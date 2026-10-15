@@ -5,10 +5,13 @@
 Site: **https://liga-apresentacoes.vercel.app**
 
 ## O que ele faz
-1. Mostra as aulas (slides) com **três níveis de acesso**, escolhidos aula por aula: **público** (sem login), **membros** (login com GitHub, só quem está na lista) e **só monitores** (padrão).
-2. Monitores veem **tudo**, inclusive o roteiro do apresentador, sem precisar liberar.
-3. Tem um **painel** em `/admin` para liberar aulas e editar as listas de alunos e monitores.
-4. O conteúdo vem do `liga-curriculo` (privado). Nada de aula fica neste repositório.
+1. Mostra as aulas (slides) com **três níveis de acesso**, escolhidos aula por aula: **público** (sem login), **membros** (login com GitHub; alunos e monitores da lista) e **só owners** (padrão).
+2. Quatro papéis:
+   - **Owner:** vê tudo (slides e roteiros), libera e usa o painel `/admin`.
+   - **Monitor:** começa com acesso de **aluno** e só vê a mais o que um owner marcar para ele (slides e roteiros, aula por aula).
+   - **Aluno:** vê as aulas de nível membros e públicas.
+   - **Visitante** (sem login): só as aulas públicas.
+3. O conteúdo vem do `liga-curriculo` (privado). Nada de aula fica neste repositório.
 
 ## Configurar (uma vez)
 Siga o **[COMO-USAR-PASSO-A-PASSO.md](COMO-USAR-PASSO-A-PASSO.md)**: criar o app de login no GitHub, um token de leitura e 5 variáveis na Vercel.

@@ -1,11 +1,20 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Painel dos monitores</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"></head>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Painel dos owners</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css">
+<style>.perm{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}.perm label{font-size:14px;color:#cfcbc0}.sub{color:var(--mut);font-size:13px;margin:10px 0 0}input[type=text]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}</style></head>
 <body><main>
-<div class="topo"><div><p class="tag">PAINEL DOS MONITORES</p><h1>Liberação de aulas</h1></div><div><a class="btn sec" href="/">Ver como aluno</a></div></div>
-<p>Você vê <b>tudo</b>, liberado ou não. O nível de cada aula define quem mais pode abrir: <b>só monitores</b> (padrão), <b>membros</b> (alunos e monitores da lista, com login do GitHub) ou <b>público</b> (qualquer pessoa, sem login). O roteiro é sempre só dos monitores. Cada mudança vira um commit no <code>liga-curriculo</code>, com seu nome. Pode levar até 1 minuto para valer para todos.</p>
-<h2>Aulas</h2><div id="aulas"><p>Carregando…</p></div>
-<h2>Pessoas (usuário do GitHub, um por linha)</h2>
-<div class="grid"><div><b>Monitores</b><textarea id="mon" placeholder="usuario1&#10;usuario2"></textarea></div><div><b>Alunos</b><textarea id="alu" placeholder="aluno1&#10;aluno2"></textarea></div></div>
+<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div><a class="btn sec" href="/">Ver como aluno</a></div></div>
+<p><b>Owners</b> veem tudo e liberam. <b>Monitores</b> têm acesso de aluno e só veem a mais o que você marcar para cada um. <b>Alunos</b> veem as aulas de nível membros e públicas. Cada mudança vira um commit no <code>liga-curriculo</code>, com seu nome; pode levar até 1 minuto para valer para todos.</p>
+
+<h2>1. Nível de cada aula</h2>
+<p><small>Só owners (padrão) · Membros (alunos e monitores logados) · Público (sem login). O roteiro nunca depende desse nível: só owners e monitores com permissão.</small></p>
+<div id="aulas"><p>Carregando…</p></div>
+
+<h2>2. Monitores e permissões</h2>
+<div class="linha"><input type="text" id="novoMon" placeholder="usuário do GitHub"><button class="btn" id="addMon">Adicionar monitor</button></div>
+<div id="monitores"></div>
+
+<h2>3. Owners e alunos (usuário do GitHub, um por linha)</h2>
+<div class="grid"><div><b>Owners</b><textarea id="own"></textarea></div><div><b>Alunos</b><textarea id="alu"></textarea></div></div>
 <p><small id="fixos"></small></p><button class="btn" id="salvar">Salvar listas</button>
 </main><div id="msg" class="msg" hidden></div>
 <script>
@@ -15,17 +24,40 @@ function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 async function carregar(){
   const r=await fetch('/api/admin');
-  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só monitores</h1><p>Entre com uma conta de monitor.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a>';return}
-  const d=await r.json();const box=$('aulas');box.textContent='';
+  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a>';return}
+  const d=await r.json();
+  const box=$('aulas');box.textContent='';
   for(const a of d.aulas){const l=el('div','linha');const t=el('div','t');t.append(el('b','',a.titulo),el('br'),el('small','',`${a.nivel} · ${a.chave}`));
-    const sel=el('select');for(const [v,n] of [['monitores','Só monitores'],['membros','Membros'],['publico','Público']]){const o=el('option','',n);o.value=v;if(v===a.acesso)o.selected=true;sel.append(o)}
+    const sel=el('select');for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const o=el('option','',n);o.value=v;if(v===a.acesso)o.selected=true;sel.append(o)}
     sel.onchange=async()=>{try{await enviar({acao:'acesso',chave:a.chave,nivel:sel.value});aviso(`${a.titulo}: ${sel.options[sel.selectedIndex].text}`)}catch(e){aviso(e.message,1);carregar()}};
     const v=el('a','btn sec','Slides');v.href=a.url;v.target='_blank';l.append(t,sel,v);
     if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}box.append(l)}
-  $('mon').value=d.monitores.join('\n');$('alu').value=d.alunos.join('\n');
-  $('fixos').textContent=d.fixos.length?`Administradores fixos (variável ADMIN_USERS): ${d.fixos.join(', ')}`:'';
+  const mb=$('monitores');mb.textContent='';
+  const nomes=Object.keys(d.monitores).sort();
+  if(!nomes.length)mb.append(el('p','','Nenhum monitor ainda.'));
+  for(const n of nomes){
+    const g=d.monitores[n],c=el('div','linha');c.style.display='block';
+    const topo=el('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px';
+    topo.append(el('b','',n));
+    const rm=el('button','btn sec','Remover');rm.onclick=async()=>{if(!confirm(`Remover o monitor ${n}?`))return;try{await enviar({acao:'remover_monitor',usuario:n});aviso('Monitor removido');carregar()}catch(e){aviso(e.message,1)}};
+    topo.append(rm);c.append(topo,el('p','sub','Marque o que este monitor pode abrir além do nível de aluno.'));
+    const caixas=[];const area=el('div','perm');
+    for(const a of d.aulas){
+      const w=el('label');const s=el('input');s.type='checkbox';s.checked=g.aulas.includes(a.chave);s.dataset.t='aulas';s.dataset.k=a.chave;
+      w.append(s,document.createTextNode(` ${a.titulo} · slides`));area.append(w);caixas.push(s);
+      if(a.tem_roteiro){const w2=el('label');const s2=el('input');s2.type='checkbox';s2.checked=g.roteiros.includes(a.chave);s2.dataset.t='roteiros';s2.dataset.k=a.chave;
+        w2.append(s2,document.createTextNode(` ${a.titulo} · roteiro`));area.append(w2);caixas.push(s2)}}
+    const salvar=async()=>{const corpo={acao:'monitor',usuario:n,aulas:[],roteiros:[]};caixas.forEach(x=>{if(x.checked)corpo[x.dataset.t].push(x.dataset.k)});
+      try{await enviar(corpo);aviso(`Permissões de ${n} salvas`)}catch(e){aviso(e.message,1)}};
+    caixas.forEach(x=>x.onchange=salvar);
+    const todos=el('button','btn sec','Marcar todas');todos.style.marginTop='8px';todos.onclick=()=>{caixas.forEach(x=>x.checked=true);salvar()};
+    const nenhum=el('button','btn sec','Desmarcar todas');nenhum.style.cssText='margin:8px 0 0 8px';nenhum.onclick=()=>{caixas.forEach(x=>x.checked=false);salvar()};
+    c.append(area,todos,nenhum);mb.append(c)}
+  $('own').value=d.owners.join('\n');$('alu').value=d.alunos.join('\n');
+  $('fixos').textContent=d.fixos.length?`Owners fixos (variável ADMIN_USERS na Vercel): ${d.fixos.join(', ')}`:'';
 }
+$('addMon').onclick=async()=>{const n=$('novoMon').value.trim();if(!n)return;try{await enviar({acao:'monitor',usuario:n,aulas:[],roteiros:[]});$('novoMon').value='';aviso('Monitor adicionado (sem permissões extras)');carregar()}catch(e){aviso(e.message,1)}};
 $('salvar').onclick=async()=>{const lin=id=>$(id).value.split(/[\s,;]+/).filter(Boolean);
-  try{await enviar({acao:'listas',monitores:lin('mon'),alunos:lin('alu')});aviso('Listas salvas');carregar()}catch(e){aviso(e.message,1)}};
+  try{await enviar({acao:'listas',owners:lin('own'),alunos:lin('alu')});aviso('Listas salvas');carregar()}catch(e){aviso(e.message,1)}};
 carregar();
 </script></body></html>

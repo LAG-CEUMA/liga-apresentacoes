@@ -7,12 +7,12 @@
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
 <script>
-const NOME={monitores:'só monitores',membros:'membros',publico:'público'};
+const NOME={owners:'só owners',membros:'membros',publico:'público'};
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
 fetch('/api/aulas').then(r=>r.json()).then(d=>{
   const conta=document.getElementById('conta');
   if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.papel}`),document.createTextNode(' '));
-    if(d.papel==='monitor'){const a=el('a','btn','Painel');a.href='/admin';conta.append(a,document.createTextNode(' '))}
+    if(d.papel==='owner'){const a=el('a','btn','Painel');a.href='/admin';conta.append(a,document.createTextNode(' '))}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
   const l=document.getElementById('lista');l.textContent='';

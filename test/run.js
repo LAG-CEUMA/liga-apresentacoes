@@ -5,7 +5,7 @@ process.env.SESSION_SECRET = 'segredo-de-teste-123456';
 process.env.GH_TOKEN = 'x'; process.env.GITHUB_CLIENT_ID = 'cid'; process.env.GITHUB_CLIENT_SECRET = 'sec';
 process.env.ADMIN_USERS = 'chefe';
 
-let cfg = { monitores: ['mon1'], alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
+let cfg = { owners: ['dono'], monitores: { mon1: { aulas: [], roteiros: [] }, mon2: { aulas: ['nivel-00-tutorial/aula-03'], roteiros: ['nivel-00-tutorial/aula-01'] } }, alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
 let sha = 'sha1'; const commits = [];
 const arquivos = {
   'niveis/nivel-00-tutorial/slides/aula-01.html': '<html>SLIDES1</html>',
@@ -37,63 +37,87 @@ function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {
   });
 }
 const ver = (user, id, roteiro) => chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id, ...(roteiro ? { roteiro: '1' } : {}) }, user });
+const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
 (async () => {
-  // público sem login
+  // público sem login; membros exige login; padrão é só owners
   let r = await ver(null, 'aula-01'); assert.equal(r.status, 200); assert(r.body.includes('SLIDES1')); assert(r.h['Cache-Control'].startsWith('public'));
-  // membros: visitante vai para login; aluno vê; desconhecido recebe 403
   r = await ver(null, 'aula-02'); assert.equal(r.status, 302); assert(r.h.Location.startsWith('/api/login?next='));
   r = await ver('alu1', 'aula-02'); assert.equal(r.status, 200); assert.equal(r.h['Cache-Control'], 'private, no-store');
   r = await ver('estranho', 'aula-02'); assert.equal(r.status, 403);
-  // padrão: aula não listada é só de monitores
   r = await ver('alu1', 'aula-03'); assert.equal(r.status, 403);
-  r = await ver('mon1', 'aula-03'); assert.equal(r.status, 200);
-  r = await ver('chefe', 'aula-03'); assert.equal(r.status, 200); // ADMIN_USERS
-  // roteiro: só monitor, mesmo se aula é pública
-  r = await ver('alu1', 'aula-01', true); assert.equal(r.status, 403);
-  r = await ver(null, 'aula-01', true); assert.equal(r.status, 302);
-  r = await ver('mon1', 'aula-01', true); assert.equal(r.status, 200); assert(r.body.includes('ROTEIRO1'));
+  // owner vê tudo (da lista e do ADMIN_USERS), inclusive roteiros
+  for (const o of ['dono', 'chefe']) {
+    assert.equal((await ver(o, 'aula-03')).status, 200);
+    r = await ver(o, 'aula-01', true); assert.equal(r.status, 200); assert(r.body.includes('ROTEIRO1'));
+  }
+  // monitor sem permissão extra = nível de aluno
+  assert.equal((await ver('mon1', 'aula-01')).status, 200);
+  assert.equal((await ver('mon1', 'aula-02')).status, 200); // membros
+  assert.equal((await ver('mon1', 'aula-03')).status, 403); // só owners
+  assert.equal((await ver('mon1', 'aula-01', true)).status, 403); // roteiro não concedido
+  // monitor com permissão: só o que foi concedido
+  assert.equal((await ver('mon2', 'aula-03')).status, 200);
+  assert.equal((await ver('mon2', 'aula-01', true)).status, 200);
+  assert.equal((await ver('mon2', 'aula-02', true)).status, 403);
+  // aluno e visitante nunca veem roteiro
+  assert.equal((await ver('alu1', 'aula-01', true)).status, 403);
+  assert.equal((await ver(null, 'aula-01', true)).status, 302);
   // caminhos inválidos / traversal
-  r = await chamar(h('ver'), { query: { dir: '../segredo', id: 'aula-09' }, user: 'mon1' }); assert.equal(r.status, 404);
-  r = await chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id: 'aula-99' }, user: 'mon1' }); assert.equal(r.status, 404);
-  // cookie adulterado e expirado
-  assert.equal(u.verificar(u.assinar({ u: 'mon1', exp: Date.now() + 1e5 }).replace(/.$/, 'x')), null);
-  assert.equal(u.verificar(u.assinar({ u: 'mon1', exp: Date.now() - 1 })), null);
+  r = await chamar(h('ver'), { query: { dir: '../segredo', id: 'aula-09' }, user: 'dono' }); assert.equal(r.status, 404);
+  r = await chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id: 'aula-99' }, user: 'dono' }); assert.equal(r.status, 404);
+  // cookie adulterado, expirado e forjado
+  assert.equal(u.verificar(u.assinar({ u: 'dono', exp: Date.now() + 1e5 }).replace(/.$/, 'x')), null);
+  assert.equal(u.verificar(u.assinar({ u: 'dono', exp: Date.now() - 1 })), null);
   r = await chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id: 'aula-03' }, headers: { cookie: 'liga_s=forjado.abc' } }); assert.equal(r.status, 302);
   // lista de aulas por papel
   const lista = async (user) => JSON.parse((await chamar(h('aulas'), { user })).body);
   let d = await lista(null); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01']); assert.equal(d.exigeLogin, 1); assert.equal(d.aulas[0].roteiro, null);
   d = await lista('alu1'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02']);
-  d = await lista('mon1'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02', 'aula-03']); assert(d.aulas[0].roteiro);
-  assert.equal(d.aulas[0].titulo, 'Aula 1: X'); assert.equal(d.aulas[0].nivel, 'Nível 0');
-  // admin: só monitor; POST exige origem e JSON
-  r = await chamar(h('admin'), { user: 'alu1' }); assert.equal(r.status, 403);
-  r = await chamar(h('admin'), { user: null }); assert.equal(r.status, 403);
-  const post = (corpo, extra = {}) => chamar(h('admin'), { user: 'mon1', method: 'POST', body: corpo, headers: { origin: 'https://site.test', 'content-type': 'application/json', ...extra } });
-  r = await post({ acao: 'acesso', chave: 'nivel-00-tutorial/aula-03', nivel: 'membros' }, { origin: 'https://evil.test' }); assert.equal(r.status, 403);
-  r = await post({ acao: 'acesso', chave: 'nivel-00-tutorial/aula-03', nivel: 'membros' }, { 'content-type': 'text/plain' }); assert.equal(r.status, 403);
-  r = await chamar(h('admin'), { user: 'alu1', method: 'POST', body: {}, headers: { origin: 'https://site.test', 'content-type': 'application/json' } }); assert.equal(r.status, 403);
-  r = await post({ acao: 'acesso', chave: 'nivel-00-tutorial/aula-03', nivel: 'membros' }); assert.equal(r.status, 200);
-  assert.equal(cfg.aulas['nivel-00-tutorial/aula-03'], 'membros'); assert(commits[0].includes('mon1'));
-  assert.equal((await ver('alu1', 'aula-03')).status, 200); // vale na hora (cache limpo)
-  r = await post({ acao: 'acesso', chave: 'nivel-00-tutorial/aula-03', nivel: 'monitores' }); assert.equal(r.status, 200);
-  assert.equal(cfg.aulas['nivel-00-tutorial/aula-03'], undefined);
-  r = await post({ acao: 'acesso', chave: 'nao/existe', nivel: 'publico' }); assert.equal(r.status, 400);
-  r = await post({ acao: 'acesso', chave: 'nivel-00-tutorial/aula-03', nivel: 'xxx' }); assert.equal(r.status, 400);
+  d = await lista('mon1'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02']); assert.equal(d.aulas[0].roteiro, null); assert.equal(d.aulas[0].acesso, undefined);
+  d = await lista('mon2'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02', 'aula-03']); assert(d.aulas[0].roteiro); assert.equal(d.aulas[1].roteiro, null);
+  d = await lista('dono'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02', 'aula-03']); assert(d.aulas[2].roteiro === null && d.aulas[0].roteiro);
+  assert.equal(d.aulas[0].titulo, 'Aula 1: X'); assert.equal(d.aulas[0].nivel, 'Nível 0'); assert.equal(d.papel, 'owner');
+  // painel: só owner
+  for (const x of ['alu1', 'mon2', null]) assert.equal((await chamar(h('admin'), { user: x })).status, 403);
+  d = JSON.parse((await chamar(h('admin'), { user: 'dono' })).body); assert.equal(d.aulas.length, 3); assert(d.monitores.mon2);
+  const post = (corpo, extra = {}, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: corpo, headers: { origin: 'https://site.test', 'content-type': 'application/json', ...extra } });
+  const AC = { acao: 'acesso', chave: CH(3), nivel: 'membros' };
+  assert.equal((await post(AC, { origin: 'https://evil.test' })).status, 403);
+  assert.equal((await post(AC, { 'content-type': 'text/plain' })).status, 403);
+  assert.equal((await post(AC, {}, 'mon2')).status, 403); // monitor não escreve
+  assert.equal((await post({ acao: 'monitor', usuario: 'mon1', aulas: [CH(3)], roteiros: [] }, {}, 'mon1')).status, 403); // não se autoconcede
+  assert.equal((await post(AC)).status, 200);
+  assert.equal(cfg.aulas[CH(3)], 'membros'); assert(commits[0].includes('dono'));
+  assert.equal((await ver('alu1', 'aula-03')).status, 200); // vale na hora
+  assert.equal((await post({ ...AC, nivel: 'owners' })).status, 200); assert.equal(cfg.aulas[CH(3)], undefined);
+  assert.equal((await post({ acao: 'acesso', chave: 'nao/existe', nivel: 'publico' })).status, 400);
+  assert.equal((await post({ ...AC, nivel: 'monitores' })).status, 400);
+  // permissões de monitor
+  assert.equal((await post({ acao: 'monitor', usuario: '@Novo', aulas: [CH(3), 'x/aula-99'], roteiros: [CH(1)] })).status, 200);
+  assert.deepEqual(cfg.monitores.novo, { aulas: [CH(3)], roteiros: [CH(1)] });
+  assert.equal((await ver('novo', 'aula-03')).status, 200);
+  assert.equal((await post({ acao: 'monitor', usuario: 'mon2', aulas: [], roteiros: [] })).status, 200);
+  assert.equal((await ver('mon2', 'aula-03')).status, 403); // revogado
+  assert.equal((await post({ acao: 'monitor', usuario: 'ruim nome!', aulas: [] })).status, 400);
+  assert.equal((await post({ acao: 'remover_monitor', usuario: 'novo' })).status, 200); assert.equal(cfg.monitores.novo, undefined);
+  assert.equal((await ver('novo', 'aula-02')).status, 403); // removido volta a visitante
+  assert.equal((await post({ acao: 'remover_monitor', usuario: 'naoexiste' })).status, 400);
   // listas
-  r = await post({ acao: 'listas', monitores: ['mon1'], alunos: ['@Ana', 'bia', 'bad name!'] }); assert.equal(r.status, 400);
-  r = await post({ acao: 'listas', monitores: ['outro'], alunos: [] }); assert.equal(r.status, 400); // não pode se remover
-  r = await post({ acao: 'listas', monitores: ['mon1', 'Prof'], alunos: ['@Ana', 'bia', 'ana'] }); assert.equal(r.status, 200);
-  assert.deepEqual(cfg.alunos, ['ana', 'bia']); assert.deepEqual(cfg.monitores, ['mon1', 'prof']);
+  assert.equal((await post({ acao: 'listas', owners: ['dono'], alunos: ['@Ana', 'bia', 'bad name!'] })).status, 400);
+  assert.equal((await post({ acao: 'listas', owners: ['outro'], alunos: [] })).status, 400); // não pode se remover
+  assert.equal((await post({ acao: 'listas', owners: ['dono', 'Prof'], alunos: ['@Ana', 'bia', 'ana'] })).status, 200);
+  assert.deepEqual(cfg.alunos, ['ana', 'bia']); assert.deepEqual(cfg.owners, ['dono', 'prof']);
   assert.equal((await ver('ana', 'aula-02')).status, 200);
+  assert.equal((await ver('prof', 'aula-03')).status, 200);
+  // compatibilidade: formato antigo (monitores como lista) vira monitores sem permissão extra
+  assert.deepEqual(u.normalizar({ monitores: ['A', 'b'] }).monitores, { a: { aulas: [], roteiros: [] }, b: { aulas: [], roteiros: [] } });
   // login: state e redirect seguro
   r = await chamar(h('login'), { query: { next: '//evil.com' } });
   assert.equal(r.status, 302); assert(r.h.Location.startsWith('https://github.com/login/oauth/authorize?client_id=cid')); assert(!r.h.Location.includes('scope='));
   const st = u.verificar(decodeURIComponent(r.h['Set-Cookie'].split(';')[0].split('=').slice(1).join('='))); assert.equal(st.n, '/');
   r = await chamar(h('login'), { query: { next: '/aula/nivel-00-tutorial/aula-02' } });
   const cookieSt = r.h['Set-Cookie'].split(';')[0]; const state = new URL(r.h.Location).searchParams.get('state');
-  // callback com state errado
   r = await chamar(h('callback'), { query: { code: 'c', state: 'errado' }, headers: { cookie: cookieSt } }); assert.equal(r.status, 400);
-  // callback ok (mock do GitHub OAuth)
   const antes = global.fetch;
   global.fetch = async (url, op) => url.includes('login/oauth/access_token') ? resp(200, { access_token: 't' }) : url.endsWith('/user') ? resp(200, { login: 'Ana' }) : antes(url, op);
   r = await chamar(h('callback'), { query: { code: 'c', state }, headers: { cookie: cookieSt } });

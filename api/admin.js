@@ -1,35 +1,47 @@
 'use strict';
-// Painel dos monitores: ver tudo, definir o acesso de cada aula e as listas de pessoas.
+// Painel dos owners: ver tudo, definir o acesso de cada aula, as listas e as permissões de cada monitor.
 const u = require('../lib/util');
+const ler = (l) => (Array.isArray(l) ? l : []).map((x) => String(x).trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
 module.exports = async (req, res) => {
   try {
     const usuario = u.usuarioDaSessao(req);
     const { cfg } = await u.lerConfig();
-    if (u.papel(cfg, usuario) !== 'monitor') return u.json(res, 403, { erro: 'Só monitores.' });
+    if (u.papel(cfg, usuario) !== 'owner') return u.json(res, 403, { erro: 'Só owners.' });
+    const aulas = await u.listarAulas();
     if (req.method === 'GET') {
-      const aulas = (await u.listarAulas()).map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id,
-        tem_roteiro: !!a.roteiro, acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
-      return u.json(res, 200, { usuario, aulas, monitores: cfg.monitores, alunos: cfg.alunos, fixos: u.admins() });
+      return u.json(res, 200, { usuario, fixos: u.admins(), owners: cfg.owners, alunos: cfg.alunos, monitores: cfg.monitores,
+        aulas: aulas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
+          acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null })) });
     }
     if (req.method !== 'POST') return u.json(res, 405, { erro: 'Método inválido.' });
     if (!u.origemOk(req) || !String(req.headers['content-type'] || '').includes('application/json')) return u.json(res, 403, { erro: 'Requisição recusada.' });
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     const novo = JSON.parse(JSON.stringify(cfg));
+    const existe = new Set(aulas.map((a) => a.chave));
     let msg;
     if (b.acao === 'acesso') {
-      const aula = (await u.listarAulas()).find((a) => a.chave === b.chave);
-      if (!aula || !u.NIVEIS.includes(b.nivel)) return u.json(res, 400, { erro: 'Aula ou nível inválido.' });
-      if (b.nivel === 'monitores') delete novo.aulas[b.chave]; else novo.aulas[b.chave] = b.nivel;
+      if (!existe.has(b.chave) || !u.NIVEIS.includes(b.nivel)) return u.json(res, 400, { erro: 'Aula ou nível inválido.' });
+      if (b.nivel === 'owners') delete novo.aulas[b.chave]; else novo.aulas[b.chave] = b.nivel;
       msg = `Portal: ${usuario} definiu ${b.chave} como ${b.nivel}`;
     } else if (b.acao === 'listas') {
-      const ler = (l) => (Array.isArray(l) ? l : []).map((x) => String(x).trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
-      const mon = ler(b.monitores), alu = ler(b.alunos);
-      const ruim = [...mon, ...alu].filter((x) => !u.USER_RE.test(x));
+      const own = ler(b.owners), alu = ler(b.alunos);
+      const ruim = [...own, ...alu].filter((x) => !u.USER_RE.test(x));
       if (ruim.length) return u.json(res, 400, { erro: `Usuário(s) inválido(s): ${ruim.slice(0, 5).join(', ')}` });
-      if (!mon.includes(usuario) && !u.admins().includes(usuario)) return u.json(res, 400, { erro: 'Você não pode se remover da lista de monitores.' });
-      novo.monitores = mon; novo.alunos = alu;
-      msg = `Portal: ${usuario} atualizou as listas (${mon.length} monitores, ${alu.length} alunos)`;
+      if (!own.includes(usuario) && !u.admins().includes(usuario)) return u.json(res, 400, { erro: 'Você não pode se remover da lista de owners.' });
+      novo.owners = own; novo.alunos = alu;
+      msg = `Portal: ${usuario} atualizou as listas (${own.length} owners, ${alu.length} alunos)`;
+    } else if (b.acao === 'monitor') {
+      const nome = ler([b.usuario])[0];
+      if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
+      const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
+      novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros) };
+      msg = `Portal: ${usuario} definiu permissões do monitor ${nome} (${novo.monitores[nome].aulas.length} aulas, ${novo.monitores[nome].roteiros.length} roteiros)`;
+    } else if (b.acao === 'remover_monitor') {
+      const nome = ler([b.usuario])[0];
+      if (!nome || !novo.monitores[nome]) return u.json(res, 400, { erro: 'Monitor não encontrado.' });
+      delete novo.monitores[nome];
+      msg = `Portal: ${usuario} removeu o monitor ${nome}`;
     } else return u.json(res, 400, { erro: 'Ação inválida.' });
     await u.gravarConfig(novo, msg);
     u.json(res, 200, { ok: true });
