@@ -1,0 +1,219 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aula 1: Game Dev além do código e da arte</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap"><style>*{margin:0;box-sizing:border-box}html,body{height:100%;background:#000;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+.slide{display:none}.slide.on{display:block}
+.slide [data-b]{transition:opacity .45s,transform .45s}.slide [data-b].hid{opacity:0;pointer-events:none}
+.slide [data-b].hid.rise{transform:translateY(40px)}.slide [data-b].hid.pop{transform:scale(.9)}
+table{border-collapse:collapse;width:100%}td,th{padding:14px 18px;border-bottom:1px solid rgba(0,0,0,.18);text-align:left;vertical-align:top}
+#notes{position:fixed;left:0;right:0;bottom:0;background:#111c;color:#fff;font:20px/1.4 'DM Sans',Arial,sans-serif;padding:18px 28px;display:none;z-index:9}
+#help{position:fixed;right:12px;top:8px;color:#fff8;font:14px Arial;z-index:9}</style></head><body><div id="stage"><div class="slide" id="cover" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:radial-gradient(circle at 88% 14%, #3b2f14 0%, #12141c 55%);color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<div style="position:absolute;left:1536px;top:128px;width:64px;height:64px;background:#f5b83d;border-radius:8px"></div>
+<div style="position:absolute;left:1616px;top:128px;width:64px;height:64px;background:#1d2130;border-radius:8px"></div>
+<div style="position:absolute;left:1696px;top:128px;width:64px;height:64px;background:#3ec9b0;border-radius:8px"></div>
+<div style="position:absolute;left:1536px;top:208px;width:64px;height:64px;background:#1d2130;border-radius:8px"></div>
+<div style="position:absolute;left:1616px;top:208px;width:64px;height:64px;background:#f5b83d;border-radius:8px"></div>
+<div style="position:absolute;left:1696px;top:208px;width:64px;height:64px;background:#1d2130;border-radius:8px"></div>
+<div style="position:absolute;left:1536px;top:288px;width:64px;height:64px;background:#3ec9b0;border-radius:8px"></div>
+<div style="position:absolute;left:1616px;top:288px;width:64px;height:64px;background:#1d2130;border-radius:8px"></div>
+<div style="position:absolute;left:1696px;top:288px;width:64px;height:64px;background:#f5b83d;border-radius:8px"></div>
+<p style="position:absolute;left:128px;top:128px;width:1200px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">LIGA ACADÊMICA DE GAMES · CEUMA</p>
+<h1 style="position:absolute;left:128px;top:340px;width:1560px;font-family:'Space Grotesk', Arial, sans-serif;font-size:112px;font-weight:700;line-height:1.05">Game dev além do código e da arte</h1>
+<p data-build-in="rise 1" style="position:absolute;left:128px;top:740px;width:1300px;font-size:40px;line-height:1.3;color:#cfcbc0">Conhecer a liga, entrar no seu repositório e fazer o primeiro commit</p>
+<p data-build-in="rise 2" style="position:absolute;left:128px;top:850px;width:560px;font-size:28px;font-weight:700;color:#12141c;background:#f5b83d;padding:14px 32px;border-radius:50%">Nível 0 · Semana 1 · 60 minutos</p>
+
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">01 / 13</p>
+</div>
+<div class="slide" id="gancho" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#f5b83d;color:#14161f;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:1380px;top:40px;width:440px;font-family:'Space Grotesk', Arial, sans-serif;font-size:640px;font-weight:700;line-height:1;color:#eaa526">?</p>
+<p style="position:absolute;left:128px;top:128px;width:1000px;font-size:26px;font-weight:700;letter-spacing:4px;color:#14161f">ABERTURA</p>
+<h1 style="position:absolute;left:128px;top:260px;width:1380px;font-family:'Space Grotesk', Arial, sans-serif;font-size:88px;font-weight:700;line-height:1.1">Levanta a mão quem acha que fazer jogo é só programar ou só desenhar.</h1>
+<p data-build-in="rise 1" style="position:absolute;left:128px;top:660px;width:1200px;font-size:52px;font-weight:700">Mantenha a mão levantada.</p>
+<p data-build-in="rise 2" style="position:absolute;left:128px;top:760px;width:1200px;font-size:40px">Vamos ver se ela continua certa.</p>
+
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">02 / 13</p>
+</div>
+<div class="slide" id="frentes" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1000px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">O JOGO</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Um jogo tem 6 frentes de trabalho</h2>
+<div data-build-in="pop 1" style="position:absolute;left:128px;top:330px;width:534px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f5b83d;width:56px;height:56px;flex:none"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:40px;font-weight:700">Game design</h3>
+<p style="font-size:28px;line-height:1.3;color:#cfcbc0">Regras, objetivo e diversão</p>
+</div>
+<div data-build-in="pop 2" style="position:absolute;left:693px;top:330px;width:534px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3ec9b0;width:56px;height:56px;flex:none"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:40px;font-weight:700">Programação</h3>
+<p style="font-size:28px;line-height:1.3;color:#cfcbc0">Faz o jogo funcionar</p>
+</div>
+<div data-build-in="pop 3" style="position:absolute;left:1258px;top:330px;width:534px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f5b83d;width:56px;height:56px;flex:none"><path d="M12 3l3 6 6 1-4.5 4.5 1 6.5-5.5-3-5.5 3 1-6.5L3 10l6-1z"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:40px;font-weight:700">Arte</h3>
+<p style="font-size:28px;line-height:1.3;color:#cfcbc0">Visual e interface</p>
+</div>
+<div data-build-in="pop 4" style="position:absolute;left:128px;top:640px;width:534px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3ec9b0;width:56px;height:56px;flex:none"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:40px;font-weight:700">Áudio</h3>
+<p style="font-size:28px;line-height:1.3;color:#cfcbc0">Música e efeitos</p>
+</div>
+<div data-build-in="pop 5" style="position:absolute;left:693px;top:640px;width:534px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#f5b83d;width:56px;height:56px;flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:40px;font-weight:700">Produção</h3>
+<p style="font-size:28px;line-height:1.3;color:#cfcbc0">Organiza prazos e tarefas</p>
+</div>
+<div data-build-in="pop 6" style="position:absolute;left:1258px;top:640px;width:534px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3ec9b0;width:56px;height:56px;flex:none"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg>
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:40px;font-weight:700">QA</h3>
+<p style="font-size:28px;line-height:1.3;color:#cfcbc0">Procura erros antes do jogador</p>
+</div>
+
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">03 / 13</p>
+</div>
+<div class="slide" id="como-funciona" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1300px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">A LIGA</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;color:#f3efe6">Como a liga funciona</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:340px;width:392px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#f5b83d">0 a 10</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">11 níveis, cada um com uma entrega</p></div>
+<div data-build-in="rise 2" style="position:absolute;left:552px;top:340px;width:392px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#3ec9b0">1 hora</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">toda semana, das 13h às 14h</p></div>
+<div data-build-in="rise 3" style="position:absolute;left:976px;top:340px;width:392px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#f5b83d">Em casa</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">tarefa de casa em todo encontro</p></div>
+<div data-build-in="rise 4" style="position:absolute;left:1400px;top:340px;width:392px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#3ec9b0">5+</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">trilhas por especialidade</p></div>
+<div data-build-in="fade 5" style="position:absolute;left:128px;top:800px;width:1664px;height:4px;background:#f5b83d"></div>
+<p data-build-in="rise 5" style="position:absolute;left:128px;top:830px;width:1664px;font-size:38px;font-weight:500">Do nível 1 ao 4 todos fazem tudo. Cada nível termina com algo que dá para mostrar.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">04 / 13</p>
+</div>
+<div class="slide" id="ingles" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1300px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">DICA DA LIGA</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;color:#f3efe6">Use tudo em inglês</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:340px;width:528px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#f5b83d">Tutoriais</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">e pesquisas quase sempre estão em inglês</p></div>
+<div data-build-in="rise 2" style="position:absolute;left:688px;top:340px;width:528px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#3ec9b0">IA e erros</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">as soluções de código aparecem em inglês</p></div>
+<div data-build-in="rise 3" style="position:absolute;left:1248px;top:340px;width:528px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#f5b83d">Carreira</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">muita gente aqui quer trabalhar no exterior</p></div>
+<div data-build-in="fade 4" style="position:absolute;left:128px;top:800px;width:1664px;height:4px;background:#f5b83d"></div>
+<p data-build-in="rise 4" style="position:absolute;left:128px;top:830px;width:1664px;font-size:38px;font-weight:500">Programas, termos e mensagens de erro: deixe em inglês e pesquise em inglês.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">05 / 13</p>
+</div>
+<div class="slide" id="dinamica" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1000px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">PRÁTICA</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Dinâmica: conheça sua dupla</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:340px;width:1664px;display:flex;align-items:center;gap:40px;background:#1d2130;padding:44px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:700;color:#12141c">1</p></div>
+<p style="flex:1;font-size:52px;line-height:1.2">Qual é o seu <b style="color:#f5b83d">curso</b>?</p>
+</div>
+<div data-build-in="rise 2" style="position:absolute;left:128px;top:550px;width:1664px;display:flex;align-items:center;gap:40px;background:#1d2130;padding:44px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)">
+<div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;background:#3ec9b0;border-radius:50%"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:700;color:#12141c">2</p></div>
+<p style="flex:1;font-size:52px;line-height:1.2">Qual <b style="color:#3ec9b0">jogo</b> você mais jogou na vida?</p>
+</div>
+<p data-build-in="rise 3" style="position:absolute;left:128px;top:790px;width:1664px;font-size:36px;line-height:1.3;color:#cfcbc0">Duplas, 5 minutos. Depois 3 voluntários apresentam o colega em uma frase.</p>
+
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">06 / 13</p>
+</div>
+<div class="slide" id="clone" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1300px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">PRÁTICA · SEU REPOSITÓRIO</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;color:#f3efe6">Entre no seu repositório</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:290px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">1</p></div><p style="flex:1;font-size:34px">Abra o e-mail do GitHub e clique em <b style="color:#f5b83d">Accept invitation</b></p></div>
+<div data-build-in="rise 2" style="position:absolute;left:128px;top:374px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">2</p></div><p style="flex:1;font-size:34px">GitHub Desktop: <b style="color:#f5b83d">File &gt; Clone repository</b></p></div>
+<div data-build-in="rise 3" style="position:absolute;left:128px;top:458px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">3</p></div><p style="flex:1;font-size:34px">Aba <b style="color:#f5b83d">GitHub.com</b>: escolha <b style="color:#f5b83d">LAG-CEUMA/aluno-seu-usuario</b></p></div>
+<div data-build-in="rise 4" style="position:absolute;left:128px;top:542px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">4</p></div><p style="flex:1;font-size:34px">Clique em <b style="color:#3ec9b0">Clone</b></p></div>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">07 / 13</p>
+</div>
+<div class="slide" id="git-conceito" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1300px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">PRÁTICA · O CONCEITO</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;color:#f3efe6">Git em três palavras</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:340px;width:528px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#f5b83d">Repository</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">a pasta do projeto, com todo o histórico</p></div>
+<div data-build-in="rise 2" style="position:absolute;left:688px;top:340px;width:528px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#3ec9b0">Commit</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">uma foto do projeto, com um nome</p></div>
+<div data-build-in="rise 3" style="position:absolute;left:1248px;top:340px;width:528px;display:flex;flex-direction:column;gap:14px;background:#1d2130;padding:36px;border-radius:20px;border:1px solid rgba(255,255,255,0.12)"><p style="font-family:'Space Grotesk', Arial, sans-serif;font-size:64px;font-weight:700;line-height:1.05;color:#f5b83d">Push</p><p style="font-size:30px;line-height:1.3;color:#cfcbc0">envia as fotos para o GitHub</p></div>
+<div data-build-in="fade 4" style="position:absolute;left:128px;top:800px;width:1664px;height:4px;background:#f5b83d"></div>
+<p data-build-in="rise 4" style="position:absolute;left:128px;top:830px;width:1664px;font-size:38px;font-weight:500">É como o histórico do Google Docs, só que você escolhe quando salvar.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">08 / 13</p>
+</div>
+<div class="slide" id="primeiro-commit" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1300px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">PRÁTICA · PRIMEIRO COMMIT</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;color:#f3efe6">Seu primeiro commit</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:280px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">1</p></div><p style="flex:1;font-size:34px"><b style="color:#f5b83d">Repository &gt; Show in Explorer</b> e abra <b style="color:#f5b83d">semana-01/ENTREGA.md</b></p></div>
+<div data-build-in="rise 2" style="position:absolute;left:128px;top:356px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">2</p></div><p style="flex:1;font-size:34px">Preencha as 3 linhas e salve com <b style="color:#f5b83d">Ctrl+S</b></p></div>
+<div data-build-in="rise 3" style="position:absolute;left:128px;top:432px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">3</p></div><p style="flex:1;font-size:34px">Volte ao GitHub Desktop: a mudança aparece na lista</p></div>
+<div data-build-in="rise 4" style="position:absolute;left:128px;top:508px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">4</p></div><p style="flex:1;font-size:34px">Summary: <b style="color:#f5b83d">Preenche entrega da semana 1</b></p></div>
+<div data-build-in="rise 5" style="position:absolute;left:128px;top:584px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#3ec9b0;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">5</p></div><p style="flex:1;font-size:34px">Clique em <b style="color:#3ec9b0">Commit to main</b></p></div>
+<div data-build-in="rise 6" style="position:absolute;left:128px;top:660px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#3ec9b0;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">6</p></div><p style="flex:1;font-size:34px">Clique em <b style="color:#3ec9b0">Push origin</b></p></div>
+<div data-build-in="rise 7" style="position:absolute;left:128px;top:736px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#3ec9b0;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">7</p></div><p style="flex:1;font-size:34px">Abra o github.com e confira que o arquivo mudou</p></div>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">09 / 13</p>
+</div>
+<div class="slide" id="tour-godot" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#f3efe6;color:#14161f;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1000px;font-size:26px;font-weight:700;letter-spacing:4px;color:#96600a">PRÁTICA · GODOT</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Tour pelo Godot</h2>
+<div style="position:absolute;left:128px;top:330px;width:1664px;height:470px;background:#12141c;border-radius:24px"></div>
+<div data-build-in="pop 1" style="position:absolute;left:160px;top:362px;width:390px;height:406px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:#1d2130;padding:0 32px;border-radius:16px;border:2px solid #f5b83d">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:700;color:#f5b83d">Scene</h3>
+<p style="font-size:30px;line-height:1.3;color:#f3efe6">A lista de objetos do jogo</p>
+</div>
+<div data-build-in="pop 2" style="position:absolute;left:582px;top:362px;width:740px;height:406px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:#1d2130;padding:0 44px;border-radius:16px;border:2px solid #3ec9b0">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:700;color:#3ec9b0">Viewport</h3>
+<p style="font-size:30px;line-height:1.3;color:#f3efe6">Onde você vê e posiciona as coisas</p>
+</div>
+<div data-build-in="pop 3" style="position:absolute;left:1354px;top:362px;width:406px;height:406px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:#1d2130;padding:0 32px;border-radius:16px;border:2px solid #f5b83d">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif;font-size:44px;font-weight:700;color:#f5b83d">Inspector</h3>
+<p style="font-size:30px;line-height:1.3;color:#f3efe6">As propriedades do que está selecionado</p>
+</div>
+<p data-build-in="rise 4" style="position:absolute;left:128px;top:830px;width:1664px;font-size:32px;font-weight:700;color:#12141c;background:#3ec9b0;padding:20px 40px;border-radius:50%">Play (F5) roda o jogo. Crie o projeto meu-primeiro-projeto e aperte Play.</p>
+
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#77746b">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#77746b">10 / 13</p>
+</div>
+<div class="slide" id="tarefa-casa" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1300px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">TAREFA DE CASA</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1;color:#f3efe6">Faça até o próximo encontro</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:290px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">1</p></div><p style="flex:1;font-size:34px">Instale o que ainda faltar (GitHub Desktop e Godot 4.7.2 Standard)</p></div>
+<div data-build-in="rise 2" style="position:absolute;left:128px;top:386px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">2</p></div><p style="flex:1;font-size:34px">Crie um projeto vazio no Godot e tire um <b style="color:#f5b83d">print</b> do editor</p></div>
+<div data-build-in="rise 3" style="position:absolute;left:128px;top:482px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">3</p></div><p style="flex:1;font-size:34px">Salve o print em <b style="color:#f5b83d">semana-01/editor.png</b></p></div>
+<div data-build-in="rise 4" style="position:absolute;left:128px;top:578px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#f5b83d;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">4</p></div><p style="flex:1;font-size:34px">No <b style="color:#f5b83d">ENTREGA.md</b>: qual frente você quer experimentar primeiro?</p></div>
+<div data-build-in="rise 5" style="position:absolute;left:128px;top:674px;width:1664px;display:flex;align-items:center;gap:28px"><div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:#3ec9b0;border-radius:50%"><p style="font-size:28px;font-weight:700;color:#12141c">5</p></div><p style="flex:1;font-size:34px">Commit e <b style="color:#3ec9b0">Push origin</b></p></div>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">11 / 13</p>
+</div>
+<div class="slide" id="retro" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#f3efe6;color:#14161f;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1000px;font-size:26px;font-weight:700;letter-spacing:4px;color:#96600a">FECHAMENTO</p>
+<h2 style="position:absolute;left:128px;top:176px;width:1664px;font-family:'Space Grotesk', Arial, sans-serif;font-size:72px;font-weight:700;line-height:1.1">Retrospectiva</h2>
+<div data-build-in="rise 1" style="position:absolute;left:128px;top:340px;width:1664px;display:flex;align-items:center;gap:36px;background:#ffffff;padding:40px 44px;border-radius:20px;border:1px solid #ddd8cb">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#0b7a68;width:64px;height:64px;flex:none"><path d="M7 11v9H3v-9zM7 11l4-8c2 0 3 1 3 3v3h6l-2 11H7"/></svg>
+<p style="flex:1;font-size:46px;line-height:1.2">O que <b style="color:#0b7a68">funcionou</b> hoje?</p>
+</div>
+<div data-build-in="rise 2" style="position:absolute;left:128px;top:530px;width:1664px;display:flex;align-items:center;gap:36px;background:#ffffff;padding:40px 44px;border-radius:20px;border:1px solid #ddd8cb">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#96600a;width:64px;height:64px;flex:none"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>
+<p style="flex:1;font-size:46px;line-height:1.2">O que <b style="color:#96600a">travou</b> você?</p>
+</div>
+<div data-build-in="rise 3" style="position:absolute;left:128px;top:720px;width:1664px;display:flex;align-items:center;gap:36px;background:#ffffff;padding:40px 44px;border-radius:20px;border:1px solid #ddd8cb">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#0b7a68;width:64px;height:64px;flex:none"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z"/></svg>
+<p style="flex:1;font-size:46px;line-height:1.2">O que você quer <b style="color:#0b7a68">aprender</b> na liga?</p>
+</div>
+
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#77746b">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#77746b">12 / 13</p>
+</div>
+<div class="slide" id="proxima" data-transition="fade" style="position:relative;width:1920px;height:1080px;overflow:hidden;box-sizing:border-box;background:#12141c;color:#f3efe6;font-family:'DM Sans', Arial, sans-serif;padding:128px">
+<p style="position:absolute;left:128px;top:128px;width:1200px;font-size:26px;font-weight:700;letter-spacing:4px;color:#f5b83d">PRÓXIMO ENCONTRO · SEMANA 2</p>
+<h1 style="position:absolute;left:128px;top:280px;width:1500px;font-family:'Space Grotesk', Arial, sans-serif;font-size:104px;font-weight:700;line-height:1.1">Godot por dentro.</h1>
+<p data-build-in="rise 1" style="position:absolute;left:128px;top:620px;width:1400px;font-size:40px;line-height:1.3;color:#cfcbc0">Cena, nó, script e sinal, e seu primeiro Pull Request.</p>
+<p data-build-in="rise 2" style="position:absolute;left:128px;top:800px;width:1300px;font-size:32px;font-weight:700;color:#12141c;background:#f5b83d;padding:20px 40px;border-radius:16px">Traga o Godot e o GitHub Desktop abertos</p>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#8d8a82">Liga de Games Ceuma · Aula inaugural</p>
+<p style="position:absolute;right:128px;bottom:64px;width:200px;font-size:24px;text-align:right;color:#8d8a82">13 / 13</p>
+</div></div><div id="notes"></div><div id="help"></div><script id="nt" type="application/json">["", "", "", "", "", "", "", "", "", "", "", "", ""]</script><script>const S=[...document.querySelectorAll('.slide')];let i=0,st=0;
+const NOTES=JSON.parse(document.getElementById('nt').textContent);
+S.forEach(s=>s.querySelectorAll('[data-build-in]').forEach(e=>{const[ef,n]=e.dataset.buildIn.split(' ');e.dataset.b=n;e.classList.add(ef);}));
+const mx=s=>Math.max(0,...[...s.querySelectorAll('[data-b]')].map(e=>+e.dataset.b));
+function show(){S.forEach((s,k)=>s.classList.toggle('on',k===i));S[i].querySelectorAll('[data-b]').forEach(e=>e.classList.toggle('hid',+e.dataset.b>st));
+document.getElementById('notes').textContent=NOTES[i]||'';location.hash=i+1;}
+function fit(){const k=Math.min(innerWidth/1920,innerHeight/1080);const t=document.getElementById('stage');t.style.transform=`scale(${k})`;t.style.left=(innerWidth-1920*k)/2+'px';t.style.top=(innerHeight-1080*k)/2+'px';}
+function next(){if(st<mx(S[i]))st++;else if(i<S.length-1){i++;st=0}show()}
+function prev(){if(st>0)st--;else if(i>0){i--;st=mx(S[i])}show()}
+addEventListener('keydown',e=>{const k=e.key;if([' ','ArrowRight','ArrowDown','PageDown','Enter'].includes(k)){e.preventDefault();next()}
+else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();prev()}
+else if(k==='Home'){i=0;st=0;show()}else if(k==='End'){i=S.length-1;st=mx(S[i]);show()}
+else if(k==='f'||k==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+else if(k==='n'||k==='N'){const n=document.getElementById('notes');n.style.display=n.style.display==='block'?'none':'block'}});
+addEventListener('click',e=>{if(e.clientX<innerWidth*0.2)prev();else next()});addEventListener('resize',fit);
+const h=parseInt(location.hash.slice(1));if(h>0&&h<=S.length)i=h-1;fit();show();</script></body></html>
