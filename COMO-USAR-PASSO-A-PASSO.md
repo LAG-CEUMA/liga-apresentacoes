@@ -3,7 +3,7 @@
 **Para quem:** aluno e monitor. **Tipo:** guia. **Tempo:** 5 minutos.
 
 ## 1. Ver uma aula (aluno ou monitor)
-1. Abra o endereço do site no navegador, no computador ou no celular.
+1. Abra **https://liga-apresentacoes.vercel.app** no navegador, no computador ou no celular.
 2. Clique na aula desejada.
 3. **Seta direita**, **espaço** ou **clique** avançam. Cada avanço mostra o próximo texto.
 4. **Seta esquerda** volta. **F** abre a tela cheia.
