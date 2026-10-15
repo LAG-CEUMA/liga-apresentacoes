@@ -16,6 +16,7 @@ module.exports = async (req, res) => {
     const sessao = u.assinar({ u: me.login.toLowerCase(), exp: Date.now() + u.SESSAO_DIAS * 86400000 });
     u.redirecionar(res, u.proximoSeguro(st.n), { 'Set-Cookie': [u.cookieSet('liga_s', sessao, u.SESSAO_DIAS * 86400), u.cookieLimpar('liga_st')] });
   } catch (e) {
+    console.error('[portal]', e && e.message);
     u.paginaSimples(res, 500, 'Erro', 'Algo deu errado no login. Tente de novo em instantes.');
   }
 };

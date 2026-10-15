@@ -15,5 +15,5 @@ module.exports = async (req, res) => {
         url: `/aula/${a.chave}`, roteiro: a.roteiro && u.pode(cfg, usuario, a.chave, true) ? `/aula/${a.chave}/roteiro` : null,
         acesso: p === 'owner' ? u.nivelDe(cfg, a.chave) : undefined })),
     });
-  } catch (e) { u.json(res, 500, { erro: 'Falha ao carregar as aulas.' }); }
+  } catch (e) { console.error('[portal]', e && e.message); u.json(res, 500, { erro: 'Falha ao carregar as aulas.' }); }
 };

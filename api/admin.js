@@ -45,5 +45,5 @@ module.exports = async (req, res) => {
     } else return u.json(res, 400, { erro: 'Ação inválida.' });
     await u.gravarConfig(novo, msg);
     u.json(res, 200, { ok: true });
-  } catch (e) { u.json(res, 500, { erro: 'Não consegui salvar agora. Tente de novo.' }); }
+  } catch (e) { console.error('[portal]', e && e.message); u.json(res, 500, { erro: 'Não consegui salvar agora. Tente de novo.' }); }
 };

@@ -22,5 +22,5 @@ module.exports = async (req, res) => {
     const publico = nivel === 'publico';
     u.enviar(res, 200, html, { 'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': publico ? 'public, s-maxage=60, stale-while-revalidate=300' : 'private, no-store' });
-  } catch (e) { u.paginaSimples(res, 500, 'Erro', 'Não consegui carregar a aula agora. Tente de novo em instantes.'); }
+  } catch (e) { console.error('[portal]', e && e.message); u.paginaSimples(res, 500, 'Erro', 'Não consegui carregar a aula agora. Tente de novo em instantes.'); }
 };
