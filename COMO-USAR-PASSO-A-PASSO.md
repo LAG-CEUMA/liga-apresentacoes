@@ -10,8 +10,8 @@ O site (Vercel) busca as aulas no repositório privado `liga-curriculo` usando u
 1. Abra github.com/organizations/LAG-CEUMA/settings/applications (ou, na sua conta, **Settings > Developer settings > OAuth Apps**).
 2. Clique em **New OAuth App**.
 3. **Application name:** `Liga de Games Ceuma`.
-4. **Homepage URL:** `https://liga-apresentacoes.vercel.app`.
-5. **Authorization callback URL:** `https://liga-apresentacoes.vercel.app/api/callback` (exatamente assim).
+4. **Homepage URL:** `https://lag-ceuma.vercel.app`.
+5. **Authorization callback URL:** `https://lag-ceuma.vercel.app/api/callback` (exatamente assim).
 6. Clique em **Register application**.
 7. Copie o **Client ID**. Clique em **Generate a new client secret** e copie o **Client secret** (aparece uma vez só).
 
@@ -50,7 +50,7 @@ O site (Vercel) busca as aulas no repositório privado `liga-curriculo` usando u
 | 4 | Visitante (sem login) | Aulas públicas | Nada |
 
 ### No painel
-1. Abra `https://liga-apresentacoes.vercel.app/admin` e entre (só owners).
+1. Abra `https://lag-ceuma.vercel.app/admin` e entre (só owners).
 2. **1. Nível de cada aula:** escolha **Só owners**, **Membros** ou **Público**. Salva sozinho.
 3. **2. Monitores e permissões:** digite o usuário e clique em **Adicionar monitor**. Depois marque, para cada monitor, os **slides** e os **roteiros** que ele pode abrir. Salva ao marcar. **Remover** tira o monitor.
 4. **3. Owners e alunos:** escreva o usuário do GitHub (um por linha) e clique em **Salvar listas**.

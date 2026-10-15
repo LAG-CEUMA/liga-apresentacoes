@@ -2,7 +2,7 @@
 
 **Para quem:** monitor (aluno só usa o site). **Tipo:** código do site. **Leia em 1 minuto.**
 
-Site: **https://liga-apresentacoes.vercel.app**
+Site: **https://lag-ceuma.vercel.app**
 
 ## O que ele faz
 1. Mostra as aulas (slides) com **três níveis de acesso**, escolhidos aula por aula: **público** (sem login), **membros** (login com GitHub; alunos e monitores da lista) e **só owners** (padrão).
