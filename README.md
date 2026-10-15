@@ -5,7 +5,7 @@
 Este repositório é o **site das aulas**. Ele publica sozinho na Vercel: tudo que entra aqui aparece no site em cerca de 1 minuto.
 
 ## O que fazer
-1. Abra o site: **https://liga-apresentacoes.vercel.app**
+1. Abra o site: **https://lag-ceuma.vercel.app**
 2. Escolha a aula e use a seta direita, espaço ou clique. **F** abre tela cheia.
 3. Funciona em qualquer navegador, sem baixar nada.
 
