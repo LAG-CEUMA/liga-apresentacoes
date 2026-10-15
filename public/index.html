@@ -1,0 +1,26 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Liga de Games Ceuma: aulas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"></head>
+<body><main>
+<div class="topo"><div><p class="tag">LIGA ACADÊMICA DE GAMES · CEUMA</p><h1>Aulas</h1></div><div id="conta"></div></div>
+<p>Escolha a aula. Dentro dela: seta direita, espaço ou clique avançam; <b>F</b> abre tela cheia.</p>
+<div id="lista"><p>Carregando…</p></div>
+<div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
+</main>
+<script>
+const NOME={monitores:'só monitores',membros:'membros',publico:'público'};
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+fetch('/api/aulas').then(r=>r.json()).then(d=>{
+  const conta=document.getElementById('conta');
+  if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.papel}`),document.createTextNode(' '));
+    if(d.papel==='monitor'){const a=el('a','btn','Painel');a.href='/admin';conta.append(a,document.createTextNode(' '))}
+    const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
+  else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
+  const l=document.getElementById('lista');l.textContent='';
+  if(!d.aulas.length)l.append(el('p','',d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
+  for(const a of d.aulas){const k=el('a','aula');k.href=a.url;
+    const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.nivel));
+    k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));l.append(k);
+    if(a.roteiro){const r=el('a','aula','');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','', 'Roteiro do apresentador (não projetar)'));l.append(r)}}
+  if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));l.append(p)}
+}).catch(()=>{document.getElementById('lista').textContent='Não consegui carregar as aulas. Recarregue a página.'});
+</script></body></html>

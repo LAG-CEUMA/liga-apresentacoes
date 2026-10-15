@@ -1,19 +1,17 @@
-# Liga de Games Ceuma: apresentações
+# Liga de Games Ceuma: portal de aulas
 
-**Para quem:** aluno e monitor. **Tipo:** apresentação. **Leia em 1 minuto.**
+**Para quem:** monitor (aluno só usa o site). **Tipo:** código do site. **Leia em 1 minuto.**
 
-Este repositório é o **site das aulas**. Ele publica sozinho na Vercel: tudo que entra aqui aparece no site em cerca de 1 minuto.
+Site: **https://liga-apresentacoes.vercel.app**
 
-## O que fazer
-1. Abra o site: **https://liga-apresentacoes.vercel.app**
-2. Escolha a aula e use a seta direita, espaço ou clique. **F** abre tela cheia.
-3. Funciona em qualquer navegador, sem baixar nada.
+## O que ele faz
+1. Mostra as aulas (slides) com **três níveis de acesso**, escolhidos aula por aula: **público** (sem login), **membros** (login com GitHub, só quem está na lista) e **só monitores** (padrão).
+2. Monitores veem **tudo**, inclusive o roteiro do apresentador, sem precisar liberar.
+3. Tem um **painel** em `/admin` para liberar aulas e editar as listas de alunos e monitores.
+4. O conteúdo vem do `liga-curriculo` (privado). Nada de aula fica neste repositório.
 
-## Não entendeu nada?
-Abra o **[COMO-USAR-PASSO-A-PASSO.md](COMO-USAR-PASSO-A-PASSO.md)**.
-
-## Importante para monitores
-Este repositório é **público**. Aqui entram só os **slides**. O **roteiro do apresentador** fica no `liga-curriculo` (privado) e nunca vem para cá.
+## Configurar (uma vez)
+Siga o **[COMO-USAR-PASSO-A-PASSO.md](COMO-USAR-PASSO-A-PASSO.md)**: criar o app de login no GitHub, um token de leitura e 5 variáveis na Vercel.
 
 ## Dica da Liga
 Use os termos e programas **em inglês**.
