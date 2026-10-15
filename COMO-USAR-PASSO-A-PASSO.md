@@ -24,7 +24,7 @@
 ## 4. Erros comuns
 | N | Erro | O que fazer |
 | --- | --- | --- |
-| 1 | A aula não aparece | Espere 1 minuto e recarregue com **Ctrl+F5** |
+| 1 | A aula não aparece | Espere 1 minuto e recarregue com **Ctrl+F5** (Mac: **Cmd+Shift+R**) |
 | 2 | Fonte diferente da esperada | O site precisa de internet para as fontes; sem elas usa fonte comum |
 | 3 | Página 404 | Confira se a pasta `aula-NN` foi copiada com o arquivo `index.html` dentro |
 
