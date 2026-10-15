@@ -2,11 +2,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css">
 <style>.perm{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}.perm label{font-size:14px;color:#cfcbc0}.sub{color:var(--mut);font-size:13px;margin:10px 0 0}input[type=text]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}</style></head>
 <body><main>
-<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div><a class="btn sec" href="/">Ver como aluno</a></div></div>
+<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/semanas">Tarefas de casa</a></div></div>
 <p><b>Owners</b> veem tudo e liberam. <b>Monitores</b> têm acesso de aluno e só veem a mais o que você marcar para cada um. <b>Alunos</b> veem as aulas de nível membros e públicas. Cada mudança vira um commit no <code>liga-curriculo</code>, com seu nome; pode levar até 1 minuto para valer para todos.</p>
 
 <h2>1. Nível de cada aula</h2>
-<p><small>Só owners (padrão) · Membros (alunos e monitores logados) · Público (sem login). O roteiro nunca depende desse nível: só owners e monitores com permissão.</small></p>
+<p><small>Para <b>tornar uma aula pública</b>, clique em <b>Público</b> na linha dela. <b>Só owners</b> (padrão): só vocês veem. <b>Membros</b>: alunos e monitores logados. <b>Público</b>: qualquer pessoa com o link, sem login. O roteiro nunca depende desse nível: só owners e monitores com permissão.</small></p>
 <div id="aulas"><p>Carregando…</p></div>
 
 <h2>2. Monitores e permissões</h2>
@@ -28,10 +28,12 @@ async function carregar(){
   const d=await r.json();
   const box=$('aulas');box.textContent='';
   for(const a of d.aulas){const l=el('div','linha');const t=el('div','t');t.append(el('b','',a.titulo),el('br'),el('small','',`${a.nivel} · ${a.chave}`));
-    const sel=el('select');for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const o=el('option','',n);o.value=v;if(v===a.acesso)o.selected=true;sel.append(o)}
-    sel.onchange=async()=>{try{await enviar({acao:'acesso',chave:a.chave,nivel:sel.value});aviso(`${a.titulo}: ${sel.options[sel.selectedIndex].text}`)}catch(e){aviso(e.message,1);carregar()}};
-    const v=el('a','btn sec','Slides');v.href=a.url;v.target='_blank';l.append(t,sel,v);
-    if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}box.append(l)}
+    const INFO={owners:'Quem vê: só owners.',membros:'Quem vê: owners, monitores e alunos da lista (precisa entrar com o GitHub).',publico:'Quem vê: qualquer pessoa com o link, sem login.'};
+    const info=el('div','nivelinfo',INFO[a.acesso]);const seg=el('div','seg');
+    for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const b=el('button',(v===a.acesso?'on ':'')+v,n);b.type='button';
+      b.onclick=async()=>{if(b.classList.contains('on'))return;try{await enviar({acao:'acesso',chave:a.chave,nivel:v});seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');info.textContent=INFO[v];aviso(`${a.titulo}: ${n}`)}catch(e){aviso(e.message,1);carregar()}};seg.append(b)}
+    const v=el('a','btn sec','Slides');v.href=a.url;v.target='_blank';l.append(t,seg,v);
+    if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}l.append(info);box.append(l)}
   const mb=$('monitores');mb.textContent='';
   const nomes=Object.keys(d.monitores).sort();
   if(!nomes.length)mb.append(el('p','','Nenhum monitor ainda.'));

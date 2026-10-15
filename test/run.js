@@ -12,6 +12,8 @@ const arquivos = {
   'niveis/nivel-00-tutorial/slides/aula-01-roteiro.html': '<html>ROTEIRO1</html>',
   'niveis/nivel-00-tutorial/slides/aula-02.html': '<html>SLIDES2</html>',
   'niveis/nivel-00-tutorial/slides/aula-03.html': '<html>SLIDES3</html>',
+  'liberacao/nivel-00/semana-01/aula.md': '# Aula TEXTO1',
+  'liberacao/nivel-00/semana-01/tarefa.md': '- [ ] TAREFA1',
   'niveis/nivel-00-tutorial/slides/indice.json': JSON.stringify({ 'aula-01': 'Aula 1: X', 'aula-02': 'Aula 2: Y', 'aula-03': 'Aula 3: Z' }),
 };
 const resp = (status, corpo) => ({ status, ok: status < 300, json: async () => corpo, text: async () => (typeof corpo === 'string' ? corpo : JSON.stringify(corpo)) });
@@ -62,6 +64,12 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   // aluno e visitante nunca veem roteiro
   assert.equal((await ver('alu1', 'aula-01', true)).status, 403);
   assert.equal((await ver(null, 'aula-01', true)).status, 302);
+  // botão voltar nos slides
+  r = await ver('dono', 'aula-03'); assert(r.body.includes('liga-voltar') || r.body.includes('Aulas'));
+  // semanas: só owners
+  r = await chamar(h('semanas'), { user: 'dono' }); assert.equal(r.status, 200);
+  const sem = JSON.parse(r.body).semanas; assert.equal(sem.length, 1); assert(sem[0].tarefa.texto.includes('TAREFA1')); assert(sem[0].aula.editar.includes('/edit/main/liberacao/nivel-00/semana-01/aula.md'));
+  for (const x of ['mon2', 'alu1', 'estranho', null]) assert.equal((await chamar(h('semanas'), { user: x })).status, 403);
   // caminhos inválidos / traversal
   r = await chamar(h('ver'), { query: { dir: '../segredo', id: 'aula-09' }, user: 'dono' }); assert.equal(r.status, 404);
   r = await chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id: 'aula-99' }, user: 'dono' }); assert.equal(r.status, 404);
