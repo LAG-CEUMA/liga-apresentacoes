@@ -32,6 +32,9 @@
   // Aceita o código <iframe ...> colado (itch.io, Discord…) ou um endereço, e devolve só o endereço do iframe permitido.
   function extrairEmbed(texto) {
     const t = String(texto || '').trim(); if (!t) return '';
+    // código "blockquote" do Instagram (o botão Incorporar): usa o endereço da publicação dentro dele
+    const ig = /data-instgrm-permalink=["']https:\/\/www\.instagram\.com\/(p|reel|tv)\/([\w-]+)/i.exec(t);
+    if (ig) return `https://www.instagram.com/${ig[1]}/${ig[2]}/embed/` + (/data-instgrm-captioned/i.test(t) ? 'captioned/' : '');
     const m = /<iframe[^>]*\ssrc=["']([^"']+)["']/i.exec(t); const src = (m ? m[1] : t).replace(/&amp;/g, '&').trim();
     return embedPermitido(src) ? src : (embedDe(src) || '');
   }

@@ -95,18 +95,18 @@ function desenhar(){
   S.vitrine=S.vitrine||[];const V=LigaVitrine;
   const lV=h('div',{});
   S.vitrine.forEach((v,i)=>{
-    const codigo=h('textarea',{maxLength:600,placeholder:'Opcional: cole aqui o código <iframe …> do itch.io, Discord etc. (YouTube, Instagram, Spotify e Slides funcionam só com o link)',style:'min-height:60px'});
+    const codigo=h('textarea',{maxLength:600,placeholder:'Opcional: cole aqui o código <iframe …> do itch.io, Discord etc. O código "Incorporar" do Instagram também funciona. (YouTube, Instagram, Spotify e Slides funcionam só com o link)',style:'min-height:60px'});
     codigo.value=v.embed&&V.embedDe(v.url)!==v.embed?v.embed:'';
     const prev=h('div',{class:'vit-grade',style:'grid-template-columns:minmax(240px,420px)'}),comp=h('div',{class:'vit-grade',hidden:true}),estado=h('small',{class:'sub'});
     const pinta=()=>{prev.textContent='';prev.append(V.render(v,null,{semAviso:false}));
       const n=V.normalizar(v);estado.textContent=n.embed?`Origem: ${n.origem} · embed disponível (iframe permitido).`:`Origem: ${n.origem} · sem embed para este link: só aparece como cartão.`;
       if(!comp.hidden){comp.textContent='';for(const m of ['cartao','clique','direto'])comp.append(h('div',{},h('div',{class:'sub',style:'margin-bottom:4px'},V.MODOS[m]),V.render(v,m)))}};
-    const recalc=()=>{v.embed=V.extrairEmbed(codigo.value)||V.embedDe(v.url)||'';mudou();pinta()};
+    const recalc=()=>{v.embed=V.extrairEmbed(codigo.value)||V.embedDe(v.url)||'';if(/instagram\.com/.test(v.embed)&&Number(v.altura)===360){v.altura=700;if(altRef)altRef.value=700}mudou();pinta()};let altRef=null;
     const tUrl=texto(v,'url',{max:300,tipo:'url',ph:'https://…'});tUrl.addEventListener('input',recalc);codigo.addEventListener('input',recalc);
     const modos=h('div',{});for(const [k,t] of Object.entries(V.MODOS))modos.append(h('button',{type:'button',class:'chipx'+(v.modo===k?' on':''),onclick:e=>{v.modo=k;modos.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');mudou();pinta()}},t));
     const tT=texto(v,'titulo',{max:80}),tL=texto(v,'legenda',{max:280,area:true}),tB=texto(v,'botao',{max:30,ph:'ex.: Seguir no Instagram'});
     [tT,tL,tB].forEach(x=>x.addEventListener('input',pinta));
-    const alt=h('input',{type:'number',min:150,max:800,step:10,value:v.altura||360});alt.addEventListener('input',()=>{v.altura=+alt.value;mudou();pinta()});
+    const alt=h('input',{type:'number',min:150,max:800,step:10,value:v.altura||360});altRef=alt;alt.addEventListener('input',()=>{v.altura=+alt.value;mudou();pinta()});
     const mover=(d)=>{const j=i+d;if(j<0||j>=S.vitrine.length)return;[S.vitrine[i],S.vitrine[j]]=[S.vitrine[j],S.vitrine[i]];mudou(true)};
     lV.append(h('div',{class:'linha',style:'display:block'},
       h('div',{class:'form'},campo('Título',tT),campo('Link do conteúdo (https://…)',tUrl),campo('Legenda',tL,true),campo('Código de incorporação (iframe)',codigo,true),campo('Texto do botão',tB),campo('Altura do embed (px)',alt),campo('Quem vê',vis(v)),pesoCampo(v)),

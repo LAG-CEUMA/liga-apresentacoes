@@ -407,6 +407,8 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   { const V = require('../public/vitrine.js'), Si = require('../lib/site.js');
     assert(V.embedDe('https://youtu.be/dQw4w9WgXcQ').includes('youtube-nocookie.com/embed/dQw4w9WgXcQ'));
     assert.equal(V.extrairEmbed('<iframe src="https://evil.com/x"></iframe>'), '');
+    assert.equal(V.extrairEmbed('<blockquote class="instagram-media" data-instgrm-captioned data-instgrm-permalink="https://www.instagram.com/reel/AbC_123-x/?utm_source=ig_embed&amp;utm_campaign=loading"></blockquote><script async src="//www.instagram.com/embed.js"></script>'), 'https://www.instagram.com/reel/AbC_123-x/embed/captioned/');
+    assert.equal(V.extrairEmbed('<blockquote data-instgrm-permalink="https://evil.com/p/x/"></blockquote>'), '');
     assert(V.extrairEmbed('<iframe src="https://itch.io/embed/123"></iframe>').includes('itch.io/embed/123'));
     assert.equal(V.embedPermitido('javascript:alert(1)'), false);
     const lim = Si.sanitizar({ vitrine: [
