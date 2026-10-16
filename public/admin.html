@@ -58,6 +58,15 @@
 <li><b>Penalidade:</b> o tipo "Atrapalhou a aula" tira pontos direto do total do aluno (nunca abaixo de zero).</li>
 <li><b>Top 5:</b> aparece na aba Ranking da Presença (completo, para quem faz chamada) e para os alunos da turma na tela inicial, se "Top 5 visível" estiver ligado. Ao arquivar uma turma, o Top 5 final fica congelado para os prêmios.</li></ul></details>
 
+<details><summary>Eventos e certificados (/eventos)</summary>
+<ul>
+<li><b>Quem cria:</b> owners e equipe com a permissão <i>Presença</i>: botão <b>+ Novo evento</b> em <code>/eventos</code> (título, tipo, data, local, carga horária, vagas, prazo de inscrição, quem vê).</li>
+<li><b>Inscrição:</b> exige login do GitHub. A pessoa informa o <b>nome completo</b> que sairá no certificado. Se houver limite de vagas, quem passar dele entra na <b>lista de espera</b>, por ordem de inscrição. Dá para confirmar presença e cancelar.</li>
+<li><b>Check-in:</b> no card do evento, <b>Check-in</b> lista os inscritos; marque quem compareceu. Quem estava inscrito e não veio fica registrado como "não compareceu". Também dá para adicionar quem veio sem se inscrever.</li>
+<li><b>Certificado:</b> quem compareceu vê <b>Ver meu certificado</b> (e em "Meus certificados"). É um modelo único, preenchido com o nome da pessoa, o evento, a data, a carga horária e um <b>código de verificação</b>. Qualquer pessoa pode conferir abrindo o endereço <code>/certificado/&lt;código&gt;</code>; o botão imprime ou salva em PDF.</li>
+<li><b>Trocar o modelo:</b> edite <code>modelos/certificado.html</code> no <code>liga-curriculo</code> usando os campos <code>{{nome}}</code>, <code>{{evento}}</code>, <code>{{tipo}}</code>, <code>{{data}}</code>, <code>{{horas}}</code>, <code>{{codigo}}</code>, <code>{{liga}}</code>, <code>{{emitido}}</code>. Sem esse arquivo, vale o modelo padrão.</li>
+<li><b>Onde ficam os dados:</b> <code>dados/eventos/&lt;código&gt;/</code> no <code>liga-curriculo</code> (um arquivo do evento e um por inscrição). O portal não apaga arquivos: para excluir um evento de teste, apague a pasta dele no GitHub.</li></ul></details>
+
 <details><summary>Os 4 tipos de pessoa</summary>
 <ul>
 <li><b>Owner:</b> vê tudo (slides, roteiros, tarefas de casa), muda níveis e permissões. Dê só a quem coordena a liga.</li>

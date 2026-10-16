@@ -1,0 +1,72 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Eventos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
+<style>input[type=text],input[type=date],input[type=time],input[type=number],textarea,select{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}.sub{color:var(--mut);font-size:13px}.ev p{margin:6px 0}</style></head>
+<body data-pg="painel"><main>
+<div class="topo"><div><p class="tag" data-site="tag">LIGA ACADÊMICA DE GAMES</p><h1>Eventos</h1></div><div class="acoes" id="topo"><a class="btn sec" href="/">&larr; Início</a></div></div>
+<div id="corpo"><p>Carregando…</p></div>
+</main><div id="msg" class="msg" hidden></div>
+<script src="/site.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function h(t,p,...f){const e=document.createElement(t);for(const [k,v] of Object.entries(p||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='style')e.style.cssText=v;else if(k in e&&k!=='list'&&k!=='for')e[k]=v;else e.setAttribute(k,v)}
+  for(const c of f.flat())if(c!==null&&c!==undefined&&c!==false)e.append(c.nodeType?c:document.createTextNode(c));return e}
+function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?' erro':'');m.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>m.hidden=true,4000)}
+async function api(corpo){const r=await fetch('/api/eventos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
+const br=x=>x?x.split('-').reverse().join('/'):'';
+let D=null;
+function camada(corpo){const veu=h('div',{class:'veu'});const box=h('div',{class:'modal'},corpo);const fechar=()=>{veu.remove();box.remove()};veu.addEventListener('click',fechar);document.body.append(veu,box);return fechar}
+function modalEvento(ev){
+  const novo=!ev;ev=ev||{id:'',titulo:'',tipo:'palestra',descricao:'',local:'',data:'',hora:'',horas:0,vagas:0,inscricaoAte:'',visibilidade:'interno',certificado:true};
+  const f={id:h('input',{type:'text',value:ev.id,disabled:!novo,maxLength:30,placeholder:'ex.: GAMEJAM-2026',oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),
+    titulo:h('input',{type:'text',value:ev.titulo,maxLength:80}),tipo:h('select',{},...Object.entries(D.tipos).map(([k,t])=>h('option',{value:k},t))),local:h('input',{type:'text',value:ev.local,maxLength:100,placeholder:'sala, link…'}),
+    data:h('input',{type:'date',value:ev.data}),hora:h('input',{type:'time',value:ev.hora}),horas:h('input',{type:'number',min:0,max:200,step:0.5,value:ev.horas}),vagas:h('input',{type:'number',min:0,max:5000,value:ev.vagas}),
+    inscricaoAte:h('input',{type:'date',value:ev.inscricaoAte}),visibilidade:h('select',{},h('option',{value:'interno'},'Interno (só membros logados)'),h('option',{value:'publico'},'Público (qualquer pessoa com login do GitHub vê)')),
+    descricao:h('textarea',{maxLength:600,style:'width:100%;min-height:80px'},ev.descricao),certificado:h('input',{type:'checkbox',checked:ev.certificado!==false})};
+  f.tipo.value=ev.tipo;f.visibilidade.value=ev.visibilidade;
+  const fechar=camada([h('h2',{style:'margin:0 0 12px'},novo?'Novo evento':'Editar evento'),
+    h('div',{class:'form'},h('label',{},'Código (maiúsculas)',f.id),h('label',{class:'larga'},'Título',f.titulo),h('label',{},'Tipo',f.tipo),h('label',{},'Quem vê',f.visibilidade),h('label',{},'Data',f.data),h('label',{},'Hora',f.hora),h('label',{class:'larga'},'Local ou link',f.local),
+      h('label',{},'Carga horária (horas)',f.horas),h('label',{},'Vagas (0 = sem limite)',f.vagas),h('label',{},'Inscrições até',f.inscricaoAte),h('label',{class:'larga'},'Descrição',f.descricao)),
+    h('label',{class:'ck'},f.certificado,'Emite certificado para quem comparecer'),
+    h('p',{class:'sub'},'Inscrição exige login do GitHub. Se houver limite de vagas, quem passar dele entra na lista de espera, por ordem de inscrição.'),
+    h('div',{style:'display:flex;justify-content:flex-end;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await api({acao:'evento',id:f.id.value,titulo:f.titulo.value,tipo:f.tipo.value,local:f.local.value,data:f.data.value,hora:f.hora.value,horas:f.horas.value,vagas:f.vagas.value,inscricaoAte:f.inscricaoAte.value,visibilidade:f.visibilidade.value,descricao:f.descricao.value,certificado:f.certificado.checked});aviso('Evento salvo');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'))])}
+async function modalCheckin(ev){
+  const r=await fetch('/api/eventos?acao=inscritos&id='+encodeURIComponent(ev.id));if(!r.ok){aviso('Não consegui carregar os inscritos.',1);return}
+  const J=await r.json();const E={};for(const i of J.inscritos)if(i.estado!=='cancelado')E[i.usuario]=i.presente;
+  const lista=h('div',{style:'max-height:44vh;overflow:auto;border:1px solid #fff2;border-radius:10px;padding:6px 12px'});const extra=h('input',{type:'text',placeholder:'adicionar quem veio sem inscrição (usuário do GitHub)',style:'flex:1;min-width:200px'});
+  const desenha=()=>{lista.textContent='';const us=Object.keys(E);if(!us.length)lista.append(h('p',{class:'sub'},'Ninguém inscrito ainda.'));
+    for(const k of us){const seg=h('div',{class:'seg tri'});const pinta=()=>seg.querySelectorAll('button').forEach((x,i)=>x.className=E[k]===[true,false][i]?'on '+['p','a'][i]:'');
+      for(const [v,t] of [[true,'Compareceu'],[false,'Não veio']]){const b=h('button',{type:'button'},t);b.addEventListener('click',()=>{E[k]=E[k]===v?null:v;pinta()});seg.append(b)}pinta();
+      const i=J.inscritos.find(x=>x.usuario===k);lista.append(h('div',{class:'linha'},h('div',{class:'t'},h('b',{},'@'+k),i&&i.nome&&i.nome!==k?' · '+i.nome:'',i&&i.espera?' (lista de espera)':'',i&&i.estado==='confirmado'?' · confirmou':''),seg))}};
+  desenha();
+  const fechar=camada([h('h2',{style:'margin:0 0 6px'},'Check-in: '+ev.titulo),h('p',{class:'sub'},'Marque quem compareceu. Quem comparece recebe o certificado (se o evento emite). Quem estava inscrito e não veio fica no histórico como "não compareceu".'),lista,
+    h('div',{style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'},extra,h('button',{class:'btn sec',type:'button',onclick:()=>{const n=extra.value.trim().replace(/^@/,'').toLowerCase();if(!/^[a-z0-9][a-z0-9-]{0,38}$/.test(n)){aviso('Usuário inválido.',1);return}E[n]=true;extra.value='';desenha()}},'Adicionar')),
+    h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'),h('button',{class:'btn',type:'button',onclick:async()=>{const est={};for(const [k,v] of Object.entries(E))if(typeof v==='boolean')est[k]=v;try{const x=await api({acao:'checkin',id:ev.id,estados:est});aviso(`Check-in salvo (${x.alterados} alterado(s))`);fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar check-in'))])}
+function cartao(ev){
+  const m=ev.minha,ativo=m&&m.estado!=='cancelado';
+  const info=[ev.data?br(ev.data)+(ev.hora?' às '+ev.hora:''):'data a definir',ev.local,ev.horas?ev.horas+' h':''].filter(Boolean).join(' · ');
+  const nomeIn=h('input',{type:'text',maxLength:60,placeholder:'seu nome completo (sai no certificado)',value:(m&&m.nome)||'',style:'flex:1;min-width:220px'});
+  const acoes=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px'});
+  if(!D.usuario){acoes.append(h('a',{class:'btn',href:'/api/login?next=/eventos'},'Entrar para se inscrever'))}
+  else if(m&&m.codigo){acoes.append(h('a',{class:'btn',href:'/certificado/'+m.codigo,target:'_blank'},'Ver meu certificado'))}
+  else if(ativo){if(m.estado==='inscrito'&&!ev.passou)acoes.append(h('button',{class:'btn',type:'button',onclick:()=>fazer({acao:'confirmar',id:ev.id},'Presença confirmada')},'Confirmar presença'));
+    if(!ev.passou){acoes.append(nomeIn,h('button',{class:'btn sec',type:'button',onclick:()=>fazer({acao:'inscrever',id:ev.id,nome:nomeIn.value},'Nome atualizado')},'Salvar nome'),h('button',{class:'btn sec',type:'button',onclick:()=>{if(confirm('Cancelar sua inscrição?'))fazer({acao:'cancelar',id:ev.id},'Inscrição cancelada')}},'Cancelar inscrição'))}}
+  else if(ev.aberto){acoes.append(nomeIn,h('button',{class:'btn',type:'button',onclick:()=>fazer({acao:'inscrever',id:ev.id,nome:nomeIn.value},'Inscrição feita')},ev.vagasLivres===0?'Entrar na lista de espera':'Inscrever-me'))}
+  else if(!ev.passou)acoes.append(h('span',{class:'sub'},'Inscrições encerradas.'));
+  const selos=[ev.passou?h('span',{class:'pill t'},'encerrado'):'',m&&ativo?h('span',{class:'pill m'},m.presente===true?'Compareceu':m.espera?`Lista de espera (${m.posicao}º)`:m.estado==='confirmado'?'Confirmado':'Inscrito'):'',m&&m.estado==='cancelado'?h('span',{class:'pill t'},'inscrição cancelada'):'',m&&m.presente===false?h('span',{class:'pill t'},'não compareceu'):''];
+  const g=D.gestor?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;border-top:1px dashed #fff2;padding-top:10px'},h('span',{class:'sub',style:'flex:1;min-width:180px'},`Organização: ${ev.inscritos} inscrito(s) · ${ev.presentes||0} compareceram · ${ev.naoCompareceram||0} não vieram`),h('button',{class:'btn sec',type:'button',onclick:()=>modalCheckin(ev)},'Check-in'),h('button',{class:'btn sec',type:'button',onclick:()=>modalEvento(ev)},'Editar')):'';
+  return h('div',{class:'cartao2 ev',style:'margin:12px 0'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('h3',{},ev.titulo),h('div',{},h('span',{class:'pill e'},D.tipos[ev.tipo]||'Evento'),ev.visibilidade==='publico'?h('span',{class:'pill t'},'público'):h('span',{class:'pill t'},'só membros'),...selos)),
+    h('div',{class:'sub'},info,ev.vagas?` · ${ev.inscritos} de ${ev.vagas} vagas`:` · ${ev.inscritos} inscrito(s)`,ev.inscricaoAte?` · inscrições até ${br(ev.inscricaoAte)}`:''),ev.descricao?h('p',{},ev.descricao):'',acoes,g)}
+async function fazer(corpo,ok){try{await api(corpo);aviso(ok);await carregar()}catch(e){aviso(e.message,1)}}
+async function carregar(){
+  const r=await fetch('/api/eventos');if(!r.ok){$('corpo').textContent='Não consegui carregar os eventos. Recarregue a página.';return}
+  D=await r.json();const c=$('corpo');c.textContent='';const topo=$('topo');topo.textContent='';topo.append(h('a',{class:'btn sec',href:'/'},'← Início'));
+  if(D.gestor)topo.append(h('button',{class:'btn',type:'button',onclick:()=>modalEvento(null)},'+ Novo evento'));
+  const certs=D.eventos.filter(e=>e.minha&&e.minha.codigo);
+  if(certs.length)c.append(h('div',{class:'cartao2',style:'margin-bottom:14px'},h('h3',{},'Meus certificados'),...certs.map(e=>h('div',{style:'margin:6px 0'},h('a',{href:'/certificado/'+e.minha.codigo,target:'_blank'},e.titulo),h('span',{class:'sub'},' · '+br(e.data))))));
+  if(!D.usuario)c.append(h('p',{class:'sub'},'Você precisa entrar com o GitHub para se inscrever.'));
+  const prox=D.eventos.filter(e=>!e.passou),pas=D.eventos.filter(e=>e.passou);
+  if(!D.eventos.length)c.append(h('p',{},D.usuario?'Nenhum evento por enquanto.':'Nenhum evento público por enquanto. Entre com o GitHub para ver os eventos da liga.'));
+  if(prox.length)c.append(h('h2',{},'Próximos'),...prox.map(cartao));
+  if(pas.length)c.append(h('h2',{},'Encerrados'),...pas.map(cartao))}
+carregar();
+</script></body></html>

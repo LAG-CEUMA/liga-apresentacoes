@@ -45,7 +45,7 @@ global.fetch = async (url, op = {}) => {
   return resp(404, {});
 };
 const u = require('../lib/util');
-const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem'];
+const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado'];
 const h = (n) => require((ROTAS.includes(n) ? '../lib/rotas/' : '../api/') + n);
 function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {} } = {}) {
   const req = { query, method, body, headers: { host: 'site.test', ...headers } };
@@ -359,6 +359,36 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   r = JSON.parse((await getp({ acao: 'ranking', turma: T }, 'dono')).body); assert(r.ranking.length >= 3 && r.ranking[0].posicao === 1);
   assert.equal((await getp({ acao: 'ranking', turma: T }, 'alu1')).status, 403);
   r = JSON.parse((await getp({ acao: 'minhapontuacao' }, 'alu1')).body); assert(r.turmas[0].top5.length > 0 && r.turmas[0].posicao >= 1 && r.turmas[0].total > 0);
+  // ---------- eventos, inscrição, check-in e certificado ----------
+  const evp = (corpo, user = 'dono') => chamar(h('eventos'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: corpo });
+  const evg = (query, user) => chamar(h('eventos'), { query, user });
+  const FUT = '2999-01-01';
+  assert.equal((await evp({ acao: 'evento', id: 'gamejam-1', titulo: 'Game Jam', tipo: 'gamejam', data: FUT, vagas: 1, visibilidade: 'interno', horas: 8 }, 'alu1')).status, 403); // aluno não cria
+  assert.equal((await evp({ acao: 'evento', id: 'x', titulo: 'ruim' })).status, 400);
+  assert.equal((await evp({ acao: 'evento', id: 'gamejam-1', titulo: 'Game Jam', tipo: 'gamejam', data: FUT, vagas: 1, visibilidade: 'interno', horas: 8 })).status, 200);
+  assert(dadosArq['dados/eventos/GAMEJAM-1/evento.json']);
+  assert.equal(JSON.parse((await evg({}, null)).body).eventos.length, 0); // interno: visitante não vê
+  assert.equal((await evp({ acao: 'inscrever', id: 'GAMEJAM-1' }, 'estranho')).status, 403);
+  assert.equal((await evp({ acao: 'inscrever', id: 'GAMEJAM-1', nome: '  Aluno Um  ' }, 'alu1')).status, 200);
+  assert.equal((await evp({ acao: 'inscrever', id: 'GAMEJAM-1', nome: 'Aluno Dois' }, 'alu2')).status, 200);
+  r = JSON.parse((await evg({}, 'alu2')).body).eventos[0]; assert.equal(r.inscritos, 2); assert.equal(r.minha.espera, true); assert.equal(r.minha.posicao, 2); // 1 vaga: o segundo espera
+  r = JSON.parse((await evg({}, 'alu1')).body).eventos[0]; assert.equal(r.minha.espera, false); assert.equal(r.minha.nome, 'Aluno Um'); assert.equal(r.minha.codigo, null);
+  assert.equal((await evp({ acao: 'confirmar', id: 'GAMEJAM-1' }, 'alu1')).status, 200);
+  assert.equal((await evp({ acao: 'cancelar', id: 'GAMEJAM-1' }, 'alu2')).status, 200);
+  assert.equal((await evg({ acao: 'inscritos', id: 'GAMEJAM-1' }, 'alu1')).status, 403);
+  assert.equal(JSON.parse((await evg({ acao: 'inscritos', id: 'GAMEJAM-1' }, 'dono')).body).inscritos.length, 2);
+  assert.equal((await evp({ acao: 'checkin', id: 'GAMEJAM-1', estados: { alu1: true } }, 'alu1')).status, 403);
+  r = JSON.parse((await evp({ acao: 'checkin', id: 'GAMEJAM-1', estados: { alu1: true, visitante1: true } })).body); assert.equal(r.alterados, 2); // visitante sem inscrição entra como presente
+  r = JSON.parse((await evg({}, 'alu1')).body).eventos[0]; assert(r.minha.codigo && r.minha.presente === true);
+  const cod = r.minha.codigo; const C = require('../lib/certificado');
+  assert.equal(C.validar(cod).usuario, 'alu1'); assert.equal(C.validar(cod.slice(0, -1) + (cod.endsWith('0') ? '1' : '0')), null); assert.equal(C.validar('GAMEJAM-1.alu2.0000000000'), null);
+  r = await chamar(h('certificado'), { query: { c: cod } }); assert.equal(r.status, 200); assert(r.body.includes('Aluno Um') && r.body.includes('Game Jam') && r.body.includes(cod));
+  assert.equal((await chamar(h('certificado'), { query: { c: 'GAMEJAM-1.alu2.' + C.codigo('GAMEJAM-1', 'alu2').split('.')[2] } })).status, 404); // cancelado e sem comparecimento: não emite
+  assert.equal((await chamar(h('certificado'), { query: { c: 'lixo' } })).status, 404);
+  assert.equal((await evp({ acao: 'evento', id: 'passado', titulo: 'Velho', data: '2020-01-01', visibilidade: 'publico' })).status, 200);
+  assert.equal((await evp({ acao: 'inscrever', id: 'PASSADO' }, 'alu1')).status, 400); // inscrições encerradas
+  assert.equal(JSON.parse((await evg({}, null)).body).eventos.length, 1); // público aparece para visitante
+  assert(C.preencher('{{nome}}', { nome: '<b>x</b>' }) === '&lt;b&gt;x&lt;/b&gt;'); // sem injeção de HTML no certificado
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)
