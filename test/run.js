@@ -306,6 +306,21 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'promover', de: '2026', para: '2026.2-N1', usuarios: alunos26.slice(0, 1).concat(['intruso']) }, {}, 'sec')).status, 200);
   assert.deepEqual(cfg.turmas['2026.2-N1'].alunos, alunos26.slice(0, 1)); assert.deepEqual(cfg.turmas['2026'].alunos, alunos26); // copia, origem intacta
   assert.equal((await post({ acao: 'promover', de: '2026', para: '2026.2-N1', usuarios: [] }, {}, 'sec')).status, 400);
+  // ---------- código em maiúsculas, renomear, excluir e validade do acesso ----------
+  assert.equal((await post({ acao: 'turma', id: 'novo-x', nome: 'Teste', inicio: '2026-12-01', fim: '2026-11-01' }, {}, 'sec')).status, 400); // fim antes do início
+  assert.equal((await post({ acao: 'turma', id: 'novo-x', nome: 'Teste', inicio: '2026-11-01', fim: '2026-12-01' }, {}, 'sec')).status, 200); assert(cfg.turmas['NOVO-X'] && !cfg.turmas['novo-x']);
+  assert.equal((await post({ acao: 'turma', id: 'NOVO-X', inicio: '2026-11-03' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['NOVO-X'].fim, '2026-12-01'); // datas editáveis depois
+  assert.equal((await post({ acao: 'renomear_turma', de: 'NOVO-X', para: '2026.2-n0' }, {}, 'sec')).status, 200); assert(cfg.turmas['2026.2-N0'] && !cfg.turmas['NOVO-X']);
+  assert.equal((await post({ acao: 'renomear_turma', de: '2026.2-N0', para: '2026' }, {}, 'sec')).status, 400); // já existe
+  assert.equal((await post({ acao: 'renomear_turma', de: '2026', para: 'OUTRA' }, {}, 'sec')).status, 400); // tem chamadas salvas
+  assert.equal((await post({ acao: 'excluir_turma', id: '2026' }, {}, 'sec')).status, 400); // tem alunos
+  assert.equal((await post({ acao: 'excluir_turma', id: '2026.2-N0' }, {}, 'sec')).status, 200); assert(!cfg.turmas['2026.2-N0']);
+  assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'arquivada' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, u.maisUmAno()); // arquivar = 1 ano
+  assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'andamento' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, '');
+  {
+    const c = u.normalizar({ alunos: ['a', 'b'], aulas: { 'n0/aula-01': 'membros' }, turmas: { X: { status: 'arquivada', nivel: 'n0', acessoApos: true, acessoAte: '2020-01-01', alunos: ['a'] }, Y: { status: 'arquivada', nivel: 'n0', acessoApos: true, acessoAte: '2999-01-01', alunos: ['b'] } } });
+    assert(!u.pode(c, 'a', 'n0/aula-01', false) && u.pode(c, 'b', 'n0/aula-01', false)); // prazo vencido corta; no prazo mantém
+  }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)

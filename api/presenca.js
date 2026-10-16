@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
     const titulos = Object.fromEntries(aulas.map((a) => [a.chave, a.titulo]));
     const podeChamar = (chave) => geral || (u.papel(cfg, usuario) === 'monitor' && cfg.monitores[usuario].aulas.includes(chave));
     const minhas = aulas.filter((a) => podeChamar(a.chave));
-    const q = req.query || {};
+    const q = { ...(req.query || {}) }; if (q.turma) q.turma = String(q.turma).toUpperCase();
     const turmaMon = (turma) => { const m = cfg.monitores[usuario]; return geral || !m || !m.turmas.length || m.turmas.includes(turma); };
     const alunosDe = (turma) => (cfg.turmas[turma] ? cfg.turmas[turma].alunos : cfg.alunos);
     const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos }]));
@@ -53,6 +53,7 @@ module.exports = async (req, res) => {
     if (!u.origemOk(req) || !String(req.headers['content-type'] || '').includes('application/json')) return u.json(res, 403, { erro: 'Requisição recusada.' });
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
+    if (b.turma) b.turma = String(b.turma).toUpperCase();
     if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (!validaSessao(b.turma, b.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida (ou sem permissão para esta aula).' });
     const alunos = new Set(alunosDe(b.turma));

@@ -1,6 +1,6 @@
 'use strict';
 // Painel: nível de cada aula, listas, monitores e equipe. Cada ação exige a permissão certa; só owners mexem na lista de owners e na equipe.
-const u = require('../lib/util');
+const u = require('../lib/util'); const d = require('../lib/dados');
 const nomeGh = (x) => String(x).trim().replace(/^https?:\/\/github\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, '').toLowerCase();
 const ler = (l) => (Array.isArray(l) ? l : []).map((x) => String(x).trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
 module.exports = async (req, res) => {
@@ -143,15 +143,42 @@ module.exports = async (req, res) => {
       msg = `Portal: ${usuario} removeu o cargo ${b.id}`;
     } else if (b.acao === 'turma') {
       if (!perm.includes('pessoas')) return nao();
-      const id = String(b.id || '').trim();
-      if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código da turma: até 20 letras, números, ponto ou traço (ex.: 2027.1).' });
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código da turma: até 20 letras, números, ponto ou traço, sem espaço (ex.: 2026.2-N0).' });
       const atual = novo.turmas[id] || { alunos: [] };
-      novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status: ['andamento', 'planejada', 'arquivada'].includes(b.status) ? b.status : (atual.status || 'planejada'),
-        inicio: /^\d{4}-\d{2}-\d{2}$/.test(String(b.inicio || '')) ? b.inicio : (atual.inicio || ''),
-        fim: b.fim === undefined ? (atual.fim || '') : (/^\d{4}-\d{2}-\d{2}$/.test(String(b.fim || '')) ? b.fim : ''),
+      const data = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? v : '');
+      const inicio = b.inicio === undefined ? (atual.inicio || '') : data(b.inicio), fim = b.fim === undefined ? (atual.fim || '') : data(b.fim);
+      if (inicio && fim && fim < inicio) return u.json(res, 400, { erro: 'O fim previsto não pode ser antes do início.' });
+      const status = ['andamento', 'planejada', 'arquivada'].includes(b.status) ? b.status : (atual.status || 'planejada');
+      let acessoAte = b.acessoAte === undefined ? (atual.acessoAte || '') : data(b.acessoAte);
+      if (status !== 'arquivada') acessoAte = '';
+      else if (!acessoAte) acessoAte = u.maisUmAno(); // arquivou: material continua por 1 ano (editável)
+      novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status, inicio, fim,
         nivel: b.nivel === undefined ? (atual.nivel || '') : (dirs.has(b.nivel) ? b.nivel : ''),
-        acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, alunos: atual.alunos };
-      msg = `Portal: ${usuario} salvou a turma ${id} (${novo.turmas[id].status})`;
+        acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, acessoAte, alunos: atual.alunos };
+      msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
+    } else if (b.acao === 'renomear_turma') {
+      // Trocar o código é seguro só se ainda não há presença gravada (os arquivos de presença usam o código).
+      if (!perm.includes('pessoas')) return nao();
+      const de = String(b.de || '').trim().toUpperCase(), para = String(b.para || '').trim().toUpperCase();
+      if (!novo.turmas[de] || !/^[A-Za-z0-9._-]{1,20}$/.test(para)) return u.json(res, 400, { erro: 'Código inválido (até 20 letras, números, ponto ou traço, sem espaço).' });
+      if (para === de) return u.json(res, 200, { ok: true });
+      if (novo.turmas[para]) return u.json(res, 400, { erro: 'Já existe uma turma com esse código.' });
+      if ((await d.listarSessoes()).some((x) => String(x.turma).toUpperCase() === de)) return u.json(res, 400, { erro: 'Esta turma já tem chamadas salvas, então o código não pode mudar (o histórico ficaria órfão). Você pode mudar o nome, o nível e as datas.' });
+      const ordem = Object.entries(novo.turmas).map(([k, v]) => [k === de ? para : k, v]);
+      novo.turmas = Object.fromEntries(ordem);
+      for (const m of Object.values(novo.monitores)) m.turmas = m.turmas.map((x) => (x === de ? para : x));
+      msg = `Portal: ${usuario} renomeou a turma ${de} para ${para}`;
+    } else if (b.acao === 'excluir_turma') {
+      if (!perm.includes('pessoas')) return nao();
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!novo.turmas[id]) return u.json(res, 400, { erro: 'Turma não encontrada.' });
+      if (Object.keys(novo.turmas).length <= 1) return u.json(res, 400, { erro: 'Precisa existir pelo menos uma turma.' });
+      if (novo.turmas[id].alunos.length) return u.json(res, 400, { erro: 'A turma ainda tem alunos. Mova-os ou, se ela já terminou, use Arquivar.' });
+      if ((await d.listarSessoes()).some((x) => String(x.turma).toUpperCase() === id)) return u.json(res, 400, { erro: 'A turma tem chamadas salvas. Use Arquivar para guardar o histórico.' });
+      delete novo.turmas[id];
+      for (const m of Object.values(novo.monitores)) m.turmas = m.turmas.filter((x) => x !== id);
+      msg = `Portal: ${usuario} excluiu a turma ${id} (vazia)`;
     } else if (b.acao === 'promover') {
       // Promover = copiar: os escolhidos entram na turma nova e continuam na de origem (que guarda o histórico e o acesso ao material).
       if (!perm.includes('pessoas')) return nao();
