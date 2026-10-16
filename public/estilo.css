@@ -88,3 +88,9 @@ input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;bo
 .vit-capa{position:relative;min-height:140px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#fff1,#0004);display:grid;place-items:center;color:var(--mut)}
 .vit-capa img{width:100%;height:100%;max-height:260px;object-fit:cover;display:block}.vit-clicavel .btn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .vit-aviso{color:var(--mut);font-size:12px}
+
+.cols{display:grid;gap:14px;align-items:start;margin:0 0 14px}.cols>*{min-width:0;margin-bottom:0}
+.cols.c1{grid-template-columns:minmax(0,1fr)}.cols.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.cols.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cols.vit.c1>.vit-card{max-width:720px}
+.cols.c2>.item,.cols.c3>.item{border:1px solid #fff2;border-radius:12px;padding:12px 14px}
+@media(max-width:800px){.cols.c2,.cols.c3{grid-template-columns:minmax(0,1fr)}}

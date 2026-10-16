@@ -15,6 +15,7 @@ module.exports = async (req, res) => {
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     if (b.acao === 'salvar') {
+      const falta = s.faltaPeso(b.site); if (falta) return u.json(res, 400, { erro: falta });
       const resumo = String(b.resumo || 'ajustes').replace(/[^\p{L}\p{N} ,.()\-]/gu, '').slice(0, 80) || 'ajustes';
       await s.gravarSite(b.site, `Portal: ${usuario} atualizou o site (${resumo})`);
       return u.json(res, 200, { ok: true });

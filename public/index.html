@@ -15,6 +15,10 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
+const BL={},PAD=['boasVindas','anuncios','agenda','vitrine','aulas','pontos','presenca'];let ORD={};
+function porPeso(arr,fn,cls){const f=document.createDocumentFragment(),a=arr.slice().sort((x,y)=>(x.peso||0)-(y.peso||0));let i=0;while(i<a.length){let j=i;while(j<a.length&&a[j].peso===a[i].peso)j++;const r=el('div','cols c'+Math.min(j-i,3)+(cls?' '+cls:''));for(let k=i;k<j;k++)r.append(fn(a[k]));f.append(r);i=j}return f}
+function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||99,ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
+  while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
   if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.titulo||d.papel}`));const P=d.permissoes||[];
@@ -22,26 +26,26 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     for(const [ok,t,h] of botoes)if(ok){const a=el('a','btn sec',t);a.href=h;conta.append(a)}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
-  const bv=site.boasVindas||{};
+  ORD=site.ordem||{};const bv=site.boasVindas||{};
   if(bv.titulo||bv.texto){const h=document.getElementById('hero');h.hidden=false;if(bv.titulo)h.append(el('h2','',bv.titulo));if(bv.texto)h.append(el('p','',bv.texto));
-    if(!d.usuario){const a=el('a','btn','Entrar com GitHub');a.href='/api/login';h.append(a)}}
-  const c=document.getElementById('corpo');c.textContent='';
+    if(!d.usuario){const a=el('a','btn','Entrar com GitHub');a.href='/api/login';h.append(a)}BL.boasVindas=h}
+  const c=document.getElementById('corpo');
   // anúncios
   const an=site.anuncios||[];
   if(an.length){const s=secao('Anúncios',an.length+(an.length===1?' aviso':' avisos'));s.id='sec-anuncios';lembrar(s,'anuncios',true);
-    for(const a of an){const i=el('div','item');if(a.fixo)i.append(el('span','pin','FIXADO'));i.append(el('h3','',a.titulo));if(a.texto)i.append(el('p','',a.texto));
-      if(a.link)i.append(link('Saiba mais',a.link));if(a.visivel==='membros'){i.append(document.createTextNode(' '),el('span','badge','membros'))}s.append(i)}c.append(s)}
+    s.append(porPeso(an,a=>{const i=el('div','item');if(a.fixo)i.append(el('span','pin','FIXADO'));i.append(el('h3','',a.titulo));if(a.texto)i.append(el('p','',a.texto));
+      if(a.link)i.append(link('Saiba mais',a.link));if(a.visivel==='membros'){i.append(document.createTextNode(' '),el('span','badge','membros'))}return i}));BL.anuncios=s}
   // agenda
   const ag=site.agenda||[];
   if(ag.length){const s=secao('Agenda',ag.length+(ag.length===1?' evento':' eventos'));s.id='sec-agenda';lembrar(s,'agenda',true);
-    for(const e of ag){const [y,m,dd]=e.data.split('-');const dt=new Date(+y,+m-1,+dd);const i=el('div','item agitem');
+    s.append(porPeso(ag,e=>{const [y,m,dd]=e.data.split('-');const dt=new Date(+y,+m-1,+dd);const i=el('div','item agitem');
       const b=el('div','data',`${dd}/${m}`);b.append(el('small','',DIAS[dt.getDay()]));const t=el('div');t.style.flex='1';
       t.append(el('b','',e.titulo));const q=[e.hora,e.local].filter(Boolean).join(' · ');if(q){t.append(el('br'),el('small','',q))}
-      if(e.link){t.append(el('br'),link('Mais informações',e.link))}i.append(b,t);if(e.visivel==='membros')i.append(el('span','badge','membros'));s.append(i)}c.append(s)}
+      if(e.link){t.append(el('br'),link('Mais informações',e.link))}i.append(b,t);if(e.visivel==='membros')i.append(el('span','badge','membros'));return i}));BL.agenda=s}
   // vitrine (redes e embeds)
   const vt=site.vitrine||[];
   if(vt.length){const s=secao('Vitrine da liga',vt.length+(vt.length===1?' destaque':' destaques'));s.id='sec-vitrine';lembrar(s,'vitrine',true);
-    const g=el('div','vit-grade');for(const v of vt)g.append(LigaVitrine.render(v));s.append(g);c.append(s)}
+    s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
   // aulas por nível
   const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);const niveis=Object.keys(por).sort();
   const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));sa.id='sec-aulas';lembrar(sa,'aulas',true);
@@ -51,14 +55,14 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
       if(a.roteiro){const r=el('a','aula');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','','Roteiro do apresentador (não projetar)'));g.append(r)}}
     sa.append(g)});
   if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));sa.append(p)}
-  c.append(sa);
+  BL.aulas=sa;organizar();
   if(d.usuario)fetch('/api/presenca?acao=minha').then(r=>r.ok?r.json():null).then(m=>{
     if(!m||!m.sessoes.length)return;const ok=m.sessoes.filter(x=>x.status==='presente').length,pts=m.sessoes.reduce((t,x)=>t+x.pontos,0);
     const s=secao('Minha presença',`${ok} de ${m.sessoes.length} aula(s) · ${pts} ponto(s)`);s.id='sec-presenca';lembrar(s,'presenca',false);
     const ST={presente:'Presente',ausente:'Falta',justificado:'Justificado','sem-chamada':'Sem chamada'};
     for(const x of m.sessoes){const i=el('div','item');i.append(el('b','',x.titulo),el('br'),el('small','',`${x.data?x.data.split('-').reverse().join('/')+' · ':''}turma ${x.turma} · ${ST[x.status]||x.status} (${x.presencas}/${x.salvas} chamadas)${x.pontos?' · '+x.pontos+' ponto(s) de participação':''}`));
       for(const p of x.participacoes)i.append(el('br'),el('small','','• '+p.tipo+(p.nota?': '+p.nota:'')));s.append(i)}
-    c.insertBefore(s,sa.nextSibling);
+    BL.presenca=s;organizar();
     const at=document.getElementById('atalhos');if(at){const b=el('button','btn sec','Minha presença');b.type='button';b.onclick=()=>{s.open=true;s.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
   }).catch(()=>{});
   if(d.usuario)fetch('/api/presenca?acao=minhapontuacao').then(r=>r.ok?r.json():null).then(m=>{
@@ -68,7 +72,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
       el('small','',`Presença ${t.partes.presenca} · Participação ${t.partes.participacao} · Exercícios ${t.partes.exercicios}${t.partes.penalidades?' · Penalidades −'+t.partes.penalidades:''} = ${t.total}`));
       if(t.top5.length){i.append(el('br'),el('small','','Top 5 da turma:'));for(const x of t.top5){i.append(el('br'),el('small','',`${x.posicao}º @${x.usuario} · ${x.total} pts`+(x.usuario===d.usuario?' (você)':'')))}}
       s.append(i)}
-    const ref=document.getElementById('sec-presenca')||sa.nextSibling;c.insertBefore(s,ref);
+    BL.pontos=s;organizar();
   }).catch(()=>{});
   // atalhos fixos no topo: Aulas sempre em primeiro e em destaque
   const at=document.getElementById('atalhos');at.hidden=false;
