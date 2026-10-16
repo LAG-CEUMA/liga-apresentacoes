@@ -152,9 +152,27 @@ function moveArrasto(e) {
   if (!arr.mov && Math.hypot(dx, dy) * K < 4) return;
   if (!arr.mov) { arr.mov = true; const el = arr.el; if (getComputedStyle(el).position !== 'absolute') { el.style.position = 'absolute'; el.style.width = el.offsetWidth + 'px'; } el.style.right = ''; el.style.bottom = ''; }
   let nx = arr.l0 + dx, ny = arr.t0 + dy; if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) ny = arr.t0; else nx = arr.l0; }
+  if (e.altKey) limpaGuias(); else { const g = imanta(arr.el, nx, ny, e.shiftKey ? arr : null); nx = g.x; ny = g.y; desenhaGuias(g.vx, g.hy); }
   arr.el.style.left = Math.round(nx) + 'px'; arr.el.style.top = Math.round(ny) + 'px'; caixaSel(); painelPos();
 }
-function fimArrasto() { window.removeEventListener('pointermove', moveArrasto); if (arr && arr.mov) commit(); arr = null; }
+// guias de alinhamento: o bloco "gruda" (8 px) nas bordas/centro do slide, na margem de 128 px e nas bordas/centro dos outros blocos. Alt = sem grude.
+function limpaGuias() { $('palco').querySelectorAll('.gd').forEach((x) => x.remove()); }
+function desenhaGuias(vx, hy) {
+  limpaGuias(); const P = $('palco');
+  for (const x of vx) P.append(h('div', { class: 'gd', style: `left:${x - 1}px;top:0;width:2px;height:1080px` }));
+  for (const y of hy) P.append(h('div', { class: 'gd', style: `top:${y - 1}px;left:0;height:2px;width:1920px` }));
+}
+function imanta(el, nx, ny, trava) {
+  const w = el.offsetWidth, hh = el.offsetHeight, TOL = 8, xs = [0, 128, 960, 1792, 1920], ys = [0, 128, 540, 952, 1080];
+  for (const o of slideEl().children) { if (o === el || o.offsetWidth === undefined) continue; xs.push(o.offsetLeft, o.offsetLeft + o.offsetWidth / 2, o.offsetLeft + o.offsetWidth); ys.push(o.offsetTop, o.offsetTop + o.offsetHeight / 2, o.offsetTop + o.offsetHeight); }
+  const acha = (ini, tam, alvos) => { let m = null; for (const a of [0, tam / 2, tam]) for (const t of alvos) { const d = t - (ini + a); if (Math.abs(d) <= TOL && (!m || Math.abs(d) < Math.abs(m.d))) m = { d, t }; } return m; };
+  const mx = trava && trava.l0 === nx ? null : acha(nx, w, xs), my = trava && trava.t0 === ny ? null : acha(ny, hh, ys);
+  if (mx) nx += mx.d; if (my) ny += my.d;
+  const vx = [], hy = []; for (const a of [0, w / 2, w]) for (const t of xs) if (Math.abs(t - (nx + a)) < 0.5 && !vx.includes(t)) vx.push(t);
+  for (const a of [0, hh / 2, hh]) for (const t of ys) if (Math.abs(t - (ny + a)) < 0.5 && !hy.includes(t)) hy.push(t);
+  return { x: nx, y: ny, vx, hy };
+}
+function fimArrasto() { limpaGuias(); window.removeEventListener('pointermove', moveArrasto); if (arr && arr.mov) commit(); arr = null; }
 function iniciaRedim(e) {
   e.stopPropagation(); e.preventDefault(); if (!sel) return; const p = pos(e), el = sel, w0 = el.offsetWidth, h0 = el.offsetHeight, temH = !!el.style.height;
   const mv = (ev) => { const q = pos(ev); el.style.width = Math.max(20, Math.round(w0 + q.x - p.x)) + 'px'; if (temH) el.style.height = Math.max(20, Math.round(h0 + q.y - p.y)) + 'px'; caixaSel(); painelPos(); };
@@ -206,7 +224,7 @@ function painel() {
     P.append(h('div', { class: 'pg' }, h('h4', {}, 'Bloco selecionado'), h('div', { class: 'sub', style: 'margin-bottom:6px' }, rot),
       h('div', { class: 'rw', 'data-pos': '1' }, campoNumPos('X', 'x', (v) => aplica(sel, 'left', v + 'px')), campoNumPos('Y', 'y', (v) => aplica(sel, 'top', v + 'px')), campoNumPos('Largura', 'w', (v) => aplica(sel, 'width', v + 'px')), sel.style.height ? campoNumPos('Altura', 'h', (v) => aplica(sel, 'height', v + 'px')) : null),
       h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px' }, h('button', { class: 'b', onclick: () => camada(true) }, 'Para frente'), h('button', { class: 'b', onclick: () => camada(false) }, 'Para trás'), h('button', { class: 'b', onclick: duplicarSel }, 'Duplicar'), h('button', { class: 'b perigo', onclick: excluirSel }, 'Excluir')),
-      h('p', { class: 'sub' }, 'Dica: arraste o bloco com o mouse, setas movem 1 px (Shift: 10 px), duplo clique edita o texto.')));
+      h('p', { class: 'sub' }, 'Dica: arraste o bloco com o mouse (ele gruda nas guias; segure Alt para não grudar), setas movem 1 px (Shift: 10 px), duplo clique edita o texto.')));
     const m = /^(\w+) (\d+)$/.exec(sel.getAttribute('data-build-in') || '');
     const ef = h('select', {}, h('option', { value: '' }, 'Já aparece com o slide'), h('option', { value: 'rise' }, 'Sobe ao clicar'), h('option', { value: 'pop' }, 'Surge ao clicar'), h('option', { value: 'fade' }, 'Aparece ao clicar')); ef.value = m ? m[1] : '';
     const nc = h('input', { type: 'number', min: 1, max: 20, value: m ? m[2] : 1 });
