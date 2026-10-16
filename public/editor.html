@@ -1,0 +1,44 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Editor de slides</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css">
+<style>
+body{overflow:auto}
+.sub{color:var(--mut);font-size:13px}
+input[type=text],input[type=number],textarea,select{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:7px 9px;font:inherit;font-size:14px;width:100%}
+input[type=color]{width:38px;height:32px;padding:0;border:1px solid #fff3;border-radius:8px;background:#12141c;cursor:pointer}
+button{font:inherit}.b{background:transparent;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}.b:hover{border-color:var(--ouro)}.b.on{background:var(--ouro);color:#12141c;border-color:var(--ouro);font-weight:700}
+.b.pri{background:var(--ouro);color:#12141c;border-color:var(--ouro);font-weight:700}.b.perigo:hover{border-color:var(--err);color:#ff9a8a}.b:disabled{opacity:.4;cursor:default}
+#lista-pg{max-width:900px;margin:0 auto;padding:28px 20px}
+.nv{background:var(--card);border:1px solid #fff2;border-radius:16px;padding:16px 18px;margin:14px 0}.nv h3{margin:0 0 8px}
+.al{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #fff1}.al span.t{flex:1}
+#ed{display:none;height:100vh;grid-template-rows:auto 1fr}#ed.on{display:grid}
+#barra{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #fff2;background:#171a24;flex-wrap:wrap}
+#barra input#tit{width:280px;font-weight:700}#est{font-size:13px;color:var(--mut)}#est.sujo{color:var(--ouro)}#est.ok{color:var(--ver)}#est.err{color:#ff9a8a}
+#cols{display:grid;grid-template-columns:210px 1fr 310px;min-height:0}
+#mini{overflow:auto;border-right:1px solid #fff2;padding:10px;background:#14161f}#props{overflow:auto;border-left:1px solid #fff2;padding:12px;background:#14161f}
+.sl{position:relative;margin:0 0 10px;cursor:pointer;border:2px solid transparent;border-radius:8px;padding:2px}.sl.on{border-color:var(--ouro)}.sl .n{position:absolute;left:6px;top:4px;font-size:11px;background:#000a;border-radius:6px;padding:1px 6px;z-index:2}
+.sl .mini{width:190px;height:107px;overflow:hidden;border-radius:6px;position:relative;background:#000;pointer-events:none}.sl .esc{width:1920px;height:1080px;transform:scale(.099);transform-origin:0 0}
+.sl .ac{display:none;gap:3px;margin-top:4px}.sl.on .ac{display:flex}.sl .ac .b{padding:2px 7px;font-size:12px}
+#centro{display:flex;flex-direction:column;min-width:0;min-height:0}#ferr{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid #fff1;align-items:center}
+#area{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;padding:14px;background:#0c0d12}
+#caixa{position:relative}#palco{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+#slide{position:relative;user-select:none}#slide [contenteditable=true]{user-select:text;cursor:text;outline:none}
+#sel{position:absolute;border:3px solid var(--ver);pointer-events:none;box-sizing:border-box;z-index:50}#sel.edit{border-color:var(--ouro);border-style:dashed}
+#sel .hd{position:absolute;right:-12px;bottom:-12px;width:22px;height:22px;background:var(--ver);border-radius:50%;pointer-events:auto;cursor:nwse-resize;border:3px solid #12141c}
+.pg{margin:0 0 14px;padding:0 0 12px;border-bottom:1px solid #fff1}.pg h4{margin:0 0 8px;font-size:13px;letter-spacing:1px;color:var(--ouro);text-transform:uppercase}
+.rw{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0}.rw label{font-size:12px;color:var(--mut);display:block}.cr{display:flex;gap:6px;align-items:center}
+.pal{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.pal i{width:20px;height:20px;border-radius:5px;border:1px solid #fff4;cursor:pointer;display:block}
+.modal{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:100}.modal>div{background:var(--card);border:1px solid #fff3;border-radius:16px;padding:20px 22px;max-width:640px;width:calc(100% - 32px);max-height:88vh;overflow:auto}
+.mod{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin:12px 0}.mod button{text-align:left;background:#12141c;border:1px solid #fff2;border-radius:12px;color:var(--txt);padding:12px;cursor:pointer}.mod button:hover{border-color:var(--ouro)}.mod b{display:block;margin-bottom:4px}.mod span{font-size:12px;color:var(--mut)}
+#msg{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:var(--card);border:1px solid var(--ver);border-radius:10px;padding:10px 16px;z-index:200}#msg.erro{border-color:var(--err)}
+@media(max-width:900px){#ed.on{display:none}#peq{display:block!important}}#peq{display:none;padding:30px 20px}
+</style></head>
+<body>
+<div id="peq"><h2>Editor de slides</h2><p>O editor funciona em computador (tela maior que 900 px). Abra este endereço no notebook.</p></div>
+<div id="lista-pg" hidden></div>
+<div id="ed">
+  <div id="barra"></div>
+  <div id="cols"><aside id="mini"></aside><section id="centro"><div id="ferr"></div><div id="area"><div id="caixa"><div id="palco"><div id="slide"></div><div id="sel" hidden><div class="hd" title="Arraste para mudar a largura"></div></div></div></div></div></section><aside id="props"></aside></div>
+</div>
+<div id="msg" hidden></div>
+<script src="/editor-modelos.js"></script><script src="/editor.js"></script>
+</body></html>

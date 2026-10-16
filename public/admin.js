@@ -7,9 +7,9 @@ function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
 function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
-const PERM_INFO={site:['Site','personalizar: cores, logo, fundos, avisos, agenda e redes'],aulas:['Aulas','mudar o nível de cada aula'],pessoas:['Pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Tarefas','ver as tarefas de casa'],presenca:['Presença','chamada, participações e histórico']};
-const PODE={site:'personalizar o site e publicar avisos, agenda e redes',aulas:'mudar o nível de cada aula',pessoas:'cadastrar alunos e monitores',tarefas:'ver as tarefas de casa',presenca:'fazer a chamada de todas as aulas e ver o histórico'};
-const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'cadastrar pessoas',tarefas:'ver as tarefas de casa',presenca:'fazer chamada (fora das aulas de monitor)'};
+const PERM_INFO={site:['Site','personalizar: cores, logo, fundos, avisos, agenda e redes'],aulas:['Aulas','mudar o nível de cada aula'],pessoas:['Pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Tarefas','ver as tarefas de casa'],presenca:['Presença','chamada, participações e histórico'],slides:['Slides','editar os slides dos níveis a que a pessoa está vinculada pela turma (/editor)']};
+const PODE={site:'personalizar o site e publicar avisos, agenda e redes',aulas:'mudar o nível de cada aula',pessoas:'cadastrar alunos e monitores',tarefas:'ver as tarefas de casa',presenca:'fazer a chamada de todas as aulas e ver o histórico',slides:'editar os slides dos níveis a que está vinculada pela turma'};
+const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'cadastrar pessoas',tarefas:'ver as tarefas de casa',presenca:'fazer chamada (fora das aulas de monitor)',slides:'editar slides'};
 let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='';
 
 // ---------- cálculo por pessoa ----------
@@ -22,7 +22,7 @@ function info(n){
   let perms=new Set();
   if(owner)Object.keys(PERM_INFO).forEach(p=>perms.add(p));
   else if(eq){(eq.permissoes||[]).forEach(p=>{perms.add(p);(origem[p]=origem[p]||[]).push('extra')});for(const c of cargos)for(const p of ((D.cargos||{})[c]||{}).permissoes||[]){perms.add(p);(origem[p]=origem[p]||[]).push(D.cargos[c].nome)}}
-  return {n,owner,fixo,aluno,mon,eq,turmas,cargos,extras,perms:[...perms],origem}
+  return {n,owner,fixo,aluno,mon,eq,turmas,cargos,extras,perms:[...perms],origem,editor:(D.editores||{})[n]||[]}
 }
 function emPalavras(i,aulasMap){
   const pode=[],nao=[];
@@ -30,6 +30,7 @@ function emPalavras(i,aulasMap){
   for(const p of Object.keys(PODE)){if(i.perms.includes(p))pode.push(PODE[p]);else if(!(p==='presenca'&&i.mon))nao.push(NAO[p])}
   if(i.mon){const a=i.mon.aulas.length,r=i.mon.roteiros.length;
     pode.push(a||r?`abrir slides de ${a} aula(s) e roteiro de ${r}; fazer a chamada dessas aulas${i.mon.turmas.length?' nas turmas '+i.mon.turmas.join(', '):' em todas as turmas'}`:'nada além do que um aluno vê (nenhuma aula liberada ainda)')}
+  for(const v of i.editor||[])pode.push(`editar os slides de ${v.includes('/')?'a aula '+v:'todo o '+v} (editor)`);
   for(const x of (i.extras||[]).filter(x=>x.ate>=(D.hoje||'')))pode.push(`ver os slides de ${nomeNivel(x.nivel)} até ${x.ate.split('-').reverse().join('/')} (acesso extra)`);
   if(i.aluno||i.mon||i.eq)pode.push('ver as aulas de nível Membros'+(i.aluno?' e a própria presença':''));
   if(!i.perms.includes('aulas')&&!i.perms.includes('pessoas'))nao.unshift('abrir o Painel');
@@ -72,11 +73,11 @@ function abrirGaveta(nome){
   const i0=nome?info(nome):null;const dono=D.dono;
   const E={usuario:nome,owner:i0?i0.owner:false,aluno:i0?i0.aluno:true,turmas:new Set(i0?i0.turmas:[Object.keys(D.turmas).find(t=>D.turmas[t].status==='andamento')||Object.keys(D.turmas)[0]]),
     monitor:!!(i0&&i0.mon),mturmas:new Set(i0&&i0.mon?i0.mon.turmas:[]),aulas:new Set(i0&&i0.mon?i0.mon.aulas:[]),roteiros:new Set(i0&&i0.mon?i0.mon.roteiros:[]),
-    acessos:(i0?i0.extras:[]).map(x=>({...x})),equipe:!!(i0&&i0.eq),cargos:new Set(i0?i0.cargos:[]),extras:new Set(i0&&i0.eq?i0.eq.permissoes:[])};
+    acessos:(i0?i0.extras:[]).map(x=>({...x})),equipe:!!(i0&&i0.eq),cargos:new Set(i0?i0.cargos:[]),extras:new Set(i0&&i0.eq?i0.eq.permissoes:[]),editor:new Set((D.editores||{})[nome]||[])};
   if(!nome){E.aluno=true}
   const {fechar,box}=camada([],'gaveta');
   const rascunhoInfo=()=>info2(E);
-  function info2(e){const eq=e.equipe?{permissoes:[...e.extras],cargos:[...e.cargos]}:null;const x={n:e.usuario,owner:e.owner,fixo:i0&&i0.fixo,aluno:e.aluno,extras:e.acessos,mon:e.monitor?{aulas:[...e.aulas],roteiros:[...e.roteiros],turmas:[...e.mturmas]}:null,eq,turmas:[...e.turmas],cargos:eq?eq.cargos:[],perms:[],origem:{}};
+  function info2(e){const eq=e.equipe?{permissoes:[...e.extras],cargos:[...e.cargos]}:null;const x={n:e.usuario,owner:e.owner,fixo:i0&&i0.fixo,aluno:e.aluno,extras:e.acessos,mon:e.monitor?{aulas:[...e.aulas],roteiros:[...e.roteiros],turmas:[...e.mturmas]}:null,eq,turmas:[...e.turmas],cargos:eq?eq.cargos:[],perms:[],origem:{},editor:[...e.editor]};
     if(e.owner)Object.keys(PERM_INFO).forEach(p=>x.perms.push(p));else if(eq){const s=new Set(eq.permissoes);eq.permissoes.forEach(p=>(x.origem[p]=x.origem[p]||[]).push('extra'));for(const c of eq.cargos)for(const p of (D.cargos[c]||{}).permissoes||[]){s.add(p);(x.origem[p]=x.origem[p]||[]).push(D.cargos[c].nome)}x.perms=[...s]}return x}
   const chip=(txt,on,fn,cls)=>h('button',{type:'button',class:'chipx '+(cls||'')+(on?' on':''),onclick:fn},txt);
   const ck=(txt,on,fn,dis,extra)=>h('label',{class:'ck',style:'display:inline-flex;margin-right:16px'},h('input',{type:'checkbox',checked:on,disabled:!!dis,onchange:e=>fn(e.target.checked)}),txt,extra||'');
@@ -110,6 +111,12 @@ function abrirGaveta(nome){
       const det=h('details',{style:'margin-top:10px'},h('summary',{style:'cursor:pointer;font-size:14px'},'Permissões extras só para esta pessoa (opcional)'));
       for(const p of Object.keys(PERM_INFO))det.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:E.extras.has(p),onchange:e=>{e.target.checked?E.extras.add(p):E.extras.delete(p);desenhar()}}),h('b',{},PERM_INFO[p][0])));
       det.open=E.extras.size>0;bl.append(det);box.append(bl)}
+    if(dono){const bl=h('div',{class:'sec'},h('h3',{},'Editor de slides (escopo)'),h('div',{class:'sub'},'Libera o editor (/editor) em um nível inteiro ou numa aula, mesmo sem cargo. Quem tem a permissão "Slides" por cargo edita os níveis a que está vinculado pela turma.'));
+      const rot=(v)=>{const [d,i]=v.split('/');const a=(D.aulas||[]).find(x=>x.dir===d&&(!i||x.id===i));const n=((D.aulas||[]).find(x=>x.dir===d)||{}).nivel||d;return i?`${n} · ${a?a.titulo:i}`:`${n} (todas as aulas)`};
+      [...E.editor].forEach(v=>bl.append(h('div',{class:'permlinha'},h('span',{class:'on'},'✓'),h('span',{},rot(v)),h('button',{class:'chipx',type:'button',onclick:()=>{E.editor.delete(v);desenhar()}},'Remover'))));
+      const ops=[];for(const [d,n] of niveisLista()){ops.push([d,n+' (todas as aulas)']);for(const a of (D.aulas||[]).filter(x=>x.dir===d))ops.push([d+'/'+a.id,n+' · '+a.titulo])}
+      const sl=h('select',{},...ops.filter(o=>!E.editor.has(o[0])).map(o=>h('option',{value:o[0]},o[1])));
+      bl.append(sl.options.length?h('div',{style:'display:flex;gap:6px;margin-top:8px'},sl,h('button',{class:'chipx',type:'button',onclick:()=>{E.editor.add(sl.value);desenhar()}},'+ Liberar')):h('p',{class:'sub'},'Nada mais a liberar.'));box.append(bl)}
     {const bl=h('div',{class:'sec'},h('h3',{},'Acesso extra ao material'),h('div',{class:'sub'},'Libera os slides de um nível para esta pessoa por um tempo (ex.: ex-aluno que pediu para rever). Não inclui roteiro nem chamada.'));
       E.acessos.forEach((a,k)=>{const nv=h('select',{onchange:e=>{a.nivel=e.target.value}},...niveisLista().map(([d,t])=>h('option',{value:d},t)));nv.value=a.nivel;
         bl.append(h('div',{style:'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin:8px 0;align-items:center'},nv,h('input',{type:'date',value:a.ate,onchange:e=>{a.ate=e.target.value}}),h('button',{class:'chipx',type:'button',onclick:()=>{E.acessos.splice(k,1);desenhar()}},'Remover'),
@@ -120,7 +127,7 @@ function abrirGaveta(nome){
     const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{
       if(!/^[a-z0-9][a-z0-9-]{0,38}$/i.test(E.usuario)){aviso('Informe um usuário do GitHub válido.',1);return}
       const c={acao:'pessoa',usuario:E.usuario,acessos:E.acessos,aluno:E.aluno,turmas:[...E.turmas],monitor:E.monitor,aulas:[...E.aulas],roteiros:[...E.roteiros],monitor_turmas:[...E.mturmas]};
-      if(dono){c.owner=E.owner;c.equipe=E.equipe;c.cargos=[...E.cargos];c.extras=[...E.extras]}
+      if(dono){c.owner=E.owner;c.equipe=E.equipe;c.cargos=[...E.cargos];c.extras=[...E.extras];c.editor=[...E.editor]}
       try{await enviar(c);aviso('Ficha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar');
     const rm=nome?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Remover @${nome} de alunos, monitores${dono?' e equipe':''}? (Owners saem pela ficha, desmarcando Owner.)`))return;try{await enviar({acao:'remover_pessoa',usuario:nome});aviso('Removido');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Remover pessoa'):'';
     box.append(h('div',{class:'rodape-g'},h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:()=>verComo(rascunhoInfo())},'Ver como '+(E.usuario?'@'+E.usuario:'esta pessoa')),rm),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:fechar},'Cancelar'),salvar)));

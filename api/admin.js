@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
-      if (dono) { v.equipe = cfg.equipe; }
+      if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
     }
@@ -101,6 +101,10 @@ module.exports = async (req, res) => {
         if (b.equipe) novo.equipe[nome] = { titulo: '', permissoes: (Array.isArray(b.extras) ? b.extras : []).filter((x) => u.PERMISSOES.includes(x)), cargos: (Array.isArray(b.cargos) ? b.cargos : []).map(String).filter((c) => novo.cargos[c]) };
         else delete novo.equipe[nome];
       }
+      if (dono && Array.isArray(b.editor)) {
+        const itens = [...new Set(b.editor.map(String).filter((x) => /^nivel-\d{2}-[a-z0-9-]{1,40}(\/aula-\d{2})?$/.test(x)))].slice(0, 60);
+        if (itens.length) novo.editores[nome] = itens; else delete novo.editores[nome];
+      }
       if (dono && b.owner !== undefined) {
         if (b.owner) { if (!novo.owners.includes(nome)) novo.owners.push(nome); }
         else {
@@ -129,7 +133,7 @@ module.exports = async (req, res) => {
       if (!nome || novo.owners.includes(nome) || u.admins().includes(nome)) return u.json(res, 400, { erro: 'Esta pessoa não pode ser removida por aqui (owner).' });
       novo.alunos = novo.alunos.filter((a) => a !== nome);
       for (const t of Object.values(novo.turmas)) t.alunos = t.alunos.filter((a) => a !== nome);
-      delete novo.monitores[nome]; delete novo.acessos[nome];
+      delete novo.monitores[nome]; delete novo.acessos[nome]; delete novo.editores[nome];
       if (dono) delete novo.equipe[nome];
       msg = `Portal: ${usuario} removeu ${nome} das listas`;
     } else if (b.acao === 'cargo') {

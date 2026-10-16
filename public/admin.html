@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
 <style>.sub{color:var(--mut);font-size:13px}input[type=text],input[type=date]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}main{max-width:980px}</style></head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Painel</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="/presenca">Presença</a></div></div>
+<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Painel</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="/presenca">Presença</a><a class="btn sec" href="/editor">Editor de slides</a></div></div>
 <div class="tabs" id="abas"></div>
 <section id="p-pessoas" hidden></section>
 <section id="p-cargos" hidden></section>
@@ -17,6 +17,17 @@
 <li><b>Quem é quem:</b> o site identifica a pessoa pelo <b>login do GitHub</b> (só o nome de usuário; nenhuma permissão sobre a conta dela é pedida).</li>
 <li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
 </ol></details>
+<details><summary>Editor de slides: criar e editar aulas sem código</summary>
+<ol>
+<li>Abra <b>/editor</b> (botão "Editor de slides" no Painel e na tela inicial). Cada nível lista suas aulas; <b>Editar slides</b> abre a aula, <b>+ Nova aula</b> cria outra (do zero ou copiando uma existente).</li>
+<li><b>No slide:</b> clique para selecionar, arraste para mover, <b>duplo clique</b> para digitar. O painel da direita muda cor, tamanho, fundo, animação e posição. <b>Ctrl+Z</b> desfaz, <b>Ctrl+S</b> salva.</li>
+<li><b>Roteiro do apresentador</b> é o campo "Roteiro" de cada slide. Ele vai só para o arquivo de roteiro e nunca aparece no slide projetado.</li>
+<li><b>Quem pode editar:</b> owners; quem tem o escopo dado na ficha da pessoa (<i>Editor de slides (escopo)</i>: um nível inteiro ou uma aula); e quem tem a permissão <b>Slides</b> num cargo, nos níveis a que está vinculado pela turma.</li>
+<li>Aula nova começa como <b>Só owners</b>. Para liberar aos alunos: Painel → Níveis das aulas.</li>
+<li>Se duas pessoas editarem a mesma aula, a segunda a salvar recebe um aviso para recarregar (ninguém sobrescreve ninguém sem querer). Versões antigas ficam no histórico do GitHub.</li>
+<li>O portal não apaga arquivos: para remover uma aula inteira, use o GitHub.</li>
+</ol></details>
+
 <details><summary>Ordem da tela inicial (pesos e colunas)</summary>
 <ol>
 <li>Em <b>Personalizar → 10. Ordem dos blocos</b>, cada bloco (Boas-vindas, Anúncios, Agenda, Vitrine, Aulas, Minha pontuação, Minha presença) tem um número de 1 a 99, <b>obrigatório</b>. O menor aparece primeiro.</li>

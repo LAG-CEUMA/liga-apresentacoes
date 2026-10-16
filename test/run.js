@@ -6,7 +6,7 @@ process.env.GH_TOKEN = 'x'; process.env.GITHUB_CLIENT_ID = 'cid'; process.env.GI
 process.env.ADMIN_USERS = 'chefe';
 
 let cfg = { owners: ['dono'], monitores: { mon1: { aulas: [], roteiros: [] }, mon2: { aulas: ['nivel-00-tutorial/aula-03'], roteiros: ['nivel-00-tutorial/aula-01'] } }, alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
-const dadosArq = {}; let dSeq = 0;
+const dadosArq = {}; let dSeq = 0; const shaArq = {};
 let siteJson = null, siteSha = null; const siteCommits = []; const imagens = {};
 let sha = 'sha1'; const commits = [];
 const arquivos = {
@@ -41,7 +41,12 @@ global.fetch = async (url, op = {}) => {
     if (mi) { if (op.method === 'PUT') { imagens[mi[1]] = Buffer.from(JSON.parse(op.body).content, 'base64'); return resp(201, {}); }
       return imagens[mi[1]] ? { status: 200, ok: true, arrayBuffer: async () => imagens[mi[1]] } : resp(404, {}); } }
   const m = /\/contents\/(.+)$/.exec(p);
-  if (m && arquivos[decodeURIComponent(m[1])] !== undefined) return resp(200, arquivos[decodeURIComponent(m[1])]);
+  if (m && op.method === 'PUT' && /^niveis\//.test(decodeURIComponent(m[1]))) { const k = decodeURIComponent(m[1]), b = JSON.parse(op.body);
+    if (arquivos[k] !== undefined && b.sha !== 'sa' + (shaArq[k] || 0)) return resp(409, {}); if (arquivos[k] === undefined && b.sha) return resp(422, {});
+    arquivos[k] = Buffer.from(b.content, 'base64').toString(); shaArq[k] = (shaArq[k] || 0) + 1; return resp(200, { content: { sha: 'sa' + shaArq[k] } }); }
+  if (m && arquivos[decodeURIComponent(m[1])] !== undefined) { const k = decodeURIComponent(m[1]);
+    if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, arquivos[k]);
+    return resp(200, { sha: 'sa' + (shaArq[k] || 0), content: Buffer.from(arquivos[k]).toString('base64') }); }
   return resp(404, {});
 };
 const u = require('../lib/util');
@@ -215,7 +220,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   // tesouraria: só título, vê como membro
   assert.equal((await chamar(h('admin'), { user: 'tes' })).status, 403); assert.equal((await ver('tes', 'aula-02')).status, 200); assert.equal((await ver('tes', 'aula-03')).status, 403);
   r = JSON.parse((await chamar(h('aulas'), { user: 'tes' })).body); assert.equal(r.papel, 'equipe'); assert.equal(r.titulo, 'Tesouraria'); assert.deepEqual(r.permissoes, []);
-  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 5);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 6);
   assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' }, {}, 'sec')).status, 403);
   assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' })).status, 200); assert.equal((await chamar(h('personalizar'), { user: 'mkt' })).status, 403);
   // ---------- presença: chamada em até 3 momentos, participações e histórico ----------
@@ -412,6 +417,79 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal(Si.faltaPeso({ ordem: m.ordem, anuncios: m.anuncios, vitrine: m.vitrine }), '');
     const l = Si.paraLeitor(Si.sanitizar({ agenda: [{ titulo: 'Z', data: '2099-01-01', peso: 1 }, { titulo: 'Y', data: '2098-01-01', peso: 2 }] }), 'aluno');
     assert.equal(l.agenda[0].titulo, 'Z'); }
+  // ---------- editor de slides ----------
+  { const Sl = require('../lib/slides.js'); const Mo = require('../public/editor-modelos.js');
+    // limpeza do HTML: nada de script, evento, link perigoso, iframe, url() nem posição fixa
+    const sujo = '<p onclick="x()" style="position:fixed;background:url(http://evil/x);color:#fff;left:10px">oi<script>alert(1)</script></p><iframe src="//evil"></iframe><img src="https://evil/x.png" onerror="x()"><img src="/api/imagem?n=a.png"><a href="javascript:x()">l</a><div data-build-in="rise 2" style="width:10px"></div><div data-build-in="evil 9"></div><svg viewBox="0 0 24 24" onload="x()"><path d="M1 1" fill="none"/></svg>';
+    const lp = Sl.limpar(sujo);
+    for (const ruim of ['<script', 'onclick', 'onerror', 'onload', 'iframe', 'evil', 'javascript', 'url(', 'fixed', '<a ']) assert(!lp.includes(ruim), 'não limpou: ' + ruim);
+    assert(lp.includes('color:#fff') && lp.includes('/api/imagem?n=a.png') && lp.includes('data-build-in="rise 2"') && lp.includes('viewBox="0 0 24 24"'));
+    // todos os modelos de slide sobrevivem à limpeza e o roteiro nunca vai no arquivo dos slides
+    for (const m of Mo.SLIDES) assert.equal(Sl.limpar(m.html).replace(/><\/(path|circle)>/g, '/>'), m.html, 'modelo ' + m.id);
+    const mod = Sl.normalizar({ titulo: 'Aula <x>', slides: [{ html: Mo.SLIDES[0].html, fundo: '#12141c', cor: '#f3efe6', notas: 'Fale devagar\nPergunte', tempo: '0:00' }, { html: Mo.SLIDES[2].html, fundo: 'red; x:y', cor: 'x', notas: '', tempo: '' }] });
+    assert.equal(mod.slides[1].fundo, '#12141c'); // fundo inválido volta ao padrão
+    const pagina = Sl.renderAula(mod); assert(pagina.includes('01 / 02') && pagina.includes('02 / 02') && !pagina.includes('01 / 01')); // numeração automática
+    assert(!pagina.includes('Fale devagar')); assert(Sl.renderRoteiro(mod, 'aula-01').includes('Fale devagar'));
+    // importar o que o editor gerou devolve o mesmo modelo
+    const volta = Sl.importarHtml(pagina, Sl.renderRoteiro(mod, 'aula-01')); assert.deepEqual(volta.slides.map((x) => x.notas), mod.slides.map((x) => x.notas)); const sempag = (t) => t.replace(/\d\d \/ \d\d/g, 'NN'); assert.deepEqual(volta.slides.map((x) => sempag(x.html)), mod.slides.map((x) => sempag(x.html))); assert.deepEqual(volta.slides.map((x) => x.fundo), mod.slides.map((x) => x.fundo));
+    assert.throws(() => Sl.importarHtml('<html>nada</html>'));
+  }
+  { const api = h('slides'), N1 = 'nivel-01-design', N2 = 'nivel-02-outro';
+    const get = (q, user) => chamar(api, { query: q, user }); const post = (b, user = 'dono') => chamar(api, { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: b });
+    const modelo = (t) => ({ titulo: t, slides: [{ html: '<h2 style="position:absolute;left:1px;top:2px">Oi</h2><p data-pag="1">01 / 01</p>', fundo: '#12141c', cor: '#f3efe6', notas: 'ideia 1', tempo: '0:05' }] });
+    cfg.equipe = { ...(cfg.equipe || {}), edi1: { titulo: '', permissoes: [], cargos: ['slider'] }, edi2: { titulo: '', permissoes: ['slides'], cargos: [] } };
+    cfg.cargos = { ...(cfg.cargos || {}), slider: { nome: 'Slider', descricao: '', permissoes: ['slides'] } };
+    cfg.monitores = { ...cfg.monitores, mon3: { aulas: [], roteiros: [], turmas: [] } };
+    cfg.turmas = { ...(cfg.turmas || {}), 'T-N1': { nome: 'N1', status: 'andamento', inicio: '', fim: '', nivel: N1, acessoApos: true, acessoAte: '', alunos: [] } };
+    cfg.editores = { escopo1: [N1], escopo2: [N1 + '/aula-02'] };
+    cfg.alunos = [...cfg.alunos, 'edi1', 'edi2']; cfg.turmas['T-N0'] = { nome: 'N0', status: 'andamento', inicio: '', fim: '', nivel: 'nivel-00-tutorial', acessoApos: true, acessoAte: '', alunos: ['edi2'] }; cfg.turmas['T-N1'].alunos = ['edi1']; // edi1 está vinculado ao nível 1; edi2 não
+    u.limparCache();
+    assert.equal((await get({ acao: 'lista' }, null)).status, 401);
+    assert.equal((await get({ acao: 'lista' }, 'alu1')).status, 403); // sem nenhuma permissão de slides
+    assert.equal((await post({ acao: 'salvar', dir: N1, id: 'aula-01', modelo: modelo('X') }, 'alu1')).status, 403);
+    // owner cria nível (e só owner)
+    assert.equal((await post({ acao: 'novo_nivel', numero: 1, nome: 'Design' }, 'edi1')).status, 403);
+    r = await post({ acao: 'novo_nivel', numero: 1, nome: 'Pensar como Designer' }); assert.equal(r.status, 200); const nivel1 = JSON.parse(r.body).dir; assert.equal(nivel1, 'nivel-01-pensar-como-designer');
+    assert.equal((await post({ acao: 'novo_nivel', numero: 1, nome: 'Outro' })).status, 400); assert.equal((await post({ acao: 'novo_nivel', numero: 500, nome: 'x' })).status, 400);
+    // owner salva aula nova: gera slides, roteiro, json do editor e título no índice
+    r = await post({ acao: 'salvar', dir: nivel1, id: 'aula-01', modelo: modelo('Aula <b>nova</b>'), base: null }); assert.equal(r.status, 200); let base1 = JSON.parse(r.body).base; assert(base1);
+    const K = (n) => `niveis/${nivel1}/${n}`;
+    assert(arquivos[K('slides/aula-01.html')].includes('01 / 01') && !arquivos[K('slides/aula-01.html')].includes('ideia 1'));
+    assert(arquivos[K('slides/aula-01-roteiro.html')].includes('ideia 1') && arquivos[K('slides/aula-01-roteiro.html')].includes('Aula &lt;b&gt;nova&lt;/b&gt;'));
+    assert.equal(JSON.parse(arquivos[K('editor/aula-01.json')]).slides[0].notas, 'ideia 1'); assert.equal(JSON.parse(arquivos[K('slides/indice.json')])['aula-01'], 'Aula <b>nova</b>');
+    // a aula aparece na lista do portal (só owners no começo) e abre para o owner
+    r = await chamar(h('ver'), { query: { dir: nivel1, id: 'aula-01' }, user: 'dono' }); assert.equal(r.status, 200); assert(r.body.includes('<div id="stage">'));
+    assert.equal((await chamar(h('ver'), { query: { dir: nivel1, id: 'aula-01' }, user: 'alu1' })).status, 403);
+    // conflito: salvar com base velha, ou criar de novo sem base
+    assert.equal((await post({ acao: 'salvar', dir: nivel1, id: 'aula-01', modelo: modelo('Y'), base: 'velha' })).status, 409);
+    assert.equal((await post({ acao: 'salvar', dir: nivel1, id: 'aula-01', modelo: modelo('Y'), base: null })).status, 409);
+    r = await post({ acao: 'salvar', dir: nivel1, id: 'aula-01', modelo: modelo('Versão 2'), base: base1 }); assert.equal(r.status, 200); base1 = JSON.parse(r.body).base;
+    r = JSON.parse((await get({ acao: 'aula', dir: nivel1, id: 'aula-01' }, 'dono')).body); assert.equal(r.origem, 'editor'); assert.equal(r.modelo.titulo, 'Versão 2'); assert.equal(r.base, base1);
+    assert.equal(JSON.parse((await get({ acao: 'aula', dir: nivel1, id: 'aula-09' }, 'dono')).body).origem, 'nova');
+    // entradas inválidas
+    assert.equal((await post({ acao: 'salvar', dir: '../x', id: 'aula-01', modelo: modelo('X') })).status, 400); assert.equal((await post({ acao: 'salvar', dir: nivel1, id: 'aula-1', modelo: modelo('X') })).status, 400);
+    assert.equal((await post({ acao: 'salvar', dir: nivel1, id: 'aula-03', modelo: { titulo: 'v', slides: [] } })).status, 400);
+    // aula que já existia sem editor (Nível 0): precisa importar e só owner substitui
+    assert.equal((await get({ acao: 'aula', dir: 'nivel-00-tutorial', id: 'aula-01' }, 'dono')).status, 200);
+    assert.equal(JSON.parse((await get({ acao: 'aula', dir: 'nivel-00-tutorial', id: 'aula-01' }, 'dono')).body).origem, 'html');
+    assert.equal((await post({ acao: 'salvar', dir: 'nivel-00-tutorial', id: 'aula-01', modelo: modelo('Sobrescreve'), base: null })).status, 400);
+    assert.equal(arquivos['niveis/nivel-00-tutorial/slides/aula-01.html'], '<html>SLIDES1</html>'); // Nível 0 intacto
+    // permissões por escopo (nível inteiro, uma aula, cargo + vínculo)
+    cfg.editores = { escopo1: [nivel1], escopo2: [nivel1 + '/aula-02'] }; cfg.turmas['T-N1'].nivel = nivel1; u.limparCache();
+    const pode = async (user, id, dir = nivel1) => (await post({ acao: 'salvar', dir, id, modelo: modelo('T ' + user + id), base: null }, user)).status;
+    assert.equal(await pode('escopo1', 'aula-05'), 200); // nível inteiro
+    assert.equal(await pode('escopo2', 'aula-02'), 200); assert.equal(await pode('escopo2', 'aula-04'), 403); // só a aula combinada
+    assert.equal(await pode('edi1', 'aula-06'), 200); // cargo com "slides" + turma do nível
+    assert.equal(await pode('edi2', 'aula-07'), 403); // permissão "slides", mas sem vínculo com o nível
+    assert.equal(await pode('mon1', 'aula-08'), 403);
+    assert.equal(await pode('escopo1', 'aula-09', 'nivel-00-tutorial'), 403); // não vale em outro nível
+    cfg.monitores.mon3 = { aulas: [], roteiros: [], turmas: [] }; cfg.equipe.mon3 = { titulo: '', permissoes: ['slides'], cargos: [] }; u.limparCache();
+    assert.equal(await pode('mon3', 'aula-10'), 200); // monitor de todas as turmas, com permissão: vínculo com todos os níveis
+    r = JSON.parse((await get({ acao: 'lista' }, 'escopo2')).body); assert.deepEqual(r.niveis.map((n) => n.dir), [nivel1]); assert(r.niveis[0].aulas.some((a) => a.id === 'aula-02' && a.editavel) && !r.niveis[0].aulas.find((a) => a.id === 'aula-01').editavel);
+    assert.equal((await get({ acao: 'importar', dir: nivel1, id: 'aula-01' }, 'escopo2')).status, 403); assert.equal((await get({ acao: 'importar', dir: nivel1, id: 'aula-01' }, 'dono')).status, 200);
+    assert.equal((await post({ acao: 'salvar', dir: nivel1, id: 'aula-01', modelo: modelo('Z'), base: base1 }, 'escopo1')).status, 200); // editor da aula com base certa
+    delete cfg.equipe.mon3; delete cfg.monitores.mon3; delete cfg.editores; delete cfg.turmas['T-N1']; delete cfg.turmas['T-N0']; cfg.alunos = cfg.alunos.filter((x) => !['edi1', 'edi2'].includes(x)); delete cfg.equipe.edi1; delete cfg.equipe.edi2; delete cfg.cargos.slider; u.limparCache();
+  }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)
