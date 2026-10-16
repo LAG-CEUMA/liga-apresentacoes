@@ -40,3 +40,5 @@ Use os termos e programas **em inglês**.
 
 ## Editor de slides
 `/editor` (api/slides.js, lib/slides.js, public/editor.js). Fonte da verdade: `niveis/<nivel>/editor/<aula>.json`; a cada salvamento o portal gera `slides/<aula>.html`, `slides/<aula>-roteiro.html` e atualiza `slides/indice.json`. O HTML dos slides passa por uma lista de tags/estilos permitidos (sanitize-html). Permissão: owner, escopo por pessoa (`editores` no acesso.json: nível ou nível/aula) ou permissão `slides` + vínculo com o nível pela turma. Aulas antigas (geradas pelo script do Nível 0) são importadas para o editor sob confirmação de um owner.
+
+Nota: o `sanitize-html` está fixado em 2.17.0 porque as versões 2.18+ puxam dependências só-ESM que a Vercel não empacotou (a função caía). O aviso do `npm audit` não se aplica: o editor não permite os atributos/tags citados (action, formaction, poster, SMIL, textarea).
