@@ -53,3 +53,7 @@ footer.rodape a.rede{border:1px solid #fff3;border-radius:99px;padding:6px 14px;
 .galeria{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.galeria button{padding:0;border:2px solid transparent;border-radius:10px;background:none;cursor:pointer}.galeria button.on{border-color:var(--ouro)}.galeria img{width:84px;height:50px;object-fit:cover;border-radius:8px;display:block}
 .marca a{display:flex}.logo{cursor:pointer}
 .atalhos{position:sticky;top:0;z-index:6;background:var(--bg);padding:8px 0;margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #fff2}
+.tabela{width:100%;border-collapse:collapse;font-size:14px}.tabela th,.tabela td{border:1px solid #fff2;padding:6px 8px;text-align:center}.tabela th{background:var(--card);position:sticky;top:0}.tabela td:first-child,.tabela th:first-child{text-align:left}
+.rolagem{overflow:auto;max-height:70vh;border-radius:10px}.st-presente{color:var(--ver);font-weight:700}.st-ausente{color:var(--err)}.st-justificado{color:var(--ouro)}.st-sem-chamada{color:var(--mut)}
+.seg.tri button.on.p{background:var(--ver)}.seg.tri button.on.a{background:var(--err);color:#fff}.seg.tri button.on.j{background:var(--ouro)}
+.passos{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.passos button{flex:1;min-width:120px;text-align:left;background:var(--card);color:var(--txt);border:1px solid #fff3;border-radius:12px;padding:10px 14px;cursor:pointer;font:inherit}.passos button.on{border-color:var(--ouro);box-shadow:0 0 0 1px var(--ouro)}.passos small{display:block;color:var(--mut)}

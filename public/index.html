@@ -18,7 +18,7 @@ function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopen
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
   if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.titulo||d.papel}`));const P=d.permissoes||[];
-    const botoes=[[P.includes('aulas')||P.includes('pessoas'),'Painel','/admin'],[P.includes('site'),'Personalizar','/personalizar'],[P.includes('tarefas'),'Tarefas de casa','/semanas']];
+    const botoes=[[P.includes('aulas')||P.includes('pessoas'),'Painel','/admin'],[P.includes('site'),'Personalizar','/personalizar'],[P.includes('tarefas'),'Tarefas de casa','/semanas'],[P.includes('presenca')||d.papel==='monitor','Presença','/presenca']];
     for(const [ok,t,h] of botoes)if(ok){const a=el('a','btn sec',t);a.href=h;conta.append(a)}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
@@ -48,6 +48,15 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     sa.append(g)});
   if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));sa.append(p)}
   c.append(sa);
+  if(d.usuario)fetch('/api/presenca?acao=minha').then(r=>r.ok?r.json():null).then(m=>{
+    if(!m||!m.sessoes.length)return;const ok=m.sessoes.filter(x=>x.status==='presente').length,pts=m.sessoes.reduce((t,x)=>t+x.pontos,0);
+    const s=secao('Minha presença',`${ok} de ${m.sessoes.length} aula(s) · ${pts} ponto(s)`);s.id='sec-presenca';lembrar(s,'presenca',false);
+    const ST={presente:'Presente',ausente:'Falta',justificado:'Justificado','sem-chamada':'Sem chamada'};
+    for(const x of m.sessoes){const i=el('div','item');i.append(el('b','',x.titulo),el('br'),el('small','',`${x.data?x.data.split('-').reverse().join('/')+' · ':''}turma ${x.turma} · ${ST[x.status]||x.status} (${x.presencas}/${x.salvas} chamadas)${x.pontos?' · '+x.pontos+' ponto(s) de participação':''}`));
+      for(const p of x.participacoes)i.append(el('br'),el('small','','• '+p.tipo+(p.nota?': '+p.nota:'')));s.append(i)}
+    c.insertBefore(s,sa.nextSibling);
+    const at=document.getElementById('atalhos');if(at){const b=el('button','btn sec','Minha presença');b.type='button';b.onclick=()=>{s.open=true;s.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
+  }).catch(()=>{});
   // atalhos fixos no topo: Aulas sempre em primeiro e em destaque
   const at=document.getElementById('atalhos');at.hidden=false;
   for(const [id,t,pri] of [['sec-aulas','Aulas',true],['sec-anuncios','Anúncios'],['sec-agenda','Agenda']]){const alvo=document.getElementById(id);if(!alvo)continue;

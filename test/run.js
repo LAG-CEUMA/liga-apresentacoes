@@ -6,6 +6,7 @@ process.env.GH_TOKEN = 'x'; process.env.GITHUB_CLIENT_ID = 'cid'; process.env.GI
 process.env.ADMIN_USERS = 'chefe';
 
 let cfg = { owners: ['dono'], monitores: { mon1: { aulas: [], roteiros: [] }, mon2: { aulas: ['nivel-00-tutorial/aula-03'], roteiros: ['nivel-00-tutorial/aula-01'] } }, alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
+const dadosArq = {}; let dSeq = 0;
 let siteJson = null, siteSha = null; const siteCommits = []; const imagens = {};
 let sha = 'sha1'; const commits = [];
 const arquivos = {
@@ -20,11 +21,17 @@ const arquivos = {
 const resp = (status, corpo) => ({ status, ok: status < 300, json: async () => corpo, text: async () => (typeof corpo === 'string' ? corpo : JSON.stringify(corpo)) });
 global.fetch = async (url, op = {}) => {
   const p = new URL(url).pathname;
-  if (p.endsWith('/git/trees/main')) return resp(200, { tree: [...Object.keys(arquivos).map((path) => ({ path })), { path: 'niveis/../segredo/slides/aula-09.html' }, { path: 'docs/x.html' }] });
+  if (p.endsWith('/git/trees/main')) return resp(200, { tree: [...Object.keys(arquivos).map((path) => ({ path })), ...Object.keys(dadosArq).map((path) => ({ path })), { path: 'niveis/../segredo/slides/aula-09.html' }, { path: 'docs/x.html' }] });
   if (p.endsWith('/contents/acesso/acesso.json')) {
     if (op.method === 'PUT') { const b = JSON.parse(op.body); if (b.sha !== sha) return resp(409, {}); cfg = JSON.parse(Buffer.from(b.content, 'base64').toString()); sha = 'sha' + (commits.push(b.message) + 1); return resp(200, {}); }
     return resp(200, { sha, content: Buffer.from(JSON.stringify(cfg)).toString('base64') });
   }
+  { const md = /\/contents\/(dados\/.+)$/.exec(p);
+    if (md) { const k = decodeURIComponent(md[1]);
+      if (op.method === 'PUT') { const b = JSON.parse(op.body); if (dadosArq[k] && dadosArq[k].sha !== b.sha) return resp(409, {}); if (!dadosArq[k] && b.sha) return resp(422, {}); dadosArq[k] = { sha: 'd' + (++dSeq), texto: Buffer.from(b.content, 'base64').toString(), msg: b.message }; return resp(200, {}); }
+      if (!dadosArq[k]) return resp(404, {});
+      if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, dadosArq[k].texto);
+      return resp(200, { sha: dadosArq[k].sha, content: Buffer.from(dadosArq[k].texto).toString('base64') }); } }
   if (p.endsWith('/contents/site/site.json')) {
     if (op.method === 'PUT') { const b = JSON.parse(op.body); if (siteSha && b.sha !== siteSha) return resp(409, {}); siteJson = Buffer.from(b.content, 'base64').toString(); siteSha = 's' + (siteCommits.push(b.message) + 1); return resp(200, {}); }
     return siteJson === null ? resp(404, {}) : resp(200, { sha: siteSha, content: Buffer.from(siteJson).toString('base64') });
@@ -205,9 +212,48 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   // tesouraria: só título, vê como membro
   assert.equal((await chamar(h('admin'), { user: 'tes' })).status, 403); assert.equal((await ver('tes', 'aula-02')).status, 200); assert.equal((await ver('tes', 'aula-03')).status, 403);
   r = JSON.parse((await chamar(h('aulas'), { user: 'tes' })).body); assert.equal(r.papel, 'equipe'); assert.equal(r.titulo, 'Tesouraria'); assert.deepEqual(r.permissoes, []);
-  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 4);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 5);
   assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' }, {}, 'sec')).status, 403);
   assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' })).status, 200); assert.equal((await chamar(h('personalizar'), { user: 'mkt' })).status, 403);
+  // ---------- presença: chamada em até 3 momentos, participações e histórico ----------
+  await post({ acao: 'listas', owners: cfg.owners, alunos: ['alu1', 'alu2', 'alu3'] });
+  await eq('pres', 'Secretaria', ['presenca']);
+  await post({ acao: 'monitor', usuario: 'mon2', aulas: [CH(3)], roteiros: [] });
+  const pres = (corpo, user = 'dono') => chamar(h('presenca'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: corpo });
+  const getp = (query, user = 'dono') => chamar(h('presenca'), { query, user });
+  const T = '2026';
+  assert.equal((await getp({ acao: 'contexto' }, null)).status, 401);
+  assert.equal((await getp({ acao: 'contexto' }, 'alu1')).status, 403);
+  assert.equal((await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 1, estados: {} }, 'alu1')).status, 403);
+  r = JSON.parse((await getp({ acao: 'contexto' }, 'dono')).body); assert.equal(r.aulas.length, 3); assert.deepEqual(r.roster, ['alu1', 'alu2', 'alu3']);
+  r = JSON.parse((await getp({ acao: 'contexto' }, 'mon2')).body); assert.deepEqual(r.aulas.map((a) => a.chave), [CH(3)]); // monitor só da aula concedida
+  assert.equal((await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 1, estados: {} }, 'mon2')).status, 400);
+  // três chamadas: início, meio, fim
+  r = await pres({ acao: 'chamada', turma: T, chave: CH(1), data: '2026-11-03', n: 1, estados: { alu1: 'p', alu2: 'p', alu3: 'j', intruso: 'p' } }, 'pres'); assert.equal(r.status, 200);
+  assert.equal(JSON.parse(r.body).presentes, 2);
+  assert(!dadosArq['dados/aulas/2026/' + CH(1) + '.json'].texto.includes('intruso')); // só quem é aluno
+  await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 2, estados: { alu1: 'p' } }, 'pres'); // alu2 sem marca = ausente
+  await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 3, estados: { alu1: 'p', alu2: 'p' } }, 'pres');
+  assert.equal((await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 4, estados: {} })).status, 400);
+  assert.equal((await pres({ acao: 'chamada', turma: '../x', chave: CH(1), n: 1, estados: {} })).status, 400);
+  assert(Object.values(dadosArq).some((x) => /Portal: pres salvou a chamada 3/.test(x.msg)) && !Object.values(dadosArq).some((x) => /alu1/.test(x.msg))); // commit sem nomes de alunos
+  r = JSON.parse((await pres({ acao: 'participacao', turma: T, chave: CH(1), usuario: 'alu1', tipo: 'pergunta', nota: 'Boa pergunta', pontos: 3 }, 'pres')).body); assert(r.ok);
+  assert.equal((await pres({ acao: 'participacao', turma: T, chave: CH(1), usuario: 'estranho', tipo: 'pergunta', pontos: 1 }, 'pres')).status, 400);
+  assert.equal((await pres({ acao: 'participacao', turma: T, chave: CH(1), usuario: 'alu1', tipo: 'inventado', pontos: 1 }, 'pres')).status, 400);
+  r = JSON.parse((await getp({ acao: 'historico' }, 'pres')).body); const rs = r.sessoes[0].resumo;
+  assert.equal(rs.alu1.status, 'presente'); assert.equal(rs.alu1.pontos, 3); assert.equal(rs.alu2.status, 'presente'); // 2 de 3
+  assert.equal(rs.alu3.status, 'ausente'); // 1 justificada em 3: não basta
+  assert.equal(r.sessoes[0].chamadas, 3);
+  // cada aluno vê só o que é dele
+  r = JSON.parse((await getp({ acao: 'minha' }, 'alu1')).body); assert.equal(r.sessoes.length, 1); assert.equal(r.sessoes[0].status, 'presente'); assert.equal(r.sessoes[0].participacoes[0].pontos, 3);
+  assert(!JSON.stringify(r).includes('alu2'));
+  assert.equal((await getp({ acao: 'historico' }, 'alu1')).status, 403);
+  assert.equal((await getp({ acao: 'minha' }, null)).status, 401);
+  // salvar a chamada de novo substitui só aquela chamada
+  await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 3, estados: { alu1: 'p', alu2: 'p', alu3: 'p' } }, 'pres');
+  r = JSON.parse((await getp({ acao: 'sessao', turma: T, chave: CH(1) }, 'pres')).body); assert.equal(r.sessao.chamadas[3].estados.alu3, 'p'); assert.equal(Object.keys(r.sessao.chamadas).length, 3);
+  const idp = r.sessao.participacoes[0].id;
+  assert.equal((await pres({ acao: 'remover_participacao', turma: T, chave: CH(1), id: idp }, 'pres')).status, 200);
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   console.log('Todos os testes passaram.');

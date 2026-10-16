@@ -38,16 +38,27 @@
 <li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
 </ol></details>
 
-<details><summary>Equipe: cargos e as 4 permissões</summary>
+<details><summary>Equipe: cargos e as 5 permissões</summary>
 <ul>
 <li><b>Para que serve:</b> quem ajuda a coordenar a liga (marketing, artes, secretaria, tesouraria...) recebe <i>só</i> o que precisa, sem virar owner. Um cargo sem tarefa no portal pode ficar só com o título e nenhuma caixa marcada.</li>
 <li><b>Site:</b> abre o <code>/personalizar</code> (cores, logo, fundos, avisos, agenda, redes). Quem tem isso publica textos e imagens para todo mundo, então dê com cuidado. Tudo fica no histórico do GitHub.</li>
 <li><b>Aulas:</b> muda o nível de cada aula (só owners / membros / público).</li>
 <li><b>Pessoas:</b> edita a lista de alunos e os monitores. <b>Não</b> mexe na lista de owners nem na equipe.</li>
 <li><b>Tarefas:</b> vê e revisa as tarefas de casa em <code>/semanas</code>.</li>
+<li><b>Presença:</b> abre <code>/presenca</code>: chamada das aulas, participações e histórico de todas as aulas. <i>Monitores</i> (instrutores) não precisam dessa permissão: eles já fazem a chamada das aulas que um owner liberou para eles no item 2.</li>
 <li><b>Owners</b> sempre têm tudo e são os únicos que mexem na lista de owners e na equipe.</li>
 <li>A pessoa da equipe também vê as aulas de nível <i>Membros</i>, como um aluno. Ela entra pelo mesmo login do GitHub.</li>
 <li><b>Onde fica:</b> em <code>acesso/acesso.json</code> (campo <code>equipe</code>) no <code>liga-curriculo</code>; cada mudança é um commit com o seu nome.</li></ul></details>
+
+<details><summary>Chamada, participações e presença (/presenca)</summary>
+<ul>
+<li><b>Chamada em até 3 momentos:</b> início, meio e fim da aula. O instrutor marca Presente, Falta ou Justificado e só vale ao clicar em <b>Salvar chamada</b>. Antes disso fica como rascunho no aparelho dele.</li>
+<li><b>Regra de presença:</b> o aluno conta como presente se esteve em pelo menos <b>metade</b> das chamadas salvas (2 de 3, por exemplo). Quem ficou sem marca é salvo como falta, com confirmação.</li>
+<li><b>Participações:</b> o instrutor registra pergunta boa, ajuda a colega, apresentação ou desafio, com pontos de 0 a 10. Por enquanto só formam histórico.</li>
+<li><b>Quem faz a chamada:</b> owners, equipe com a permissão <i>Presença</i> e monitores (só das aulas liberadas para eles no item 2).</li>
+<li><b>Quem vê:</b> cada aluno vê só a própria presença na tela inicial. O histórico geral e o CSV (para Excel/Power BI) são de quem tem permissão.</li>
+<li><b>Onde ficam os dados:</b> no GitHub, pasta <code>dados/aulas/&lt;turma&gt;/…</code> do <code>liga-curriculo</code> (um arquivo por aula e turma). Guardamos só o usuário do GitHub e o estado, sem nomes nem e-mails; os commits também não citam alunos. Se um dia a liga crescer demais, a base pode migrar para um banco de dados.</li>
+<li><b>Turma:</b> um texto livre (ex.: <code>2026</code>, <code>2027.1</code>) que separa as chamadas de grupos diferentes na mesma aula.</li></ul></details>
 
 <details><summary>Os 4 tipos de pessoa</summary>
 <ul>
@@ -123,7 +134,7 @@ async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',hea
 function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
 function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
 let DADOS=null;
-const PERM_INFO={site:['Site','usar /personalizar: cores, logo, fundos, anúncios, agenda e redes'],aulas:['Aulas','mudar o nível de cada aula (só owners / membros / público)'],pessoas:['Pessoas','editar as listas de alunos e os monitores (não mexe em owners nem na equipe)'],tarefas:['Tarefas','ver e revisar as tarefas de casa em /semanas']};
+const PERM_INFO={site:['Site','usar /personalizar: cores, logo, fundos, anúncios, agenda e redes'],aulas:['Aulas','mudar o nível de cada aula (só owners / membros / público)'],pessoas:['Pessoas','editar as listas de alunos e os monitores (não mexe em owners nem na equipe)'],tarefas:['Tarefas','ver e revisar as tarefas de casa em /semanas'],presenca:['Presença','fazer a chamada das aulas (até 3 por aula), registrar participações e ver o histórico em /presenca']};
 function desenharEquipe(d){
   if(!d.dono)return;const box=$('equipe');box.textContent='';const nomes=Object.keys(d.equipe||{}).sort();
   if(!nomes.length)box.append(el('p','','Ninguém na equipe ainda.'));
