@@ -1,18 +1,62 @@
 {
   "cleanUrls": true,
   "redirects": [
-    { "source": "/aula-01", "destination": "/aula/nivel-00-tutorial/aula-01" }
+    {
+      "source": "/aula-01",
+      "destination": "/aula/nivel-00-tutorial/aula-01"
+    }
   ],
   "rewrites": [
-    { "source": "/api/tema.css", "destination": "/api/tema" },
-    { "source": "/aula/:dir/:id/roteiro", "destination": "/api/ver?dir=:dir&id=:id&roteiro=1" },
-    { "source": "/aula/:dir/:id", "destination": "/api/ver?dir=:dir&id=:id" }
+    {
+      "source": "/api/login",
+      "destination": "/api/auth?rota=login"
+    },
+    {
+      "source": "/api/callback",
+      "destination": "/api/auth?rota=callback"
+    },
+    {
+      "source": "/api/logout",
+      "destination": "/api/auth?rota=logout"
+    },
+    {
+      "source": "/api/site",
+      "destination": "/api/publico?rota=site"
+    },
+    {
+      "source": "/api/tema.css",
+      "destination": "/api/publico?rota=tema"
+    },
+    {
+      "source": "/api/imagem",
+      "destination": "/api/publico?rota=imagem"
+    },
+    {
+      "source": "/aula/:dir/:id/roteiro",
+      "destination": "/api/ver?dir=:dir&id=:id&roteiro=1"
+    },
+    {
+      "source": "/aula/:dir/:id",
+      "destination": "/api/ver?dir=:dir&id=:id"
+    }
   ],
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Robots-Tag", "value": "noindex" },
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "Referrer-Policy", "value": "same-origin" }
-    ] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
+    }
   ]
 }

@@ -45,7 +45,8 @@ global.fetch = async (url, op = {}) => {
   return resp(404, {});
 };
 const u = require('../lib/util');
-const h = (n) => require('../api/' + n);
+const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem'];
+const h = (n) => require((ROTAS.includes(n) ? '../lib/rotas/' : '../api/') + n);
 function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {} } = {}) {
   const req = { query, method, body, headers: { host: 'site.test', ...headers } };
   if (user) req.headers.cookie = 'liga_s=' + encodeURIComponent(u.assinar({ u: user, exp: Date.now() + 1e6 }));
@@ -256,5 +257,10 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await pres({ acao: 'remover_participacao', turma: T, chave: CH(1), id: idp }, 'pres')).status, 200);
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
+  // roteadores (limite de funções da Vercel gratuita)
+  assert.equal((await chamar(require('../api/auth'), { query: { rota: 'logout' } })).status, 302);
+  assert.equal((await chamar(require('../api/auth'), { query: { rota: 'x' } })).status, 404);
+  assert.equal((await chamar(require('../api/publico'), { query: { rota: 'site' } })).status, 200);
+  assert.equal((await chamar(require('../api/publico'), { query: { rota: 'imagem', n: 'x.png' } })).status, 404);
   console.log('Todos os testes passaram.');
 })().catch((e) => { console.error('FALHOU:', e); process.exit(1); });
