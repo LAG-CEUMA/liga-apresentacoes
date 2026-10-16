@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "description": "Portal de aulas da Liga de Games Ceuma, com controle de acesso",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "test": "node test/run.js"
