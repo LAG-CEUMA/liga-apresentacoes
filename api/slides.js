@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
           aulas: aulas.filter((a) => a.dir === d).map((a) => ({ id: a.id, titulo: a.titulo, editavel: pode(d, a.id) })) }));
         const visiveis = niveis.filter((n) => dono || n.podeCriar || n.aulas.some((a) => a.editavel));
         if (!visiveis.length && !dono) return erro(403, 'Você não tem permissão para editar slides. Peça a um owner.');
-        return u.json(res, 200, { usuario, dono, niveis: visiveis });
+        return u.json(res, 200, { usuario, dono, repo: u.REPO(), branch: u.BRANCH(), niveis: visiveis });
       }
       if (acao === 'imagens') { if (!algum) return erro(403, 'Sem permissão.'); return u.json(res, 200, { imagens: await Site.listarImagens() }); }
       if (!validar(q.dir, q.id)) return erro(400, 'Aula inválida.');

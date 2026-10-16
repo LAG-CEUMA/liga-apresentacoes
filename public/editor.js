@@ -15,6 +15,26 @@ async function ler(qs) {
   if (!r.ok) { const e = new Error(j.erro || 'Falha ao carregar.'); e.status = r.status; throw e; } return j;
 }
 
+// ---------- excluir aula (passo a passo no GitHub: o portal não apaga arquivos) ----------
+let REPO_INFO = null;
+async function modalExcluir(dir, id, titulo) {
+  if (!REPO_INFO) { try { const d = await ler('acao=lista'); REPO_INFO = { repo: d.repo, branch: d.branch }; } catch (e) { aviso(e.message, 1); return; } }
+  const { repo, branch } = REPO_INFO, gh = `https://github.com/${repo}`;
+  const arqs = [[`niveis/${dir}/slides/${id}.html`, 'os slides'], [`niveis/${dir}/slides/${id}-roteiro.html`, 'o roteiro'], [`niveis/${dir}/editor/${id}.json`, 'o arquivo do editor']];
+  const L = (t, u) => h('a', { href: u, target: '_blank', rel: 'noopener', style: 'color:var(--ouro)' }, t);
+  const v = modal([h('h3', { style: 'margin-top:0' }, 'Excluir a aula "' + titulo + '"'),
+    h('p', { class: 'sub' }, 'Por segurança o portal não apaga arquivos. A exclusão é feita no GitHub, em poucos cliques. Nada se perde de verdade: o GitHub guarda o histórico e dá para recuperar.'),
+    h('div', { style: 'background:#2a1d1d;border:1px solid #e5604f66;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:14px' }, '⚠ Antes de apagar, confira em Painel → Turmas se nenhuma turma depende desta aula. Aulas já dadas ficam no histórico de presença mesmo sem os slides.'),
+    h('ol', { style: 'line-height:1.7;padding-left:20px' },
+      h('li', {}, 'Entre no GitHub com sua conta de owner (a conta que pode alterar o repositório ', h('b', {}, repo), ').'),
+      h('li', {}, 'Apague cada arquivo abaixo: clique no link, depois no botão ', h('b', {}, '⋯'), ' (três pontinhos) no canto direito → ', h('b', {}, 'Delete file'), ' → ', h('b', {}, 'Commit changes'), '.'),
+      h('li', {}, 'Para cada arquivo:', h('ul', {}, ...arqs.map(([c, n]) => h('li', {}, L(c, `${gh}/blob/${branch}/${c}`), h('span', { class: 'sub' }, ' (' + n + ')'))))),
+      h('li', {}, 'Tire o título da aula da lista: abra ', L(`niveis/${dir}/slides/indice.json`, `${gh}/edit/${branch}/niveis/${dir}/slides/indice.json`), ', apague a linha que começa com ', h('code', {}, `"${id}":`), ' (cuide para não deixar vírgula sobrando na última linha) e clique em ', h('b', {}, 'Commit changes'), '.'),
+      h('li', {}, 'Volte ao portal e recarregue. Em até 1 minuto a aula some da lista, do Painel e da tela inicial.')),
+    h('p', { class: 'sub' }, 'Se você só quer esconder a aula dos alunos, não precisa apagar: em Painel → Níveis das aulas, deixe como "Só owners".'),
+    h('button', { class: 'b', onclick: () => v.remove() }, 'Fechar')]);
+}
+
 // ======================= LISTA =======================
 async function lista() {
   const box = $('lista-pg'); box.hidden = false; box.textContent = 'Carregando…';
@@ -41,7 +61,7 @@ async function lista() {
     c.open = lembra(n.dir, d.niveis.length <= 2); c.addEventListener('toggle', () => grava(n.dir, c.open)); detalhes.push(c);
     if (!n.aulas.length) c.append(h('p', { class: 'sub' }, 'Nenhuma aula ainda.'));
     for (const a of n.aulas) c.append(h('div', { class: 'al' }, h('span', { class: 't' }, h('b', {}, a.titulo), h('br'), h('small', { class: 'sub' }, a.id)),
-      a.editavel ? h('a', { class: 'b pri', href: `/editor?dir=${n.dir}&id=${a.id}` }, 'Editar slides') : h('span', { class: 'sub' }, 'sem permissão'), h('a', { class: 'b', href: `/aula/${n.dir}/${a.id}`, target: '_blank' }, 'Ver')));
+      a.editavel ? h('a', { class: 'b pri', href: `/editor?dir=${n.dir}&id=${a.id}` }, 'Editar slides') : h('span', { class: 'sub' }, 'sem permissão'), h('a', { class: 'b', href: `/aula/${n.dir}/${a.id}`, target: '_blank' }, 'Ver'), a.editavel ? h('button', { class: 'b perigo', title: 'Como excluir esta aula', onclick: () => { REPO_INFO = { repo: d.repo, branch: d.branch }; modalExcluir(n.dir, a.id, a.titulo); } }, 'Excluir…') : null));
     if (n.podeCriar) {
       const tit = h('input', { type: 'text', placeholder: 'Título da nova aula', style: 'flex:1;min-width:220px' });
       const copia = h('select', { style: 'width:260px' }, h('option', { value: '' }, 'Começar do zero'), ...todas.map((a) => h('option', { value: a.dir + '/' + a.id }, `Copiar de: ${a.nome} · ${a.titulo}`)));
@@ -104,10 +124,10 @@ function moverPara(de, para) { if (para < 0 || para >= M.slides.length) return; 
 function duplicarSlide(k) { commit(); M.slides.splice(k + 1, 0, JSON.parse(JSON.stringify(M.slides[k]))); cur = k + 1; marcarSujo(true); snap(); desenhaTudo(); }
 function excluirSlide(k) { if (M.slides.length < 2) return aviso('A aula precisa ter pelo menos um slide.', 1); if (!confirm('Excluir o slide ' + (k + 1) + '? (dá para desfazer com Ctrl+Z)')) return; commit(); M.slides.splice(k, 1); cur = Math.min(cur, M.slides.length - 1); marcarSujo(true); snap(); desenhaTudo(); }
 function novoSlide(m) { commit(); M.slides.splice(cur + 1, 0, { html: m.html, fundo: m.fundo, cor: m.cor, notas: '', tempo: '' }); cur++; marcarSujo(true); snap(); desenhaTudo(); }
-function modal(corpo) { const v = h('div', { class: 'modal', onclick: (e) => { if (e.target === v) v.remove(); } }, h('div', {}, corpo)); document.body.append(v); return v; }
+function modal(corpo) { const v = h('div', { class: 'edmodal', onclick: (e) => { if (e.target === v) v.remove(); } }, h('div', {}, corpo)); document.body.append(v); return v; }
 function modalNovoSlide() {
   const v = modal([h('h3', { style: 'margin-top:0' }, 'Novo slide'), h('p', { class: 'sub' }, 'Escolha um modelo. Depois é só clicar nos textos e trocar.'),
-    h('div', { class: 'mod' }, ...M0.SLIDES.map((m) => h('button', { onclick: () => { novoSlide(m); v.remove(); } }, h('b', {}, m.nome), h('span', {}, m.desc)))),
+    h('div', { class: 'edmod' }, ...M0.SLIDES.map((m) => h('button', { onclick: () => { novoSlide(m); v.remove(); } }, h('b', {}, m.nome), h('span', {}, m.desc)))),
     h('button', { class: 'b', onclick: () => v.remove() }, 'Cancelar')]);
 }
 
@@ -232,7 +252,7 @@ function inserirImagem(nome, w, hh) {
   inserir(`<img src="/api/imagem?n=${nome}" alt="" style="position:absolute;left:200px;top:260px;width:${lar}px;${alt ? 'height:' + alt + 'px;' : ''}object-fit:cover;border-radius:12px">`);
 }
 async function modalImagens() {
-  const grade = h('div', { class: 'mod', style: 'grid-template-columns:repeat(auto-fill,minmax(120px,1fr))' }, 'Carregando…');
+  const grade = h('div', { class: 'edmod', style: 'grid-template-columns:repeat(auto-fill,minmax(120px,1fr))' }, 'Carregando…');
   const arq = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', hidden: true });
   const v = modal([h('h3', { style: 'margin-top:0' }, 'Imagens'), h('p', { class: 'sub' }, 'Envie uma imagem (PNG, JPG, WEBP ou GIF) ou escolha uma já enviada. As imagens ficam públicas: não envie nada confidencial.'),
     h('div', { style: 'display:flex;gap:8px;margin-bottom:8px' }, h('button', { class: 'b pri', onclick: () => arq.click() }, '⬆ Enviar nova imagem'), arq, h('button', { class: 'b', onclick: () => v.remove() }, 'Fechar')), grade]);
@@ -275,7 +295,7 @@ function barra() {
   const tit = h('input', { id: 'tit', type: 'text', value: M.titulo, maxlength: 120, 'aria-label': 'Título da aula' }); tit.oninput = () => { M.titulo = tit.value; marcarSujo(true); agendarSnap(); };
   B.append(h('a', { class: 'b', href: '/editor' }, '← Aulas'), tit, h('span', { class: 'sub' }, DIR + ' / ' + ID), h('span', { style: 'flex:1' }), h('span', { id: 'est' }, ''),
     h('button', { class: 'b', id: 'desf', onclick: () => desfazer(-1), title: 'Ctrl+Z' }, '↶ Desfazer'), h('button', { class: 'b', id: 'ref', onclick: () => desfazer(1), title: 'Ctrl+Y' }, '↷ Refazer'),
-    h('button', { class: 'b', onclick: historico, title: 'Versões salvas desta aula' }, '🕘 Histórico'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}`, target: '_blank', title: 'Abre a versão salva' }, 'Ver aula'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}/roteiro`, target: '_blank' }, 'Ver roteiro'),
+    h('button', { class: 'b', onclick: historico, title: 'Versões salvas desta aula' }, '🕘 Histórico'), h('button', { class: 'b perigo', onclick: () => modalExcluir(DIR, ID, M.titulo), title: 'Como excluir esta aula' }, 'Excluir…'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}`, target: '_blank', title: 'Abre a versão salva' }, 'Ver aula'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}/roteiro`, target: '_blank' }, 'Ver roteiro'),
     h('button', { class: 'b pri', id: 'salvarb', onclick: salvar, title: 'Ctrl+S' }, 'Salvar'));
   const F = $('ferr'); F.textContent = '';
   const ic = h('select', { style: 'width:130px', 'aria-label': 'Ícone' }, ...Object.keys(M0.ICONES).map((n) => h('option', { value: n }, n)));
