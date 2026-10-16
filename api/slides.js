@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
         if (!visiveis.length && !dono) return erro(403, 'Você não tem permissão para editar slides. Peça a um owner.');
         return u.json(res, 200, { usuario, dono, repo: u.REPO(), branch: u.BRANCH(), niveis: visiveis });
       }
-      if (acao === 'imagens') { if (!algum) return erro(403, 'Sem permissão.'); return u.json(res, 200, { imagens: await Site.listarImagens() }); }
+      if (acao === 'imagens') { if (!algum) return erro(403, 'Sem permissão.'); return u.json(res, 200, { imagens: await Site.listarImagensDo('slides'), todas: dono ? await Site.imagensComModulos() : undefined }); }
       if (!validar(q.dir, q.id)) return erro(400, 'Aula inválida.');
       if (acao === 'versoes') { if (!pode(q.dir, q.id)) return erro(403, 'Sem permissão.'); return u.json(res, 200, { versoes: await S.versoes(q.dir, q.id) }); }
       if (acao === 'versao') {
@@ -60,7 +60,11 @@ module.exports = async (req, res) => {
       if (!algum) return erro(403, 'Sem permissão.');
       const m = /^data:image\/[a-z+]+;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.dados || ''));
       if (!m) return erro(400, 'Imagem inválida.');
-      try { return u.json(res, 200, { ok: true, nome: await Site.enviarImagem(b.nome, Buffer.from(m[1], 'base64'), usuario) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
+      try { return u.json(res, 200, { ok: true, nome: await Site.enviarImagem(b.nome, Buffer.from(m[1], 'base64'), usuario, b.tambemSite === true ? ['slides', 'site'] : ['slides']) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
+    }
+    if (b.acao === 'imagem_modulos') {
+      if (!dono) return erro(403, 'Só owners definem onde a imagem aparece.');
+      try { return u.json(res, 200, { ok: true, modulos: await Site.definirModulos(String(b.nome || ''), Array.isArray(b.modulos) ? b.modulos : [], usuario) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
     }
     if (b.acao === 'novo_nivel') {
       if (!dono) return erro(403, 'Só owners criam níveis.');

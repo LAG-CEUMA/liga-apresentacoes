@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
     const { cfg } = await u.lerConfig();
     if (!u.temPerm(cfg, usuario, 'site')) return u.json(res, 403, { erro: 'Só owners.' });
     if (req.method === 'GET') {
-      const [{ site }, imagens] = await Promise.all([s.lerSite(), s.listarImagens()]);
+      const [{ site }, imagens] = await Promise.all([s.lerSite(), s.listarImagensDo('site')]);
       return u.json(res, 200, { usuario, site, imagens, redes: s.REDES, padrao: s.padrao() });
     }
     if (req.method !== 'POST') return u.json(res, 405, { erro: 'Método inválido.' });
@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
     if (b.acao === 'upload') {
       const m = /^data:image\/[a-z+]+;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.dados || ''));
       if (!m) return u.json(res, 400, { erro: 'Imagem inválida.' });
-      const nome = await s.enviarImagem(b.nome, Buffer.from(m[1], 'base64'), usuario);
+      const nome = await s.enviarImagem(b.nome, Buffer.from(m[1], 'base64'), usuario, ['site']);
       return u.json(res, 200, { ok: true, nome });
     }
     u.json(res, 400, { erro: 'Ação inválida.' });

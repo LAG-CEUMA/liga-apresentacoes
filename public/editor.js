@@ -112,7 +112,7 @@ function desenhaLista() {
     it.ondrop = (e) => { e.preventDefault(); const de = +e.dataTransfer.getData('text/plain'); if (!Number.isNaN(de) && de !== k) moverPara(de, k); };
     box.append(it);
   });
-  box.append(h('button', { class: 'b pri', style: 'width:100%', onclick: modalNovoSlide }, '+ Novo slide'));
+  box.append(h('button', { class: 'b pri', style: 'width:100%', onclick: modalNovoSlide }, '+ Novo slide'), h('button', { class: 'b', style: 'width:100%;margin-top:6px', onclick: modalCopiar }, '⧉ Copiar de outra aula'));
 }
 function renderSlide() {
   const s = M.slides[cur], el = slideEl(); el.style.cssText = estilo(s); el.innerHTML = numerar(s.html, cur + 1, M.slides.length); selecionar(null);
@@ -252,19 +252,81 @@ function inserirImagem(nome, w, hh) {
   inserir(`<img src="/api/imagem?n=${nome}" alt="" style="position:absolute;left:200px;top:260px;width:${lar}px;${alt ? 'height:' + alt + 'px;' : ''}object-fit:cover;border-radius:12px">`);
 }
 async function modalImagens() {
+  commit();
+  const usadas = [...new Set(M.slides.flatMap((x) => [...x.html.matchAll(/\/api\/imagem\?n=([a-z0-9._-]+)/g)].map((m) => m[1])))];
   const grade = h('div', { class: 'edmod', style: 'grid-template-columns:repeat(auto-fill,minmax(120px,1fr))' }, 'Carregando…');
   const arq = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', hidden: true });
-  const v = modal([h('h3', { style: 'margin-top:0' }, 'Imagens'), h('p', { class: 'sub' }, 'Envie uma imagem (PNG, JPG, WEBP ou GIF) ou escolha uma já enviada. As imagens ficam públicas: não envie nada confidencial.'),
-    h('div', { style: 'display:flex;gap:8px;margin-bottom:8px' }, h('button', { class: 'b pri', onclick: () => arq.click() }, '⬆ Enviar nova imagem'), arq, h('button', { class: 'b', onclick: () => v.remove() }, 'Fechar')), grade]);
+  const tambem = h('input', { type: 'checkbox' });
+  const abas = h('div', { style: 'display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap' });
+  const v = modal([h('h3', { style: 'margin-top:0' }, 'Imagens'), h('p', { class: 'sub' }, 'Envie uma imagem (PNG, JPG, WEBP ou GIF) ou escolha uma já disponível. As imagens ficam públicas: não envie nada confidencial.'),
+    h('div', { style: 'display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;align-items:center' }, h('button', { class: 'b pri', onclick: () => arq.click() }, '⬆ Enviar nova imagem'), arq, h('button', { class: 'b', onclick: () => v.remove() }, 'Fechar')),
+    h('label', { class: 'sub', style: 'display:flex;gap:6px;align-items:center;margin-bottom:8px' }, tambem, 'Também deixar essa nova imagem disponível no site (Personalizar). Se não marcar, ela só aparece no editor de slides.'),
+    abas, grade]);
   arq.onchange = async () => {
     const f = arq.files[0]; if (!f) return;
-    try { aviso('Enviando…'); const r = await reduz(f); const j = await api({ acao: 'upload', nome: f.name, dados: r.dados }); v.remove(); inserirImagem(j.nome, r.w, r.h); aviso('Imagem inserida'); } catch (e) { aviso(e.message, 1); }
+    try { aviso('Enviando…'); const r = await reduz(f); const j = await api({ acao: 'upload', nome: f.name, dados: r.dados, tambemSite: tambem.checked }); v.remove(); inserirImagem(j.nome, r.w, r.h); aviso('Imagem inserida'); } catch (e) { aviso(e.message, 1); }
   };
-  try {
-    const d = await ler('acao=imagens'); grade.textContent = '';
-    if (!d.imagens.length) grade.append(h('span', { class: 'sub' }, 'Nenhuma imagem enviada ainda.'));
-    for (const n of d.imagens) { const b = h('button', { title: n, style: 'padding:4px', onclick: () => { v.remove(); const im = new Image(); im.onload = () => inserirImagem(n, im.naturalWidth, im.naturalHeight); im.onerror = () => inserirImagem(n, 0, 0); im.src = '/api/imagem?n=' + n; } }, h('img', { src: '/api/imagem?n=' + n, alt: '', style: 'width:100%;height:80px;object-fit:cover;border-radius:6px;display:block' })); grade.append(b); }
-  } catch (e) { grade.textContent = e.message; }
+  const escolher = (n) => { v.remove(); const im = new Image(); im.onload = () => inserirImagem(n, im.naturalWidth, im.naturalHeight); im.onerror = () => inserirImagem(n, 0, 0); im.src = '/api/imagem?n=' + n; };
+  const miniImg = (n) => h('img', { src: '/api/imagem?n=' + n, alt: '', style: 'width:100%;height:80px;object-fit:cover;border-radius:6px;display:block' });
+  let d;
+  try { d = await ler('acao=imagens'); } catch (e) { grade.textContent = e.message; return; }
+  const abaDe = {
+    aula: ['Desta aula', () => usadas, 'Imagens que já estão nos slides desta aula.'],
+    disp: ['Disponíveis', () => d.imagens, 'Imagens liberadas para o editor de slides.'],
+  };
+  if (d.todas) abaDe.ger = ['Gerenciar (owner)', null, 'Defina onde cada imagem aparece. Desmarcar "Slides" tira a imagem da lista do editor; ela continua funcionando onde já está sendo usada.'];
+  let atual = usadas.length ? 'aula' : 'disp';
+  const desenha = () => {
+    abas.textContent = ''; grade.textContent = '';
+    for (const [k, [t]] of Object.entries(abaDe)) abas.append(h('button', { class: 'b' + (k === atual ? ' pri' : ''), onclick: () => { atual = k; desenha(); } }, t));
+    abas.append(h('span', { class: 'sub', style: 'align-self:center' }, abaDe[atual][2]));
+    if (atual === 'ger') {
+      grade.style.gridTemplateColumns = '1fr';
+      if (!d.todas.length) grade.append(h('span', { class: 'sub' }, 'Nenhuma imagem enviada ainda.'));
+      for (const im of d.todas) {
+        const marca = (m, rot) => { const c = h('input', { type: 'checkbox' }); c.checked = im.modulos.includes(m); c.onchange = async () => {
+          const novo = c.checked ? [...new Set([...im.modulos, m])] : im.modulos.filter((x) => x !== m);
+          try { const r = await api({ acao: 'imagem_modulos', nome: im.nome, modulos: novo }); im.modulos = r.modulos; if (m === 'slides') d.imagens = c.checked ? [...new Set([...d.imagens, im.nome])] : d.imagens.filter((x) => x !== im.nome); aviso('Salvo'); } catch (e) { c.checked = !c.checked; aviso(e.message, 1); } };
+          return h('label', { style: 'display:flex;gap:6px;align-items:center' }, c, rot); };
+        grade.append(h('div', { style: 'display:flex;gap:12px;align-items:center;padding:4px' }, h('img', { src: '/api/imagem?n=' + im.nome, alt: '', style: 'width:90px;height:56px;object-fit:cover;border-radius:6px' }), h('span', { class: 'sub', style: 'flex:1;word-break:break-all' }, im.nome), marca('slides', 'Slides'), marca('site', 'Site')));
+      }
+      return;
+    }
+    grade.style.gridTemplateColumns = 'repeat(auto-fill,minmax(120px,1fr))';
+    const lista = abaDe[atual][1]();
+    if (!lista.length) grade.append(h('span', { class: 'sub' }, atual === 'aula' ? 'Esta aula ainda não usa imagens.' : 'Nenhuma imagem liberada para o editor. Envie uma nova' + (d.todas ? ' ou libere uma em "Gerenciar".' : ' ou peça a um owner para liberar.')));
+    for (const n of lista) grade.append(h('button', { title: n, style: 'padding:4px', onclick: () => escolher(n) }, miniImg(n)));
+  };
+  desenha();
+}
+// ---------- copiar slides de outra aula ----------
+async function modalCopiar() {
+  const corpo = h('div', {}, 'Carregando…');
+  const v = modal([h('h3', { style: 'margin-top:0' }, 'Copiar slides de outra aula'), corpo]);
+  let d; try { d = await ler('acao=lista'); } catch (e) { corpo.textContent = e.message; return; }
+  const escolha = () => {
+    corpo.textContent = '';
+    corpo.append(h('p', { class: 'sub' }, 'Escolha a aula de onde copiar. Os slides copiados entram depois do slide atual; a aula de origem não muda.'));
+    for (const n of d.niveis) { const as = n.aulas.filter((a) => !(n.dir === DIR && a.id === ID)); if (!as.length) continue;
+      corpo.append(h('div', { class: 'sub', style: 'margin:8px 0 4px' }, n.nome), ...as.map((a) => h('button', { class: 'b', style: 'display:block;width:100%;text-align:left;margin-bottom:4px', onclick: () => slides(n.dir, a) }, a.titulo + '  ·  ' + a.id))); }
+    if (!corpo.querySelector('button')) corpo.append(h('p', { class: 'sub' }, 'Não há outras aulas disponíveis para copiar.'));
+    corpo.append(h('button', { class: 'b', style: 'margin-top:8px', onclick: () => v.remove() }, 'Cancelar'));
+  };
+  const slides = async (dir, a) => {
+    corpo.textContent = 'Carregando slides…'; let m;
+    try { m = (await ler(`acao=importar&dir=${encodeURIComponent(dir)}&id=${encodeURIComponent(a.id)}`)).modelo; } catch (e) { corpo.textContent = ''; corpo.append(h('p', { class: 'sub' }, e.message), h('button', { class: 'b', onclick: escolha }, 'Voltar')); return; }
+    const marcas = [], grade = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:10px 0' });
+    m.slides.forEach((s, k) => { const c = h('input', { type: 'checkbox' }); marcas.push(c); const mini = h('div', { class: 'mini', style: 'width:170px;height:96px;overflow:hidden;position:relative;border-radius:6px' }); const e = miniaturaHtml(s, k); e.style.width = '1920px'; e.style.height = '1080px'; e.style.transformOrigin = '0 0'; e.style.transform = 'scale(.0885)'; mini.append(e);
+      grade.append(h('label', { style: 'display:block;cursor:pointer' }, mini, h('span', { class: 'sub', style: 'display:flex;gap:6px;align-items:center;margin-top:4px' }, c, `${k + 1}. ${tituloDe(s, k)}`))); });
+    const todos = h('button', { class: 'b', onclick: () => { const t = marcas.some((c) => !c.checked); marcas.forEach((c) => { c.checked = t; }); } }, 'Marcar/desmarcar todos');
+    corpo.textContent = '';
+    corpo.append(h('p', { class: 'sub' }, `Aula: ${a.titulo}. Marque os slides que quer copiar.`), h('div', {}, todos), grade, h('div', { style: 'display:flex;gap:8px' },
+      h('button', { class: 'b pri', onclick: () => {
+        const esc = m.slides.filter((_, k) => marcas[k].checked); if (!esc.length) { aviso('Marque pelo menos um slide.', 1); return; }
+        commit(); M.slides.splice(cur + 1, 0, ...esc.map((x) => ({ html: x.html, fundo: x.fundo, cor: x.cor, notas: x.notas || '', tempo: x.tempo || '' }))); cur++; marcarSujo(true); snap(); desenhaTudo(); v.remove(); aviso(esc.length + ' slide(s) copiado(s). Clique em Salvar para publicar.');
+      } }, 'Copiar selecionados'), h('button', { class: 'b', onclick: escolha }, 'Voltar'), h('button', { class: 'b', onclick: () => v.remove() }, 'Cancelar')));
+  };
+  escolha();
 }
 // ---------- histórico ----------
 async function historico() {

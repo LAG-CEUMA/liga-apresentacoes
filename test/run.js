@@ -7,7 +7,7 @@ process.env.ADMIN_USERS = 'chefe';
 
 let cfg = { owners: ['dono'], monitores: { mon1: { aulas: [], roteiros: [] }, mon2: { aulas: ['nivel-00-tutorial/aula-03'], roteiros: ['nivel-00-tutorial/aula-01'] } }, alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
 const dadosArq = {}; let dSeq = 0; const shaArq = {}; const histArq = {}; let nCommit = 0;
-let siteJson = null, siteSha = null; const siteCommits = []; const imagens = {};
+let siteJson = null, siteSha = null; const siteCommits = []; const imagens = {}; let modJson = null, modSha = null;
 let sha = 'sha1'; const commits = [];
 const arquivos = {
   'niveis/nivel-00-tutorial/slides/aula-01.html': '<html>SLIDES1</html>',
@@ -37,6 +37,10 @@ global.fetch = async (url, op = {}) => {
     return siteJson === null ? resp(404, {}) : resp(200, { sha: siteSha, content: Buffer.from(siteJson).toString('base64') });
   }
   if (p.endsWith('/contents/site/imagens')) return resp(200, Object.keys(imagens).map((name) => ({ name })));
+  if (p.endsWith('/contents/site/imagens/modulos.json')) {
+    if (op.method === 'PUT') { const c = JSON.parse(op.body); if (modSha && c.sha !== modSha) return resp(409, {}); modJson = Buffer.from(c.content, 'base64').toString(); modSha = 'm' + Math.random().toString(36).slice(2); return resp(200, {}); }
+    return modJson === null ? resp(404, {}) : resp(200, { content: Buffer.from(modJson).toString('base64'), sha: modSha });
+  }
   { const mi = /\/contents\/site\/imagens\/(.+)$/.exec(p);
     if (mi) { if (op.method === 'PUT') { imagens[mi[1]] = Buffer.from(JSON.parse(op.body).content, 'base64'); return resp(201, {}); }
       return imagens[mi[1]] ? { status: 200, ok: true, arrayBuffer: async () => imagens[mi[1]] } : resp(404, {}); } }
@@ -501,6 +505,20 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     r = await post({ acao: 'upload', nome: 'Meu Logo.png', dados: png }); assert.equal(r.status, 200); const nomeImg = JSON.parse(r.body).nome; assert(/^meu-logo-[a-z0-9]+\.png$/.test(nomeImg));
     assert.equal((await post({ acao: 'upload', nome: 'x.png', dados: 'data:image/png;base64,AAAA' })).status, 400); assert.equal((await post({ acao: 'upload', nome: 'x', dados: 'lixo' })).status, 400);
     assert(JSON.parse((await get({ acao: 'imagens' })).body).imagens.includes(nomeImg)); assert.equal((await get({ acao: 'imagens' }, 'alu1')).status, 403);
+    { // módulos das imagens: do editor só no editor; do site (Personalizar) fora do editor
+      const pers = (b) => chamar(h('personalizar'), { method: 'POST', user: 'dono', headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: b });
+      let L = JSON.parse((await get({ acao: 'imagens' })).body); assert(L.imagens.includes(nomeImg)); assert(L.todas.find((x) => x.nome === nomeImg).modulos.join() === 'slides');
+      assert(!JSON.parse((await chamar(h('personalizar'), { query: {}, user: 'dono' })).body).imagens.includes(nomeImg));
+      const rs = await pers({ acao: 'upload', nome: 'Banner Site.png', dados: png }); const nomeSite = JSON.parse(rs.body).nome;
+      L = JSON.parse((await get({ acao: 'imagens' })).body); assert(!L.imagens.includes(nomeSite)); assert.equal(L.todas.find((x) => x.nome === nomeSite).modulos.join(), 'site');
+      assert(JSON.parse((await chamar(h('personalizar'), { query: {}, user: 'dono' })).body).imagens.includes(nomeSite));
+      assert.equal((await post({ acao: 'imagem_modulos', nome: nomeSite, modulos: ['site', 'slides'] }, 'alu1')).status, 403);
+      assert.equal((await post({ acao: 'imagem_modulos', nome: '../x.png', modulos: ['slides'] })).status, 400);
+      assert.equal((await post({ acao: 'imagem_modulos', nome: nomeSite, modulos: ['site', 'slides', 'lixo'] })).status, 200);
+      L = JSON.parse((await get({ acao: 'imagens' })).body); assert(L.imagens.includes(nomeSite)); assert.equal(L.todas.find((x) => x.nome === nomeSite).modulos.join(), 'site,slides');
+      assert.equal((await post({ acao: 'imagem_modulos', nome: nomeImg, modulos: [] })).status, 200); assert(!JSON.parse((await get({ acao: 'imagens' })).body).imagens.includes(nomeImg));
+      const r2 = await post({ acao: 'upload', nome: 'Dois.png', dados: png, tambemSite: true }); const n2 = JSON.parse(r2.body).nome; assert.equal(JSON.parse((await get({ acao: 'imagens' })).body).todas.find((x) => x.nome === n2).modulos.join(), 'site,slides');
+    }
     // a imagem enviada entra no slide e sobrevive à limpeza; imagem de fora é descartada
     const Sl = require('../lib/slides.js'); const mi = Sl.normalizar({ titulo: 'I', slides: [{ html: `<img src="/api/imagem?n=${nomeImg}" style="position:absolute;width:300px;object-fit:cover"><img src="https://x.com/a.png">` }] });
     assert(mi.slides[0].html.includes(nomeImg) && !mi.slides[0].html.includes('x.com'));
