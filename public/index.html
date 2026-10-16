@@ -1,26 +1,50 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Liga de Games Ceuma: aulas</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"></head>
-<body><main>
-<div class="topo"><div><p class="tag">LIGA ACADÊMICA DE GAMES · CEUMA</p><h1>Aulas</h1></div><div id="conta"></div></div>
-<p>Escolha a aula. Dentro dela: seta direita, espaço ou clique avançam; <b>F</b> abre tela cheia.</p>
-<div id="lista"><p>Carregando…</p></div>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Liga de Games Ceuma</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"></head>
+<body data-pg="inicio"><main>
+<div class="topo"><div><p class="tag" data-site="tag">LIGA ACADÊMICA DE GAMES · CEUMA</p><h1 id="titulo">Início</h1></div><div class="acoes" id="conta"></div></div>
+<div id="hero" class="hero" hidden></div>
+<div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
+<script src="/site.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
+const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
-fetch('/api/aulas').then(r=>r.json()).then(d=>{
+function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
+function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
+function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
+Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
-  if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.papel}`),document.createTextNode(' '));
-    if(d.papel==='owner'){const a=el('a','btn','Painel');a.href='/admin';conta.append(a,document.createTextNode(' '));const t=el('a','btn sec','Tarefas de casa');t.href='/semanas';conta.append(t,document.createTextNode(' '))}
+  if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.papel}`));
+    if(d.papel==='owner'){for(const [t,h] of [['Painel','/admin'],['Personalizar','/personalizar'],['Tarefas de casa','/semanas']]){const a=el('a','btn sec',t);a.href=h;conta.append(a)}}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
-  const l=document.getElementById('lista');l.textContent='';
-  if(!d.aulas.length)l.append(el('p','',d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
-  for(const a of d.aulas){const k=el('a','aula');k.href=a.url;
-    const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.nivel));
-    k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));l.append(k);
-    if(a.roteiro){const r=el('a','aula','');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','', 'Roteiro do apresentador (não projetar)'));l.append(r)}}
-  if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));l.append(p)}
-}).catch(()=>{document.getElementById('lista').textContent='Não consegui carregar as aulas. Recarregue a página.'});
+  const bv=site.boasVindas||{};
+  if(bv.titulo||bv.texto){const h=document.getElementById('hero');h.hidden=false;if(bv.titulo)h.append(el('h2','',bv.titulo));if(bv.texto)h.append(el('p','',bv.texto));
+    if(!d.usuario){const a=el('a','btn','Entrar com GitHub');a.href='/api/login';h.append(a)}}
+  const c=document.getElementById('corpo');c.textContent='';
+  // anúncios
+  const an=site.anuncios||[];
+  if(an.length){const s=secao('Anúncios',an.length+(an.length===1?' aviso':' avisos'));lembrar(s,'anuncios',true);
+    for(const a of an){const i=el('div','item');if(a.fixo)i.append(el('span','pin','FIXADO'));i.append(el('h3','',a.titulo));if(a.texto)i.append(el('p','',a.texto));
+      if(a.link)i.append(link('Saiba mais',a.link));if(a.visivel==='membros'){i.append(document.createTextNode(' '),el('span','badge','membros'))}s.append(i)}c.append(s)}
+  // agenda
+  const ag=site.agenda||[];
+  if(ag.length){const s=secao('Agenda',ag.length+(ag.length===1?' evento':' eventos'));lembrar(s,'agenda',true);
+    for(const e of ag){const [y,m,dd]=e.data.split('-');const dt=new Date(+y,+m-1,+dd);const i=el('div','item agitem');
+      const b=el('div','data',`${dd}/${m}`);b.append(el('small','',DIAS[dt.getDay()]));const t=el('div');t.style.flex='1';
+      t.append(el('b','',e.titulo));const q=[e.hora,e.local].filter(Boolean).join(' · ');if(q){t.append(el('br'),el('small','',q))}
+      if(e.link){t.append(el('br'),link('Mais informações',e.link))}i.append(b,t);if(e.visivel==='membros')i.append(el('span','badge','membros'));s.append(i)}c.append(s)}
+  // aulas por nível
+  const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);const niveis=Object.keys(por).sort();
+  const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));lembrar(sa,'aulas',true);
+  if(!d.aulas.length)sa.append(el('p','',d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
+  niveis.forEach((nv,i)=>{const g=secao(nv,por[nv].length+' aula(s)');g.classList.add('pequeno');lembrar(g,'nv_'+nv,i===0);
+    for(const a of por[nv]){const k=el('a','aula');k.href=a.url;const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.chave));k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));g.append(k);
+      if(a.roteiro){const r=el('a','aula');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','','Roteiro do apresentador (não projetar)'));g.append(r)}}
+    sa.append(g)});
+  if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));sa.append(p)}
+  c.append(sa);
+}).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>

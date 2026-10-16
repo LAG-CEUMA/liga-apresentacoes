@@ -6,6 +6,7 @@ process.env.GH_TOKEN = 'x'; process.env.GITHUB_CLIENT_ID = 'cid'; process.env.GI
 process.env.ADMIN_USERS = 'chefe';
 
 let cfg = { owners: ['dono'], monitores: { mon1: { aulas: [], roteiros: [] }, mon2: { aulas: ['nivel-00-tutorial/aula-03'], roteiros: ['nivel-00-tutorial/aula-01'] } }, alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
+let siteJson = null, siteSha = null; const siteCommits = []; const imagens = {};
 let sha = 'sha1'; const commits = [];
 const arquivos = {
   'niveis/nivel-00-tutorial/slides/aula-01.html': '<html>SLIDES1</html>',
@@ -24,6 +25,14 @@ global.fetch = async (url, op = {}) => {
     if (op.method === 'PUT') { const b = JSON.parse(op.body); if (b.sha !== sha) return resp(409, {}); cfg = JSON.parse(Buffer.from(b.content, 'base64').toString()); sha = 'sha' + (commits.push(b.message) + 1); return resp(200, {}); }
     return resp(200, { sha, content: Buffer.from(JSON.stringify(cfg)).toString('base64') });
   }
+  if (p.endsWith('/contents/site/site.json')) {
+    if (op.method === 'PUT') { const b = JSON.parse(op.body); if (siteSha && b.sha !== siteSha) return resp(409, {}); siteJson = Buffer.from(b.content, 'base64').toString(); siteSha = 's' + (siteCommits.push(b.message) + 1); return resp(200, {}); }
+    return siteJson === null ? resp(404, {}) : resp(200, { sha: siteSha, content: Buffer.from(siteJson).toString('base64') });
+  }
+  if (p.endsWith('/contents/site/imagens')) return resp(200, Object.keys(imagens).map((name) => ({ name })));
+  { const mi = /\/contents\/site\/imagens\/(.+)$/.exec(p);
+    if (mi) { if (op.method === 'PUT') { imagens[mi[1]] = Buffer.from(JSON.parse(op.body).content, 'base64'); return resp(201, {}); }
+      return imagens[mi[1]] ? { status: 200, ok: true, arrayBuffer: async () => imagens[mi[1]] } : resp(404, {}); } }
   const m = /\/contents\/(.+)$/.exec(p);
   if (m && arquivos[decodeURIComponent(m[1])] !== undefined) return resp(200, arquivos[decodeURIComponent(m[1])]);
   return resp(404, {});
@@ -135,5 +144,37 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal(r.status, 302); assert.equal(r.h.Location, '/aula/nivel-00-tutorial/aula-02');
   const sc = r.h['Set-Cookie'].find((c) => c.startsWith('liga_s=')); assert(sc.includes('HttpOnly') && sc.includes('Secure') && sc.includes('SameSite=Lax'));
   global.fetch = antes;
+  // ---------- site: tema, imagens, anúncios, agenda ----------
+  const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40)]);
+  const salvarSite = (site, user = 'dono') => chamar(h('personalizar'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: { acao: 'salvar', site, resumo: 'teste' } });
+  r = await chamar(h('site')); assert.equal(r.status, 200); assert(JSON.parse(r.body).nome); // padrão sem arquivo
+  r = await chamar(h('tema')); assert(r.body.includes('--ouro:#f5b83d'));
+  for (const x of ['alu1', 'mon1', null]) assert.equal((await chamar(h('personalizar'), { user: x })).status, 403);
+  assert.equal((await salvarSite({}, 'alu1')).status, 403);
+  r = await chamar(h('personalizar'), { user: 'dono' }); assert.equal(r.status, 200);
+  // upload valida o conteúdo real da imagem
+  const up = (dados, user = 'dono') => chamar(h('personalizar'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: { acao: 'upload', nome: 'Meu Logo!.png', dados } });
+  r = await up('data:image/png;base64,' + Buffer.from('nao sou imagem').toString('base64')); assert.equal(r.status, 400);
+  r = await up('data:image/png;base64,' + PNG.toString('base64')); assert.equal(r.status, 200);
+  const nomeImg = JSON.parse(r.body).nome; assert(/^meu-logo-[a-z0-9]+\.png$/.test(nomeImg));
+  r = await chamar(h('imagem'), { query: { n: nomeImg } }); assert.equal(r.status, 200); assert.equal(r.h['Content-Type'], 'image/png');
+  assert.equal((await chamar(h('imagem'), { query: { n: '../acesso/acesso.json' } })).status, 404);
+  const hoje = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  const ontem = new Date(Date.now() - 27 * 3600e3).toISOString().slice(0, 10), amanha = new Date(Date.now() + 21 * 3600e3).toISOString().slice(0, 10);
+  r = await salvarSite({ nome: 'Liga X', logo: nomeImg, tema: { primaria: '#ff0000', bg: 'url(x)' }, raio: 99, fundos: { inicio: { img: nomeImg, escurecer: 30 }, painel: { img: '../x.png' } },
+    boasVindas: { titulo: 'Oi', texto: '<script>alert(1)</script>' },
+    anuncios: [{ titulo: 'Público', visivel: 'publico', link: 'javascript:alert(1)' }, { titulo: 'Só membros', visivel: 'membros', fixo: true }, { titulo: 'Vencido', ate: ontem }, { titulo: 'Futuro', de: amanha }, { titulo: '' }],
+    agenda: [{ titulo: 'Passou', data: ontem }, { titulo: 'Hoje', data: hoje, hora: '13:00' }, { titulo: 'Sem data' }, { titulo: 'Membros', data: amanha, visivel: 'membros' }],
+    redes: [{ nome: 'Instagram', url: 'https://instagram.com/lag' }, { nome: 'Instagram', url: 'javascript:alert(1)' }] });
+  assert.equal(r.status, 200); assert(siteCommits[0].includes('dono'));
+  const salvo = JSON.parse(siteJson);
+  assert.equal(salvo.tema.primaria, '#ff0000'); assert.equal(salvo.tema.bg, '#12141c'); assert.equal(salvo.raio, 30); assert.equal(salvo.fundos.painel.img, ''); assert.equal(salvo.redes.length, 1); assert.equal(salvo.anuncios[0].link, '');
+  r = await chamar(h('tema')); assert(r.body.includes('--ouro:#ff0000') && r.body.includes(`body[data-pg="inicio"]`) && r.body.includes(nomeImg) && !r.body.includes('url(x)') && !r.body.includes('painel"]'));
+  // leitor: visitante só vê o público e o que está na validade; membro vê mais; fixo vem primeiro
+  let v = JSON.parse((await chamar(h('site'))).body); assert.deepEqual(v.anuncios.map((a) => a.titulo), ['Público']); assert.deepEqual(v.agenda.map((a) => a.titulo), ['Hoje']); assert.equal(v.redes.length, 1);
+  v = JSON.parse((await chamar(h('site'), { user: 'dono' })).body); assert.deepEqual(v.anuncios.map((a) => a.titulo), ['Só membros', 'Público']); assert.deepEqual(v.agenda.map((a) => a.titulo), ['Hoje', 'Membros']);
+  assert(!JSON.stringify(v).includes('"owners"')); // não vaza configuração de acesso
+  // painel de aulas e semanas continuam só para quem pode
+  assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   console.log('Todos os testes passaram.');
 })().catch((e) => { console.error('FALHOU:', e); process.exit(1); });

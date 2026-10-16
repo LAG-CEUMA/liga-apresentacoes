@@ -1,7 +1,7 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Tarefas de casa</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"></head>
-<body><main>
-<div class="topo"><div><p class="tag">SÓ OWNERS</p><h1>Semanas e tarefas de casa</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/admin">Painel</a></div></div>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"></head>
+<body data-pg="semanas"><main>
+<div class="topo"><div><p class="tag">SÓ OWNERS</p><h1>Semanas e tarefas de casa</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/admin">Painel</a><a class="btn sec" href="/personalizar">Personalizar site</a></div></div>
 <p>Aqui estão o <b>texto da aula</b> e a <b>tarefa de casa</b> de cada semana, como o aluno vai receber (a tarefa vira uma Issue no repositório dele). Leia, avalie e use <b>Sugerir alteração</b>: abre o arquivo no GitHub para editar e salvar (commit). <b>Nada é enviado aos alunos por esta página</b>; o envio é feito depois pelo script de liberação. Mais detalhes no <a href="/admin#guia">Guia do painel</a>.</p>
 <div class="cartao" style="padding:14px 22px"><b>Onde isso fica?</b><ol style="line-height:1.7">
 <li><b>No GitHub</b> (não na Vercel): repositório privado <b>LAG-CEUMA/liga-curriculo</b>, pasta <code>liberacao/</code>. É lá que os textos moram de verdade.</li>
@@ -9,6 +9,7 @@
 <li>Para <b>mudar</b> algo: botão <b>Sugerir alteração</b> em cada bloco, que abre o arquivo no GitHub. Para ver a pasta inteira: <a href="https://github.com/LAG-CEUMA/liga-curriculo/tree/main/liberacao" target="_blank" rel="noopener">abrir a pasta liberacao/ no GitHub</a>.</li></ol></div>
 <div class="linha" id="barra" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 8px"><button class="btn sec" id="exp">Expandir tudo</button><button class="btn sec" id="rec">Recolher tudo</button><small id="cont"></small></div><div id="corpo"><p>Carregando…</p></div>
 </main>
+<script src="/site.js"></script>
 <script>
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
 function inline(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')

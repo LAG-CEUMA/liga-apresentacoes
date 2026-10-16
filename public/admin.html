@@ -1,8 +1,8 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Painel dos owners</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
 <style>.perm{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}.perm label{font-size:14px;color:#cfcbc0}.sub{color:var(--mut);font-size:13px;margin:10px 0 0}input[type=text]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}</style></head>
-<body><main>
-<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="#guia">Guia</a></div></div>
+<body data-pg="painel"><main>
+<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="#guia">Guia</a></div></div>
 <p><b>Owners</b> veem tudo e liberam. <b>Monitores</b> têm acesso de aluno e só veem a mais o que você marcar para cada um. <b>Alunos</b> veem as aulas de nível membros e públicas. Cada mudança vira um commit no <code>liga-curriculo</code>, com seu nome; pode levar até 1 minuto para valer para todos.</p>
 
 <h2>1. Nível de cada aula</h2>
@@ -58,6 +58,16 @@
 <li><b>Owners fixos</b> (linha cinza abaixo das caixas) vêm da variável <code>ADMIN_USERS</code> na Vercel: não saem desta tela, nem por engano. É a "chave-mestra" para ninguém se trancar fora.</li>
 <li>Para ser owner, a pessoa precisa de conta no GitHub. Não precisa ser membro da organização para entrar no site.</li></ul></details>
 
+<details><summary>Personalizar o site (/personalizar): cores, logo, fundos, avisos, agenda e redes</summary>
+<ul>
+<li><b>Para que serve:</b> mudar a cara do site rapidamente (por exemplo, para um evento ou datas comemorativas) sem mexer em código.</li>
+<li><b>Prévia na hora:</b> as cores e o fundo mudam só para você enquanto edita. Só vira público ao clicar em <b>Salvar alterações</b>.</li>
+<li><b>Onde fica de verdade:</b> no GitHub, repositório <code>liga-curriculo</code>, pasta <code>site/</code> (<code>site.json</code> com os textos e cores; <code>imagens/</code> com logos e fundos). Cada salvamento é um commit com o seu nome, então dá para voltar atrás pelo histórico.</li>
+<li><b>Temas:</b> "prontos" mudam cores; "seus temas" guardam também os fundos de cada tela. Para um evento: monte o visual, <i>Guardar tema</i>, e depois só aplique e salve.</li>
+<li><b>Avisos e agenda:</b> escolha quem vê (qualquer pessoa ou só quem entrou). Avisos com "até" e eventos passados somem sozinhos.</li>
+<li><b>Imagens:</b> PNG, JPG, WEBP ou GIF até 3 MB. Ficam públicas (qualquer pessoa pode abrir o endereço da imagem), então <b>não envie nada privado</b>. Fundos são reduzidos automaticamente.</li>
+<li><b>Voltar ao visual original:</b> aplique o tema "Padrão da Liga" e remova logo e fundos (botão "Nenhuma").</li></ul></details>
+
 <details><summary>Tarefas de casa e "liberação" (/semanas): explicado do zero</summary>
 <p><b>O que é "liberação"?</b> É o ato de <i>entregar aos alunos o material de uma semana</i>: o resumo da aula e a tarefa de casa. Não tem relação com "liberar acesso" do item 1 (aquilo é sobre quem pode <i>ver os slides</i>).</p>
 <p><b>Como funciona, em 4 passos:</b></p>
@@ -83,6 +93,7 @@
 <li>Para trocar quem é "owner fixo", é preciso editar <code>ADMIN_USERS</code> na Vercel (Settings → Environment Variables) e fazer redeploy.</li></ul></details>
 </div>
 </main><div id="msg" class="msg" hidden></div>
+<script src="/site.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}

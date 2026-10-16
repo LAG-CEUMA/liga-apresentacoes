@@ -1,0 +1,103 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Personalizar o site</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"></head>
+<body data-pg="painel"><main>
+<div class="topo"><div><p class="tag" data-site="tag">PERSONALIZAR O SITE</p><h1>Aparência e avisos</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/admin">Painel</a><a class="btn sec" href="/" target="_blank" rel="noopener">Ver o site</a></div></div>
+<p>Mude cores, logo, papel de parede, avisos e agenda <b>sem mexer em código</b>. Tudo o que você muda aqui aparece <b>na hora nesta tela</b> (prévia) e só vai para todo mundo quando clicar em <b>Salvar alterações</b>, no fim da página. Cada salvamento vira um commit no <code>liga-curriculo</code>, na pasta <code>site/</code>, com o seu nome.</p>
+<div id="corpo"><p>Carregando…</p></div>
+<div class="barra" id="barra" hidden><b id="estado">Sem alterações</b><span style="flex:1"></span><button class="btn sec" id="descartar" type="button">Descartar</button><button class="btn" id="salvar" type="button">Salvar alterações</button></div>
+</main><div id="msg" class="msg" hidden></div>
+<script src="/site.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+function h(t,p,...f){const e=document.createElement(t);for(const [k,v] of Object.entries(p||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k in e&&k!=='list')e[k]=v;else e.setAttribute(k,v)}
+  for(const c of f.flat())if(c!==null&&c!==undefined&&c!==false)e.append(c.nodeType?c:document.createTextNode(c));return e}
+function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?' erro':'');m.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>m.hidden=true,4000)}
+async function api(corpo){const r=await fetch('/api/personalizar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
+const COR=[['bg','Fundo da página'],['card','Cartões e caixas'],['txt','Texto'],['mut','Texto secundário'],['primaria','Cor principal (botões e destaques)'],['botaoTxt','Texto dos botões'],['sucesso','Cor de "público"']];
+const TELAS=[['inicio','Tela inicial (login e avisos)'],['painel','Painel e personalização'],['semanas','Tarefas de casa']];
+const PRONTOS=[
+ {nome:'Padrão da Liga',tema:{bg:'#12141c',card:'#1d2130',txt:'#f3efe6',mut:'#8d8a82',primaria:'#f5b83d',botaoTxt:'#12141c',sucesso:'#3ec9b0'},raio:10},
+ {nome:'Claro',tema:{bg:'#f4f1ea',card:'#ffffff',txt:'#1c1f2a',mut:'#6b6860',primaria:'#d9822b',botaoTxt:'#ffffff',sucesso:'#1f9d84'},raio:10},
+ {nome:'Neon (evento)',tema:{bg:'#0b0620',card:'#1a1040',txt:'#f5f0ff',mut:'#9d8fd0',primaria:'#ff2e97',botaoTxt:'#ffffff',sucesso:'#00e5ff'},raio:16},
+ {nome:'Natal',tema:{bg:'#10231a',card:'#1a3526',txt:'#fff7e8',mut:'#9bb8a3',primaria:'#e63946',botaoTxt:'#ffffff',sucesso:'#ffd166'},raio:14},
+ {nome:'Halloween',tema:{bg:'#17100b',card:'#2a1c12',txt:'#fff1e0',mut:'#b39a82',primaria:'#ff7a00',botaoTxt:'#1a0f08',sucesso:'#9b5de5'},raio:12},
+ {nome:'Retrô pixel',tema:{bg:'#1b1b2f',card:'#272744',txt:'#f0f0f0',mut:'#9aa0c8',primaria:'#4ade80',botaoTxt:'#0b1b10',sucesso:'#fbbf24'},raio:0}];
+let S,ORIG,IMGS=[],REDES=[];
+const clone=o=>JSON.parse(JSON.stringify(o));
+function previa(){const r=document.documentElement.style,t=S.tema;
+  r.setProperty('--bg',t.bg);r.setProperty('--card',t.card);r.setProperty('--txt',t.txt);r.setProperty('--mut',t.mut);r.setProperty('--ouro',t.primaria);r.setProperty('--btntxt',t.botaoTxt);r.setProperty('--ver',t.sucesso);r.setProperty('--raio',S.raio+'px');
+  const f=S.fundos.painel;const b=document.body.style;
+  if(f.img){const rgb=[1,3,5].map(i=>parseInt(t.bg.slice(i,i+2),16)).join(',');b.backgroundImage=`linear-gradient(rgba(${rgb},${f.escurecer/100}),rgba(${rgb},${f.escurecer/100})),url(/api/imagem?n=${f.img})`;b.backgroundSize='cover';b.backgroundPosition='center';b.backgroundAttachment='fixed'}
+  else{b.backgroundImage='';b.backgroundColor=t.bg}}
+function mudou(refazer){previa();const sujo=JSON.stringify(S)!==ORIG;$('barra').hidden=!sujo;$('estado').textContent=sujo?'Há alterações não salvas (a prévia já está valendo só para você)':'Sem alterações';if(refazer)desenhar()}
+window.addEventListener('beforeunload',e=>{if(S&&JSON.stringify(S)!==ORIG){e.preventDefault();e.returnValue=''}});
+function secao(titulo,resumo,aberta,...corpo){const d=h('details',{class:'nivel',open:!!aberta},h('summary',{},h('span',{class:'nvt'},titulo),h('span',{class:'nvc'},resumo||'')),...corpo);
+  d.dataset.k=titulo;try{const v=localStorage.getItem('liga_pers_'+titulo);if(v!==null)d.open=v==='1'}catch{}d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_pers_'+titulo,d.open?'1':'0')}catch{}});return d}
+function campo(rot,el,larga){return h('label',{class:larga?'larga':''},rot,el)}
+function texto(obj,k,{max=120,area=false,tipo='text',ph=''}={}){const e=h(area?'textarea':'input',{value:obj[k]||'',maxLength:max,placeholder:ph});if(!area)e.type=tipo;e.addEventListener('input',()=>{obj[k]=e.value;mudou()});return e}
+async function enviarArquivo(arq,tipo){
+  if(!/^image\/(png|jpeg|webp|gif)$/.test(arq.type))throw new Error('Use PNG, JPG, WEBP ou GIF.');
+  let dados;
+  if(tipo==='fundo'&&arq.type!=='image/gif'){dados=await new Promise((ok,no)=>{const u=URL.createObjectURL(arq),i=new Image();i.onload=()=>{const e=Math.min(1,1920/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*e);c.height=Math.round(i.height*e);c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',.85))};i.onerror=()=>no(new Error('Não consegui ler a imagem.'));i.src=u})}
+  else{if(arq.size>3*1024*1024)throw new Error('Imagem maior que 3 MB.');dados=await new Promise((ok,no)=>{const f=new FileReader();f.onload=()=>ok(f.result);f.onerror=()=>no(new Error('Não consegui ler o arquivo.'));f.readAsDataURL(arq)})}
+  const r=await api({acao:'upload',nome:arq.name,dados});IMGS.unshift(r.nome);return r.nome}
+function seletorImagem(valor,aoEscolher,tipo,comNenhuma){
+  const gal=h('div',{class:'galeria'});
+  const bt=(nome)=>{const b=h('button',{type:'button',class:nome===valor?'on':'',title:nome||'Sem imagem',onclick:()=>{aoEscolher(nome);mudou(true)}},nome?h('img',{src:'/api/imagem?n='+encodeURIComponent(nome),alt:nome,loading:'lazy'}):h('span',{class:'badge',style:'display:block;padding:15px 10px'},'Nenhuma'));return b};
+  if(comNenhuma)gal.append(bt(''));for(const n of IMGS)gal.append(bt(n));
+  const arq=h('input',{type:'file',accept:'image/png,image/jpeg,image/webp,image/gif',hidden:true});
+  arq.addEventListener('change',async()=>{if(!arq.files[0])return;aviso('Enviando imagem…');try{const n=await enviarArquivo(arq.files[0],tipo);aoEscolher(n);aviso('Imagem enviada');mudou(true)}catch(e){aviso(e.message,1)}});
+  return h('div',{},gal,h('button',{class:'btn sec',type:'button',onclick:()=>arq.click()},'Enviar nova imagem'),arq,h('small',{style:'margin-left:8px;color:var(--mut)'},tipo==='fundo'?'Ideal 1920×1080; reduzimos sozinhos.':'PNG com fundo transparente é o melhor.'))}
+function desenhar(){
+  const c=$('corpo');c.textContent='';
+  // 1 identidade
+  c.append(secao('1. Identidade','nome, subtítulo e logo',true,
+    h('div',{class:'form'},campo('Nome do site',texto(S,'nome',{max:60})),campo('Subtítulo (linha pequena acima do título)',texto(S,'tag',{max:80}))),
+    h('p',{class:'sub'},'Logo (aparece no topo de todas as telas):'),seletorImagem(S.logo,n=>S.logo=n,'logo',true)));
+  // 2 cores
+  const cores=h('div',{class:'form'});
+  for(const [k,rot] of COR){const i=h('input',{type:'color',value:S.tema[k]});i.addEventListener('input',()=>{S.tema[k]=i.value;mudou()});cores.append(campo(rot,i))}
+  const raio=h('input',{type:'range',min:0,max:30,value:S.raio});const rv=h('b',{},S.raio+' px');raio.addEventListener('input',()=>{S.raio=+raio.value;rv.textContent=S.raio+' px';mudou()});
+  c.append(secao('2. Cores e botões','7 cores e arredondamento',false,cores,h('div',{class:'form'},campo('Arredondamento dos botões',h('div',{},raio,' ',rv))),
+    h('p',{},'Exemplo dos botões: ',h('a',{class:'btn',href:'#',onclick:e=>e.preventDefault()},'Botão principal'),' ',h('a',{class:'btn sec',href:'#',onclick:e=>e.preventDefault()},'Botão secundário'))));
+  // 3 fundos
+  const fs=[];for(const [p,rot] of TELAS){const f=S.fundos[p];const esc=h('input',{type:'range',min:0,max:90,value:f.escurecer});const ev=h('b',{},f.escurecer+'%');esc.addEventListener('input',()=>{f.escurecer=+esc.value;ev.textContent=f.escurecer+'%';mudou()});
+    fs.push(h('div',{class:'linha',style:'display:block'},h('b',{},rot),h('p',{class:'sub'},p==='painel'?'A prévia desta tela já mostra o fundo escolhido.':'Aparece só depois de salvar.'),seletorImagem(f.img,n=>f.img=n,'fundo',true),h('label',{style:'display:block;margin-top:8px;font-size:13px;color:var(--mut)'},'Escurecer o fundo para o texto ficar legível: ',ev,h('br'),esc)))}
+  c.append(secao('3. Papel de parede por tela','um fundo diferente em cada tela',false,...fs));
+  // 4 temas
+  const nomeT=h('input',{type:'text',placeholder:'Ex.: Semana Game Jam',maxLength:40});
+  const lista=h('div',{});for(const t of PRONTOS)lista.append(h('button',{class:'preset',type:'button',onclick:()=>{S.tema={...t.tema};S.raio=t.raio;mudou(true);aviso(`Tema "${t.nome}" aplicado (falta salvar)`)}},h('i',{style:'background:'+t.tema.primaria}),h('i',{style:'background:'+t.tema.bg}),t.nome));
+  const meus=h('div',{});if(!S.temas.length)meus.append(h('small',{style:'color:var(--mut)'},'Nenhum tema salvo ainda.'));
+  S.temas.forEach((t,i)=>meus.append(h('span',{class:'preset'},h('i',{style:'background:'+t.tema.primaria}),h('i',{style:'background:'+t.tema.bg}),h('a',{href:'#',onclick:e=>{e.preventDefault();S.tema={...t.tema};S.raio=t.raio;S.fundos=clone(t.fundos);mudou(true);aviso(`Tema "${t.nome}" aplicado (falta salvar)`)}},t.nome),h('a',{href:'#',title:'Apagar',onclick:e=>{e.preventDefault();if(confirm(`Apagar o tema "${t.nome}"?`)){S.temas.splice(i,1);mudou(true)}}},'✕'))));
+  c.append(secao('4. Temas prontos e salvos',`${PRONTOS.length} prontos · ${S.temas.length} seus`,false,h('p',{class:'sub'},'Prontos (mudam só as cores e o arredondamento):'),lista,
+    h('p',{class:'sub'},'Seus temas (guardam cores, arredondamento e fundos de cada tela, ótimo para eventos):'),meus,
+    h('div',{class:'form',style:'margin-top:10px'},campo('Salvar o visual atual como tema',nomeT),h('div',{style:'align-self:end'},h('button',{class:'btn sec',type:'button',onclick:()=>{const n=nomeT.value.trim();if(!n)return aviso('Dê um nome ao tema.',1);S.temas=S.temas.filter(t=>t.nome!==n);S.temas.push({nome:n,tema:clone(S.tema),raio:S.raio,fundos:clone(S.fundos)});mudou(true);aviso(`Tema "${n}" guardado (falta salvar)`)}},'Guardar tema')))));
+  // 5 boas-vindas
+  c.append(secao('5. Boas-vindas na tela inicial','título e texto',false,h('div',{class:'form'},campo('Título',texto(S.boasVindas,'titulo',{max:120})),campo('Texto',texto(S.boasVindas,'texto',{max:600,area:true}),true))));
+  // 6 anúncios
+  const vis=(o)=>{const s=h('select',{},h('option',{value:'publico'},'Qualquer pessoa'),h('option',{value:'membros'},'Só quem entrou (membros)'));s.value=o.visivel;s.addEventListener('change',()=>{o.visivel=s.value;mudou()});return s};
+  const lA=h('div',{});S.anuncios.forEach((a,i)=>{const fx=h('input',{type:'checkbox',checked:a.fixo});fx.addEventListener('change',()=>{a.fixo=fx.checked;mudou()});
+    lA.append(h('div',{class:'linha',style:'display:block'},h('div',{class:'form'},campo('Título',texto(a,'titulo')),campo('Link (opcional, https://…)',texto(a,'link',{max:300,tipo:'url'})),campo('Texto',texto(a,'texto',{max:800,area:true}),true),
+      campo('Quem vê',vis(a)),campo('Mostrar a partir de',texto(a,'de',{tipo:'date'})),campo('Mostrar até',texto(a,'ate',{tipo:'date'})),campo('Fixar no topo',fx)),
+      h('button',{class:'btn sec',type:'button',onclick:()=>{if(confirm('Apagar este aviso?')){S.anuncios.splice(i,1);mudou(true)}}},'Apagar aviso')))});
+  c.append(secao('6. Anúncios e notícias',S.anuncios.length+' aviso(s)',false,h('button',{class:'btn',type:'button',onclick:()=>{S.anuncios.unshift({id:'',titulo:'Novo aviso',texto:'',link:'',visivel:'publico',fixo:false,de:'',ate:''});mudou(true)}},'+ Novo aviso'),lA,h('p',{class:'sub'},'Avisos sem data aparecem sempre. Com "até", somem sozinhos depois da data.')));
+  // 7 agenda
+  const lG=h('div',{});S.agenda.forEach((a,i)=>lG.append(h('div',{class:'linha',style:'display:block'},h('div',{class:'form'},campo('Evento',texto(a,'titulo')),campo('Data',texto(a,'data',{tipo:'date'})),campo('Hora',texto(a,'hora',{tipo:'time'})),campo('Local',texto(a,'local')),campo('Link (opcional)',texto(a,'link',{max:300,tipo:'url'})),campo('Quem vê',vis(a))),
+      h('button',{class:'btn sec',type:'button',onclick:()=>{if(confirm('Apagar este evento?')){S.agenda.splice(i,1);mudou(true)}}},'Apagar evento'))));
+  c.append(secao('7. Agenda',S.agenda.length+' evento(s)',false,h('button',{class:'btn',type:'button',onclick:()=>{const d=new Date(Date.now()-3*3600e3).toISOString().slice(0,10);S.agenda.push({id:'',titulo:'Novo evento',data:d,hora:'13:00',local:'',link:'',visivel:'publico'});mudou(true)}},'+ Novo evento'),lG,h('p',{class:'sub'},'Eventos passados somem sozinhos da tela inicial. Eventos sem data são ignorados ao salvar.')));
+  // 8 redes
+  const lR=h('div',{});S.redes.forEach((r,i)=>{const s=h('select',{},...REDES.map(n=>h('option',{value:n},n)));s.value=r.nome;s.addEventListener('change',()=>{r.nome=s.value;mudou()});
+    lR.append(h('div',{class:'linha'},h('div',{class:'form',style:'flex:1;margin:0'},campo('Rede',s),campo('Endereço (https://…)',texto(r,'url',{max:300,tipo:'url'}))),h('button',{class:'btn sec',type:'button',onclick:()=>{S.redes.splice(i,1);mudou(true)}},'Remover')))});
+  c.append(secao('8. Redes sociais e links',S.redes.length+' link(s)',false,h('button',{class:'btn',type:'button',onclick:()=>{if(S.redes.length>=12)return aviso('Máximo de 12 links.',1);S.redes.push({nome:'Instagram',url:'https://'});mudou(true)}},'+ Novo link'),lR,h('p',{class:'sub'},'Aparecem como botões no rodapé de todas as telas. Links sem endereço completo são descartados ao salvar.')));
+}
+function resumo(){const o=JSON.parse(ORIG),n=S,r=[];
+  const d=(a,b)=>JSON.stringify(a)!==JSON.stringify(b);
+  if(d([o.nome,o.tag,o.logo],[n.nome,n.tag,n.logo]))r.push('identidade');if(d([o.tema,o.raio],[n.tema,n.raio]))r.push('cores');if(d(o.fundos,n.fundos))r.push('fundos');if(d(o.temas,n.temas))r.push('temas');
+  if(d(o.boasVindas,n.boasVindas))r.push('boas-vindas');if(d(o.anuncios,n.anuncios))r.push('anúncios');if(d(o.agenda,n.agenda))r.push('agenda');if(d(o.redes,n.redes))r.push('redes');return r.join(', ')||'ajustes'}
+$('salvar').onclick=async()=>{const b=$('salvar');b.disabled=true;try{await api({acao:'salvar',site:S,resumo:resumo()});const d=await fetch('/api/personalizar').then(r=>r.json());S=d.site;ORIG=JSON.stringify(S);desenhar();mudou();aviso('Publicado! Aparece para todos em até 1 minuto.')}catch(e){aviso(e.message,1)}b.disabled=false};
+$('descartar').onclick=()=>{if(confirm('Descartar as alterações não salvas?'))location.reload()};
+fetch('/api/personalizar').then(async r=>{
+  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/personalizar">Entrar com GitHub</a>';return}
+  const d=await r.json();S=d.site;ORIG=JSON.stringify(S);IMGS=d.imagens;REDES=d.redes;desenhar();previa()
+}).catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
+</script></body></html>
