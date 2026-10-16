@@ -32,6 +32,6 @@ fetch('/api/semanas').then(async r=>{
  function mostrar(i){[...abas.children].forEach((b,k)=>b.classList.toggle('on',k===i));corpo.textContent='';const s=d.semanas[i];
   corpo.append(secao('O que o aluno recebe na aula','GitHub · '+s.aula.path,s.aula),secao('Tarefa de casa (vira Issue)','GitHub · '+s.tarefa.path,s.tarefa))}
  if(!d.semanas.length){corpo.textContent='Nenhuma semana encontrada.';return}
- d.semanas.forEach((s,i)=>{const b=el('button','',(/nivel-(\d+)/.exec(s.dir)?'N'+Number(/nivel-(\d+)/.exec(s.dir)[1])+' · ':'')+'Semana '+Number(s.semana.slice(7)));b.onclick=()=>mostrar(i);abas.append(b)});
+ d.semanas.forEach((s,i)=>{const b=el('button','',(/nivel-(\d+)/.exec(s.dir)?'Nível '+Number(/nivel-(\d+)/.exec(s.dir)[1])+' · ':'')+'Semana '+Number(s.semana.slice(7)));b.onclick=()=>mostrar(i);abas.append(b)});
  mostrar(0)}).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>
