@@ -101,9 +101,9 @@ function desenhar(){
     const pinta=()=>{prev.textContent='';prev.append(V.render(v,null,{semAviso:false}));
       const n=V.normalizar(v);estado.textContent=n.embed?`Origem: ${n.origem} · embed disponível (iframe permitido).`:`Origem: ${n.origem} · sem embed para este link: só aparece como cartão.`;
       if(!comp.hidden){comp.textContent='';for(const m of ['cartao','clique','direto'])comp.append(h('div',{},h('div',{class:'sub',style:'margin-bottom:4px'},V.MODOS[m]),V.render(v,m)))}};
-    const recalc=()=>{v.embed=V.extrairEmbed(codigo.value)||V.embedDe(v.url)||'';if(/instagram\.com/.test(v.embed)&&Number(v.altura)===360){v.altura=700;if(altRef)altRef.value=700}mudou();pinta()};let altRef=null;
+    const recalc=()=>{const tinha=!!v.embed;v.embed=V.extrairEmbed(codigo.value)||V.embedDe(v.url)||'';if(/instagram\.com/.test(v.embed)&&Number(v.altura)===360){v.altura=700;if(altRef)altRef.value=700}if(v.embed&&!tinha&&v.modo==='cartao'){v.modo='clique';if(modosRef)modosRef.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('on',Object.keys(V.MODOS)[i]==='clique'))}mudou();pinta()};let altRef=null,modosRef=null;
     const tUrl=texto(v,'url',{max:300,tipo:'url',ph:'https://…'});tUrl.addEventListener('input',recalc);codigo.addEventListener('input',recalc);
-    const modos=h('div',{});for(const [k,t] of Object.entries(V.MODOS))modos.append(h('button',{type:'button',class:'chipx'+(v.modo===k?' on':''),onclick:e=>{v.modo=k;modos.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');mudou();pinta()}},t));
+    const modos=h('div',{});modosRef=modos;for(const [k,t] of Object.entries(V.MODOS))modos.append(h('button',{type:'button',class:'chipx'+(v.modo===k?' on':''),onclick:e=>{v.modo=k;modos.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');mudou();pinta()}},t));
     const tT=texto(v,'titulo',{max:80}),tL=texto(v,'legenda',{max:280,area:true}),tB=texto(v,'botao',{max:30,ph:'ex.: Seguir no Instagram'});
     [tT,tL,tB].forEach(x=>x.addEventListener('input',pinta));
     const alt=h('input',{type:'number',min:150,max:800,step:10,value:v.altura||360});altRef=alt;alt.addEventListener('input',()=>{v.altura=+alt.value;mudou();pinta()});
