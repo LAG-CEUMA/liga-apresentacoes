@@ -1,6 +1,6 @@
 'use strict';
 // Editor de slides: quem pode editar (owner, escopo por nível/aula, ou cargo "slides" + vínculo com o nível).
-const u = require('../lib/util'); const S = require('../lib/slides');
+const u = require('../lib/util'); const S = require('../lib/slides'); const Site = require('../lib/site');
 const SUBSTITUIR_IMPORTADA = true;
 module.exports = async (req, res) => {
   try {
@@ -10,6 +10,7 @@ module.exports = async (req, res) => {
     const dono = u.papel(cfg, usuario) === 'owner';
     const pode = (dir, id) => u.podeEditarSlides(cfg, usuario, dir, id);
     const erro = (c, m) => u.json(res, c, { erro: m });
+    const algum = dono || u.permissoes(cfg, usuario).includes('slides') || ((cfg.editores || {})[usuario] || []).length > 0; // pode usar o editor em algum lugar
     const validar = (dir, id) => S.DIR_RE.test(String(dir || '')) && S.AULA_ID_RE.test(String(id || ''));
     if (req.method === 'GET') {
       const q = req.query || {}; const acao = q.acao || 'lista';
@@ -22,7 +23,13 @@ module.exports = async (req, res) => {
         if (!visiveis.length && !dono) return erro(403, 'Você não tem permissão para editar slides. Peça a um owner.');
         return u.json(res, 200, { usuario, dono, niveis: visiveis });
       }
+      if (acao === 'imagens') { if (!algum) return erro(403, 'Sem permissão.'); return u.json(res, 200, { imagens: await Site.listarImagens() }); }
       if (!validar(q.dir, q.id)) return erro(400, 'Aula inválida.');
+      if (acao === 'versoes') { if (!pode(q.dir, q.id)) return erro(403, 'Sem permissão.'); return u.json(res, 200, { versoes: await S.versoes(q.dir, q.id) }); }
+      if (acao === 'versao') {
+        if (!pode(q.dir, q.id)) return erro(403, 'Sem permissão.');
+        try { return u.json(res, 200, { modelo: await S.lerVersao(q.dir, q.id, q.sha) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
+      }
       if (acao === 'aula') {
         if (!pode(q.dir, q.id)) return erro(403, 'Sem permissão para editar esta aula.');
         const a = await S.lerAula(q.dir, q.id);
@@ -48,6 +55,12 @@ module.exports = async (req, res) => {
         const r = await S.salvarAula(b.dir, b.id, b.modelo, usuario, b.base || null, SUBSTITUIR_IMPORTADA && !!b.substituir);
         return u.json(res, 200, { ok: true, base: r.base, modelo: r.modelo });
       } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
+    }
+    if (b.acao === 'upload') {
+      if (!algum) return erro(403, 'Sem permissão.');
+      const m = /^data:image\/[a-z+]+;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.dados || ''));
+      if (!m) return erro(400, 'Imagem inválida.');
+      try { return u.json(res, 200, { ok: true, nome: await Site.enviarImagem(b.nome, Buffer.from(m[1], 'base64'), usuario) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
     }
     if (b.acao === 'novo_nivel') {
       if (!dono) return erro(403, 'Só owners criam níveis.');

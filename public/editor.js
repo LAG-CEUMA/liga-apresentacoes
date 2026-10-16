@@ -31,9 +31,14 @@ async function lista() {
       h('button', { class: 'b pri', onclick: async () => { try { await api({ acao: 'novo_nivel', numero: n.value, nome: nm.value }); aviso('Nível criado'); lista(); } catch (e) { aviso(e.message, 1); } } }, 'Criar nível'))));
   }
   const todas = d.niveis.flatMap((n) => n.aulas.map((a) => ({ dir: n.dir, nome: n.nome, ...a })));
+  const lembra = (k, pad) => { try { const v = localStorage.getItem('liga_ed_' + k); return v === null ? pad : v === '1'; } catch { return pad; } };
+  const grava = (k, v) => { try { localStorage.setItem('liga_ed_' + k, v ? '1' : '0'); } catch { /* sem armazenamento */ } };
+  const detalhes = [];
+  box.append(h('div', { style: 'display:flex;gap:8px;margin:10px 0' }, h('button', { class: 'b', onclick: () => detalhes.forEach((x) => { x.open = true; }) }, 'Expandir tudo'), h('button', { class: 'b', onclick: () => detalhes.forEach((x) => { x.open = false; }) }, 'Recolher tudo')));
   for (const n of d.niveis) {
     const proximo = 'aula-' + String(Math.max(0, ...n.aulas.map((a) => +a.id.slice(5))) + 1).padStart(2, '0');
-    const c = h('div', { class: 'nv' }, h('h3', {}, n.nome, h('span', { class: 'sub' }, '  ' + n.dir)));
+    const c = h('details', { class: 'nv' }, h('summary', { style: 'cursor:pointer;list-style:none;display:flex;gap:10px;align-items:baseline' }, h('h3', { style: 'margin:0' }, n.nome), h('span', { class: 'sub' }, n.dir), h('span', { class: 'badge', style: 'margin-left:auto' }, n.aulas.length + (n.aulas.length === 1 ? ' aula' : ' aulas'))));
+    c.open = lembra(n.dir, d.niveis.length <= 2); c.addEventListener('toggle', () => grava(n.dir, c.open)); detalhes.push(c);
     if (!n.aulas.length) c.append(h('p', { class: 'sub' }, 'Nenhuma aula ainda.'));
     for (const a of n.aulas) c.append(h('div', { class: 'al' }, h('span', { class: 't' }, h('b', {}, a.titulo), h('br'), h('small', { class: 'sub' }, a.id)),
       a.editavel ? h('a', { class: 'b pri', href: `/editor?dir=${n.dir}&id=${a.id}` }, 'Editar slides') : h('span', { class: 'sub' }, 'sem permissão'), h('a', { class: 'b', href: `/aula/${n.dir}/${a.id}`, target: '_blank' }, 'Ver')));
@@ -137,7 +142,7 @@ function iniciaRedim(e) {
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up, { once: true });
 }
 function comecaEdicao(e) {
-  let t = e.target; if (t === slideEl() || t instanceof SVGElement) return;
+  let t = e.target; if (t === slideEl() || t instanceof SVGElement || t.tagName === 'IMG') return;
   while (t.parentElement !== slideEl() && INLINE.has(t.tagName)) t = t.parentElement;
   if (editando) fimEdicao();
   editando = t; t.contentEditable = 'true'; t.focus();
@@ -208,6 +213,56 @@ function painel() {
 }
 function campoNumPos(rot, k, fn) { const i = h('input', { type: 'number', 'data-k': k, value: k === 'x' ? sel.offsetLeft : k === 'y' ? sel.offsetTop : k === 'w' ? sel.offsetWidth : sel.offsetHeight }); i.oninput = () => { if (i.value !== '') fn(+i.value); }; return h('div', {}, h('label', {}, rot), i); }
 
+// ---------- imagens ----------
+function reduz(file) { // reduz para no máximo 1920 px de largura (WebP) para não pesar no repositório
+  return new Promise((ok, no) => {
+    if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) return no(new Error('Use PNG, JPG, WEBP ou GIF.'));
+    const rd = new FileReader(); rd.onerror = () => no(new Error('Não consegui ler o arquivo.'));
+    rd.onload = () => {
+      if (file.type === 'image/gif') return file.size > 3e6 ? no(new Error('GIF maior que 3 MB.')) : ok({ dados: rd.result, w: 0, h: 0 });
+      const im = new Image(); im.onerror = () => no(new Error('Imagem inválida.'));
+      im.onload = () => { const k = Math.min(1, 1920 / im.naturalWidth), c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok({ dados: c.toDataURL('image/webp', 0.9), w: c.width, h: c.height }); };
+      im.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
+function inserirImagem(nome, w, hh) {
+  const lar = Math.min(w || 800, 800), alt = w ? Math.round(lar * hh / w) : 0;
+  inserir(`<img src="/api/imagem?n=${nome}" alt="" style="position:absolute;left:200px;top:260px;width:${lar}px;${alt ? 'height:' + alt + 'px;' : ''}object-fit:cover;border-radius:12px">`);
+}
+async function modalImagens() {
+  const grade = h('div', { class: 'mod', style: 'grid-template-columns:repeat(auto-fill,minmax(120px,1fr))' }, 'Carregando…');
+  const arq = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', hidden: true });
+  const v = modal([h('h3', { style: 'margin-top:0' }, 'Imagens'), h('p', { class: 'sub' }, 'Envie uma imagem (PNG, JPG, WEBP ou GIF) ou escolha uma já enviada. As imagens ficam públicas: não envie nada confidencial.'),
+    h('div', { style: 'display:flex;gap:8px;margin-bottom:8px' }, h('button', { class: 'b pri', onclick: () => arq.click() }, '⬆ Enviar nova imagem'), arq, h('button', { class: 'b', onclick: () => v.remove() }, 'Fechar')), grade]);
+  arq.onchange = async () => {
+    const f = arq.files[0]; if (!f) return;
+    try { aviso('Enviando…'); const r = await reduz(f); const j = await api({ acao: 'upload', nome: f.name, dados: r.dados }); v.remove(); inserirImagem(j.nome, r.w, r.h); aviso('Imagem inserida'); } catch (e) { aviso(e.message, 1); }
+  };
+  try {
+    const d = await ler('acao=imagens'); grade.textContent = '';
+    if (!d.imagens.length) grade.append(h('span', { class: 'sub' }, 'Nenhuma imagem enviada ainda.'));
+    for (const n of d.imagens) { const b = h('button', { title: n, style: 'padding:4px', onclick: () => { v.remove(); const im = new Image(); im.onload = () => inserirImagem(n, im.naturalWidth, im.naturalHeight); im.onerror = () => inserirImagem(n, 0, 0); im.src = '/api/imagem?n=' + n; } }, h('img', { src: '/api/imagem?n=' + n, alt: '', style: 'width:100%;height:80px;object-fit:cover;border-radius:6px;display:block' })); grade.append(b); }
+  } catch (e) { grade.textContent = e.message; }
+}
+// ---------- histórico ----------
+async function historico() {
+  const lista = h('div', {}, 'Carregando…');
+  const v = modal([h('h3', { style: 'margin-top:0' }, 'Histórico desta aula'), h('p', { class: 'sub' }, 'Cada salvamento é uma versão. "Restaurar" carrega a versão na tela; confira e clique em Salvar para valer (e Ctrl+Z desfaz).'), lista, h('button', { class: 'b', onclick: () => v.remove() }, 'Fechar')]);
+  try {
+    const d = await ler(`acao=versoes&dir=${encodeURIComponent(DIR)}&id=${encodeURIComponent(ID)}`); lista.textContent = '';
+    if (!d.versoes.length) lista.append(h('p', { class: 'sub' }, 'Ainda não há versões salvas pelo editor.'));
+    d.versoes.forEach((x, k) => {
+      const dt = x.data ? new Date(x.data).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+      lista.append(h('div', { class: 'al' }, h('span', { class: 't' }, h('b', {}, dt), h('span', { class: 'sub' }, x.autor ? '  por @' + x.autor : ''), k === 0 ? h('span', { class: 'badge', style: 'margin-left:8px' }, 'atual') : null),
+        h('button', { class: 'b', onclick: async () => {
+          if (!confirm('Carregar esta versão na tela? O que está na tela agora será substituído (dá para desfazer com Ctrl+Z).')) return;
+          try { const r = await ler(`acao=versao&dir=${encodeURIComponent(DIR)}&id=${encodeURIComponent(ID)}&sha=${x.sha}`); if (editando) fimEdicao(); commit(); snap(); M.titulo = r.modelo.titulo; M.slides = r.modelo.slides; $('tit').value = M.titulo; cur = Math.min(cur, M.slides.length - 1); sel = foco = null; desenhaTudo(); marcarSujo(true); snap(); v.remove(); aviso('Versão carregada. Clique em Salvar para publicá-la.'); } catch (e) { aviso(e.message, 1); }
+        } }, 'Restaurar')));
+    });
+  } catch (e) { lista.textContent = e.message; }
+}
 // ---------- barra e ferramentas ----------
 function atualizaBarra() { const d = $('desf'), r = $('ref'); if (d) d.disabled = hi <= 0 && hist[hi] === snapshot(); if (r) r.disabled = hi >= hist.length - 1; }
 async function salvar() {
@@ -220,12 +275,12 @@ function barra() {
   const tit = h('input', { id: 'tit', type: 'text', value: M.titulo, maxlength: 120, 'aria-label': 'Título da aula' }); tit.oninput = () => { M.titulo = tit.value; marcarSujo(true); agendarSnap(); };
   B.append(h('a', { class: 'b', href: '/editor' }, '← Aulas'), tit, h('span', { class: 'sub' }, DIR + ' / ' + ID), h('span', { style: 'flex:1' }), h('span', { id: 'est' }, ''),
     h('button', { class: 'b', id: 'desf', onclick: () => desfazer(-1), title: 'Ctrl+Z' }, '↶ Desfazer'), h('button', { class: 'b', id: 'ref', onclick: () => desfazer(1), title: 'Ctrl+Y' }, '↷ Refazer'),
-    h('a', { class: 'b', href: `/aula/${DIR}/${ID}`, target: '_blank', title: 'Abre a versão salva' }, 'Ver aula'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}/roteiro`, target: '_blank' }, 'Ver roteiro'),
+    h('button', { class: 'b', onclick: historico, title: 'Versões salvas desta aula' }, '🕘 Histórico'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}`, target: '_blank', title: 'Abre a versão salva' }, 'Ver aula'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}/roteiro`, target: '_blank' }, 'Ver roteiro'),
     h('button', { class: 'b pri', id: 'salvarb', onclick: salvar, title: 'Ctrl+S' }, 'Salvar'));
   const F = $('ferr'); F.textContent = '';
   const ic = h('select', { style: 'width:130px', 'aria-label': 'Ícone' }, ...Object.keys(M0.ICONES).map((n) => h('option', { value: n }, n)));
   F.append(h('span', { class: 'sub' }, 'Adicionar:'), ...[['Título', 'titulo'], ['Texto', 'texto'], ['Etiqueta', 'etiqueta'], ['Cartão', 'cartao'], ['Caixa', 'caixa'], ['Número', 'numero'], ['Pílula', 'pilula']].map(([t, k]) => h('button', { class: 'b', onclick: () => inserir(M0.ELEMENTOS[k]()) }, t)),
-    ic, h('button', { class: 'b', onclick: () => inserir(M0.ELEMENTOS.icone(ic.value)) }, '+ Ícone'), h('span', { style: 'flex:1' }), h('a', { class: 'b', target: '_blank', href: `/aula/${DIR}/${ID}#${cur + 1}`, onclick: (e) => { e.currentTarget.href = `/aula/${DIR}/${ID}#${cur + 1}`; } }, '▶ Ver este slide'));
+    h('button', { class: 'b', onclick: modalImagens }, '🖼 Imagem'), ic, h('button', { class: 'b', onclick: () => inserir(M0.ELEMENTOS.icone(ic.value)) }, '+ Ícone'), h('span', { style: 'flex:1' }), h('a', { class: 'b', target: '_blank', href: `/aula/${DIR}/${ID}#${cur + 1}`, onclick: (e) => { e.currentTarget.href = `/aula/${DIR}/${ID}#${cur + 1}`; } }, '▶ Ver este slide'));
   marcarSujo(sujo); atualizaBarra();
 }
 function teclas(e) {

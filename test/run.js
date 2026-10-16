@@ -6,7 +6,7 @@ process.env.GH_TOKEN = 'x'; process.env.GITHUB_CLIENT_ID = 'cid'; process.env.GI
 process.env.ADMIN_USERS = 'chefe';
 
 let cfg = { owners: ['dono'], monitores: { mon1: { aulas: [], roteiros: [] }, mon2: { aulas: ['nivel-00-tutorial/aula-03'], roteiros: ['nivel-00-tutorial/aula-01'] } }, alunos: ['alu1'], aulas: { 'nivel-00-tutorial/aula-01': 'publico', 'nivel-00-tutorial/aula-02': 'membros' } };
-const dadosArq = {}; let dSeq = 0; const shaArq = {};
+const dadosArq = {}; let dSeq = 0; const shaArq = {}; const histArq = {}; let nCommit = 0;
 let siteJson = null, siteSha = null; const siteCommits = []; const imagens = {};
 let sha = 'sha1'; const commits = [];
 const arquivos = {
@@ -43,7 +43,10 @@ global.fetch = async (url, op = {}) => {
   const m = /\/contents\/(.+)$/.exec(p);
   if (m && op.method === 'PUT' && /^niveis\//.test(decodeURIComponent(m[1]))) { const k = decodeURIComponent(m[1]), b = JSON.parse(op.body);
     if (arquivos[k] !== undefined && b.sha !== 'sa' + (shaArq[k] || 0)) return resp(409, {}); if (arquivos[k] === undefined && b.sha) return resp(422, {});
-    arquivos[k] = Buffer.from(b.content, 'base64').toString(); shaArq[k] = (shaArq[k] || 0) + 1; return resp(200, { content: { sha: 'sa' + shaArq[k] } }); }
+    arquivos[k] = Buffer.from(b.content, 'base64').toString(); shaArq[k] = (shaArq[k] || 0) + 1; (histArq[k] = histArq[k] || []).unshift({ sha: String(++nCommit).padStart(40, '0'), texto: arquivos[k], msg: b.message }); return resp(200, { content: { sha: 'sa' + shaArq[k] } }); }
+  if (p.endsWith('/commits')) { const k = new URL(url).searchParams.get('path'); return resp(200, (histArq[k] || []).map((x) => ({ sha: x.sha, commit: { message: x.msg, author: { date: '2026-10-16T12:00:00Z' } } }))); }
+  { const mr = /\/contents\/(.+)$/.exec(p), ref = new URL(url).searchParams.get('ref');
+    if (mr && /^[0-9a-f]{40}$/.test(ref || '')) { const v = ((histArq[decodeURIComponent(mr[1])]) || []).find((x) => x.sha === ref); return v ? resp(200, { sha: 'x', content: Buffer.from(v.texto).toString('base64') }) : resp(404, {}); } }
   if (m && arquivos[decodeURIComponent(m[1])] !== undefined) { const k = decodeURIComponent(m[1]);
     if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, arquivos[k]);
     return resp(200, { sha: 'sa' + (shaArq[k] || 0), content: Buffer.from(arquivos[k]).toString('base64') }); }
@@ -489,6 +492,24 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await get({ acao: 'importar', dir: nivel1, id: 'aula-01' }, 'escopo2')).status, 403); assert.equal((await get({ acao: 'importar', dir: nivel1, id: 'aula-01' }, 'dono')).status, 200);
     assert.equal((await post({ acao: 'salvar', dir: nivel1, id: 'aula-01', modelo: modelo('Z'), base: base1 }, 'escopo1')).status, 200); // editor da aula com base certa
     delete cfg.equipe.mon3; delete cfg.monitores.mon3; delete cfg.editores; delete cfg.turmas['T-N1']; delete cfg.turmas['T-N0']; cfg.alunos = cfg.alunos.filter((x) => !['edi1', 'edi2'].includes(x)); delete cfg.equipe.edi1; delete cfg.equipe.edi2; delete cfg.cargos.slider; u.limparCache();
+  }
+  // imagens e histórico do editor
+  { const api = h('slides'); const post = (b, user = 'dono') => chamar(api, { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: b });
+    const get = (q, user = 'dono') => chamar(api, { query: q, user });
+    const png = 'data:image/png;base64,' + Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0, 0]).toString('base64');
+    assert.equal((await post({ acao: 'upload', nome: 'logo.png', dados: png }, 'alu1')).status, 403);
+    r = await post({ acao: 'upload', nome: 'Meu Logo.png', dados: png }); assert.equal(r.status, 200); const nomeImg = JSON.parse(r.body).nome; assert(/^meu-logo-[a-z0-9]+\.png$/.test(nomeImg));
+    assert.equal((await post({ acao: 'upload', nome: 'x.png', dados: 'data:image/png;base64,AAAA' })).status, 400); assert.equal((await post({ acao: 'upload', nome: 'x', dados: 'lixo' })).status, 400);
+    assert(JSON.parse((await get({ acao: 'imagens' })).body).imagens.includes(nomeImg)); assert.equal((await get({ acao: 'imagens' }, 'alu1')).status, 403);
+    // a imagem enviada entra no slide e sobrevive à limpeza; imagem de fora é descartada
+    const Sl = require('../lib/slides.js'); const mi = Sl.normalizar({ titulo: 'I', slides: [{ html: `<img src="/api/imagem?n=${nomeImg}" style="position:absolute;width:300px;object-fit:cover"><img src="https://x.com/a.png">` }] });
+    assert(mi.slides[0].html.includes(nomeImg) && !mi.slides[0].html.includes('x.com'));
+    // histórico: cada salvamento vira uma versão; restaurar lê o conteúdo daquele momento
+    const N = 'nivel-01-pensar-como-designer'; const mod = (t) => ({ titulo: t, slides: [{ html: '<h2>' + t + '</h2>', fundo: '#12141c', cor: '#f3efe6', notas: '', tempo: '' }] });
+    r = JSON.parse((await post({ acao: 'salvar', dir: N, id: 'aula-31', modelo: mod('V1'), base: null })).body); r = JSON.parse((await post({ acao: 'salvar', dir: N, id: 'aula-31', modelo: mod('V2'), base: r.base })).body);
+    const vs = JSON.parse((await get({ acao: 'versoes', dir: N, id: 'aula-31' })).body).versoes; assert.equal(vs.length, 2); assert.equal(vs[0].autor, 'dono');
+    assert.equal(JSON.parse((await get({ acao: 'versao', dir: N, id: 'aula-31', sha: vs[1].sha })).body).modelo.titulo, 'V1'); assert.equal(JSON.parse((await get({ acao: 'versao', dir: N, id: 'aula-31', sha: vs[0].sha })).body).modelo.titulo, 'V2');
+    assert.equal((await get({ acao: 'versao', dir: N, id: 'aula-31', sha: '../etc' })).status, 400); assert.equal((await get({ acao: 'versoes', dir: N, id: 'aula-31' }, 'alu1')).status, 403);
   }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
