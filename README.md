@@ -31,3 +31,6 @@ Use os termos e programas **em inglês**.
 - Acesso extra por pessoa: `acessos.<usuario>: [{nivel, ate, motivo}]` (slides do nível até a data; nunca roteiro). Editado na ficha (ação `pessoa`, campo `acessos`).
 - **Pontuação** (`lib/pontos.js`): presença + participação + exercícios − penalidades; pesos em `pontuacao` (padrão) e `turmas.<id>.pesos`; entregas em `s.entregas` de cada sessão; Top 5 congelado em `turmas.<id>.rankingFinal` ao arquivar.
 - **Eventos** (`api/eventos.js`, `public/eventos.html`): `dados/eventos/<ID>/evento.json` e `inscricoes/<usuario>.json`. **Certificado** em `/certificado/<código>` (código = ID.usuario.HMAC); modelo opcional em `modelos/certificado.html` no repositório de conteúdo.
+
+## Vitrine
+`site.vitrine` (até 24 destaques) aparece na tela inicial. Cada item tem modo `cartao`, `clique` ou `direto`. Embeds só de sites da lista em `public/vitrine.js` (YouTube, Vimeo, itch.io, Instagram, Spotify, Discord, Google Slides/Drive, TikTok), sempre em iframe com sandbox. Edição em Personalizar → 9. Vitrine.

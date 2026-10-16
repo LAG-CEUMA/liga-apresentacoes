@@ -6,7 +6,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="barra" id="barra" hidden><b id="estado">Sem alterações</b><span style="flex:1"></span><button class="btn sec" id="descartar" type="button">Descartar</button><button class="btn" id="salvar" type="button">Salvar alterações</button></div>
 </main><div id="msg" class="msg" hidden></div>
-<script src="/site.js"></script>
+<script src="/site.js"></script><script src="/vitrine.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 function h(t,p,...f){const e=document.createElement(t);for(const [k,v] of Object.entries(p||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k in e&&k!=='list')e[k]=v;else e.setAttribute(k,v)}
@@ -89,11 +89,37 @@ function desenhar(){
   const lR=h('div',{});S.redes.forEach((r,i)=>{const s=h('select',{},...REDES.map(n=>h('option',{value:n},n)));s.value=r.nome;s.addEventListener('change',()=>{r.nome=s.value;mudou()});
     lR.append(h('div',{class:'linha'},h('div',{class:'form',style:'flex:1;margin:0'},campo('Rede',s),campo('Endereço (https://…)',texto(r,'url',{max:300,tipo:'url'}))),h('button',{class:'btn sec',type:'button',onclick:()=>{S.redes.splice(i,1);mudou(true)}},'Remover')))});
   c.append(secao('8. Redes sociais e links',S.redes.length+' link(s)',false,h('button',{class:'btn',type:'button',onclick:()=>{if(S.redes.length>=12)return aviso('Máximo de 12 links.',1);S.redes.push({nome:'Instagram',url:'https://'});mudou(true)}},'+ Novo link'),lR,h('p',{class:'sub'},'Aparecem como botões no rodapé de todas as telas. Links sem endereço completo são descartados ao salvar.')));
+  // 9 vitrine
+  S.vitrine=S.vitrine||[];const V=LigaVitrine;
+  const lV=h('div',{});
+  S.vitrine.forEach((v,i)=>{
+    const codigo=h('textarea',{maxLength:600,placeholder:'Opcional: cole aqui o código <iframe …> do itch.io, Discord etc. (YouTube, Instagram, Spotify e Slides funcionam só com o link)',style:'min-height:60px'});
+    codigo.value=v.embed&&V.embedDe(v.url)!==v.embed?v.embed:'';
+    const prev=h('div',{class:'vit-grade',style:'grid-template-columns:minmax(240px,420px)'}),comp=h('div',{class:'vit-grade',hidden:true}),estado=h('small',{class:'sub'});
+    const pinta=()=>{prev.textContent='';prev.append(V.render(v,null,{semAviso:false}));
+      const n=V.normalizar(v);estado.textContent=n.embed?`Origem: ${n.origem} · embed disponível (iframe permitido).`:`Origem: ${n.origem} · sem embed para este link: só aparece como cartão.`;
+      if(!comp.hidden){comp.textContent='';for(const m of ['cartao','clique','direto'])comp.append(h('div',{},h('div',{class:'sub',style:'margin-bottom:4px'},V.MODOS[m]),V.render(v,m)))}};
+    const recalc=()=>{v.embed=V.extrairEmbed(codigo.value)||V.embedDe(v.url)||'';mudou();pinta()};
+    const tUrl=texto(v,'url',{max:300,tipo:'url',ph:'https://…'});tUrl.addEventListener('input',recalc);codigo.addEventListener('input',recalc);
+    const modos=h('div',{});for(const [k,t] of Object.entries(V.MODOS))modos.append(h('button',{type:'button',class:'chipx'+(v.modo===k?' on':''),onclick:e=>{v.modo=k;modos.querySelectorAll('button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');mudou();pinta()}},t));
+    const tT=texto(v,'titulo',{max:80}),tL=texto(v,'legenda',{max:280,area:true}),tB=texto(v,'botao',{max:30,ph:'ex.: Seguir no Instagram'});
+    [tT,tL,tB].forEach(x=>x.addEventListener('input',pinta));
+    const alt=h('input',{type:'number',min:150,max:800,step:10,value:v.altura||360});alt.addEventListener('input',()=>{v.altura=+alt.value;mudou();pinta()});
+    const mover=(d)=>{const j=i+d;if(j<0||j>=S.vitrine.length)return;[S.vitrine[i],S.vitrine[j]]=[S.vitrine[j],S.vitrine[i]];mudou(true)};
+    lV.append(h('div',{class:'linha',style:'display:block'},
+      h('div',{class:'form'},campo('Título',tT),campo('Link do conteúdo (https://…)',tUrl),campo('Legenda',tL,true),campo('Código de incorporação (iframe)',codigo,true),campo('Texto do botão',tB),campo('Altura do embed (px)',alt),campo('Quem vê',vis(v))),
+      h('p',{class:'sub'},'Capa (aparece no cartão e antes do clique):'),seletorImagem(v.imagem||'',n=>v.imagem=n,'capa',true),
+      h('p',{class:'sub',style:'margin-top:10px'},'Como exibir (teste e deixe o que ficar melhor):'),modos,estado,prev,
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>{comp.hidden=!comp.hidden;pinta()}},'Comparar os 3 modos lado a lado'),h('button',{class:'btn sec',type:'button',onclick:()=>mover(-1)},'↑ Subir'),h('button',{class:'btn sec',type:'button',onclick:()=>mover(1)},'↓ Descer'),h('button',{class:'btn sec',type:'button',onclick:()=>{if(confirm('Remover este destaque da vitrine?')){S.vitrine.splice(i,1);mudou(true)}}},'Remover')),comp));
+    pinta()});
+  c.append(secao('9. Vitrine (redes, vídeos, jogos)',S.vitrine.length+' destaque(s)',false,
+    h('p',{class:'sub',style:'max-width:760px'},'Destaques que aparecem na tela inicial para levar a pessoa até a rede ou o jogo. Cole o link; se o site permitir, o portal monta o embed sozinho (YouTube, Instagram, Vimeo, Spotify, Google Slides). Para itch.io, Discord e outros, cole o código <iframe> que o próprio site fornece. Só endereços de uma lista de sites permitidos são aceitos.'),
+    h('button',{class:'btn',type:'button',onclick:()=>{if(S.vitrine.length>=24)return aviso('Máximo de 24 destaques.',1);S.vitrine.unshift({id:'',titulo:'Novo destaque',legenda:'',url:'',embed:'',modo:'cartao',imagem:'',botao:'',altura:360,visivel:'publico'});mudou(true)}},'+ Novo destaque'),lV));
 }
 function resumo(){const o=JSON.parse(ORIG),n=S,r=[];
   const d=(a,b)=>JSON.stringify(a)!==JSON.stringify(b);
   if(d([o.nome,o.tag,o.logo],[n.nome,n.tag,n.logo]))r.push('identidade');if(d([o.tema,o.raio],[n.tema,n.raio]))r.push('cores');if(d(o.fundos,n.fundos))r.push('fundos');if(d(o.temas,n.temas))r.push('temas');
-  if(d(o.boasVindas,n.boasVindas))r.push('boas-vindas');if(d(o.anuncios,n.anuncios))r.push('anúncios');if(d(o.agenda,n.agenda))r.push('agenda');if(d(o.redes,n.redes))r.push('redes');return r.join(', ')||'ajustes'}
+  if(d(o.boasVindas,n.boasVindas))r.push('boas-vindas');if(d(o.anuncios,n.anuncios))r.push('anúncios');if(d(o.agenda,n.agenda))r.push('agenda');if(d(o.redes,n.redes))r.push('redes');if(d(o.vitrine,n.vitrine))r.push('vitrine');return r.join(', ')||'ajustes'}
 $('salvar').onclick=async()=>{const b=$('salvar');b.disabled=true;try{await api({acao:'salvar',site:S,resumo:resumo()});const d=await fetch('/api/personalizar').then(r=>r.json());S=d.site;ORIG=JSON.stringify(S);desenhar();mudou();aviso('Publicado! Aparece para todos em até 1 minuto.')}catch(e){aviso(e.message,1)}b.disabled=false};
 $('descartar').onclick=()=>{if(confirm('Descartar as alterações não salvas?'))location.reload()};
 fetch('/api/personalizar').then(async r=>{

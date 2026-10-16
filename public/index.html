@@ -7,7 +7,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
-<script src="/site.js"></script>
+<script src="/site.js"></script><script src="/vitrine.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
@@ -38,6 +38,10 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
       const b=el('div','data',`${dd}/${m}`);b.append(el('small','',DIAS[dt.getDay()]));const t=el('div');t.style.flex='1';
       t.append(el('b','',e.titulo));const q=[e.hora,e.local].filter(Boolean).join(' · ');if(q){t.append(el('br'),el('small','',q))}
       if(e.link){t.append(el('br'),link('Mais informações',e.link))}i.append(b,t);if(e.visivel==='membros')i.append(el('span','badge','membros'));s.append(i)}c.append(s)}
+  // vitrine (redes e embeds)
+  const vt=site.vitrine||[];
+  if(vt.length){const s=secao('Vitrine da liga',vt.length+(vt.length===1?' destaque':' destaques'));s.id='sec-vitrine';lembrar(s,'vitrine',true);
+    const g=el('div','vit-grade');for(const v of vt)g.append(LigaVitrine.render(v));s.append(g);c.append(s)}
   // aulas por nível
   const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);const niveis=Object.keys(por).sort();
   const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));sa.id='sec-aulas';lembrar(sa,'aulas',true);

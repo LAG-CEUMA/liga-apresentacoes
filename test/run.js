@@ -389,6 +389,18 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await evp({ acao: 'inscrever', id: 'PASSADO' }, 'alu1')).status, 400); // inscrições encerradas
   assert.equal(JSON.parse((await evg({}, null)).body).eventos.length, 1); // público aparece para visitante
   assert(C.preencher('{{nome}}', { nome: '<b>x</b>' }) === '&lt;b&gt;x&lt;/b&gt;'); // sem injeção de HTML no certificado
+  // vitrine: só embeds de sites permitidos
+  { const V = require('../public/vitrine.js'), Si = require('../lib/site.js');
+    assert(V.embedDe('https://youtu.be/dQw4w9WgXcQ').includes('youtube-nocookie.com/embed/dQw4w9WgXcQ'));
+    assert.equal(V.extrairEmbed('<iframe src="https://evil.com/x"></iframe>'), '');
+    assert(V.extrairEmbed('<iframe src="https://itch.io/embed/123"></iframe>').includes('itch.io/embed/123'));
+    assert.equal(V.embedPermitido('javascript:alert(1)'), false);
+    const lim = Si.sanitizar({ vitrine: [
+      { titulo: 'Ruim', url: 'https://x.com/a', embed: 'https://evil.com/e', modo: 'direto', visivel: 'publico' },
+      { titulo: '', url: 'https://x.com/b' },
+      { titulo: 'Membros', url: 'https://x.com/c', visivel: 'membros' }] });
+    assert.equal(lim.vitrine.length, 2); assert(!lim.vitrine[0].embed.includes('evil.com'));
+    assert.equal(Si.paraLeitor(lim, 'visitante').vitrine.length, 1); }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)
