@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css">
 <style>.perm{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}.perm label{font-size:14px;color:#cfcbc0}.sub{color:var(--mut);font-size:13px;margin:10px 0 0}input[type=text]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}</style></head>
 <body><main>
-<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/semanas">Tarefas de casa</a></div></div>
+<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="#guia">Guia</a></div></div>
 <p><b>Owners</b> veem tudo e liberam. <b>Monitores</b> têm acesso de aluno e só veem a mais o que você marcar para cada um. <b>Alunos</b> veem as aulas de nível membros e públicas. Cada mudança vira um commit no <code>liga-curriculo</code>, com seu nome; pode levar até 1 minuto para valer para todos.</p>
 
 <h2>1. Nível de cada aula</h2>
@@ -16,6 +16,67 @@
 <h2>3. Owners e alunos (usuário do GitHub, um por linha)</h2>
 <div class="grid"><div><b>Owners</b><textarea id="own"></textarea></div><div><b>Alunos</b><textarea id="alu"></textarea></div></div>
 <p><small id="fixos"></small></p><button class="btn" id="salvar">Salvar listas</button>
+
+<h2 id="guia">Guia: o que acontece quando você faz cada coisa</h2>
+<p><small>Leia uma vez; serve também para novos owners. Clique em cada item para abrir.</small></p>
+<div class="guia">
+<details open><summary>Como tudo se encaixa (visão geral)</summary>
+<ol>
+<li><b>Onde ficam os arquivos:</b> as aulas (slides e roteiros), as tarefas de casa e a lista de acessos ficam no repositório <b>privado</b> <code>LAG-CEUMA/liga-curriculo</code> no GitHub. Ninguém de fora enxerga esse repositório.</li>
+<li><b>Onde as pessoas assistem:</b> este site (<code>lag-ceuma.vercel.app</code>) lê o repositório e mostra a aula só para quem tem permissão. O site não guarda cópia: se você mudar um arquivo no GitHub, o site passa a mostrar a versão nova em até 1 minuto.</li>
+<li><b>Quem é quem:</b> o site identifica a pessoa pelo <b>login do GitHub</b> (só o nome de usuário; nenhuma permissão sobre a conta dela é pedida).</li>
+<li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
+</ol></details>
+
+<details><summary>Os 4 tipos de pessoa</summary>
+<ul>
+<li><b>Owner:</b> vê tudo (slides, roteiros, tarefas de casa), muda níveis e permissões. Dê só a quem coordena a liga.</li>
+<li><b>Monitor:</b> começa igual a um aluno. Só vê a mais o que um owner marcar para ele (slides de uma aula, roteiro de uma aula).</li>
+<li><b>Aluno:</b> usuário na lista de alunos. Vê aulas de nível <i>Membros</i> e <i>Público</i>. Nunca vê roteiros.</li>
+<li><b>Visitante:</b> qualquer pessoa sem login ou fora das listas. Vê só aulas de nível <i>Público</i>.</li></ul></details>
+
+<details><summary>1. Nível de cada aula: o que cada botão faz</summary>
+<ul>
+<li><b>Só owners</b> (padrão para toda aula nova): só owners abrem. Use enquanto a aula está em preparo.</li>
+<li><b>Membros:</b> owners, monitores e alunos da lista, depois de entrar com o GitHub.</li>
+<li><b>Público:</b> qualquer pessoa com o link, sem login. Use para as aulas que a liga quer divulgar.</li></ul>
+<p><b>O que acontece no repositório:</b> o clique grava um commit em <code>acesso/acesso.json</code> com seu nome (ex.: "Portal: afonsofarias definiu nivel-00-tutorial/aula-02 como publico"). O arquivo da aula em si não muda.</p>
+<p><b>Para desfazer:</b> clique no nível anterior. Quem já abriu uma aula pública pode ter uma cópia em cache por alguns minutos; para retirar algo realmente sensível, deixe em "Só owners" e avise.</p>
+<p><b>O roteiro</b> (guia do apresentador) nunca é público nem de membros, não importa o nível dos slides.</p></details>
+
+<details><summary>2. Monitores e permissões</summary>
+<ul>
+<li><b>Adicionar monitor:</b> digite o usuário do GitHub (sem @) e clique em adicionar. Ele entra sem nenhuma permissão extra, ou seja, vê o mesmo que um aluno.</li>
+<li><b>Caixas de seleção:</b> cada caixa libera <i>uma</i> aula (slides) ou <i>um</i> roteiro para <i>aquele</i> monitor. Salva ao marcar; não existe botão "salvar".</li>
+<li><b>Remover:</b> tira o monitor da lista e apaga as permissões dele. Ele continua podendo ver o que é público.</li></ul>
+<p><b>Repositório:</b> cada alteração é um commit em <code>acesso/acesso.json</code>.</p></details>
+
+<details><summary>3. Listas de owners e alunos</summary>
+<ul>
+<li>Um usuário do GitHub por linha, sem @, sem espaços. Maiúsculas e minúsculas não importam.</li>
+<li><b>Salvar listas</b> substitui as duas listas inteiras pelo que está nas caixas. Confira antes de salvar: se apagar uma linha, a pessoa perde o acesso.</li>
+<li><b>Owners fixos</b> (linha cinza abaixo das caixas) vêm da variável <code>ADMIN_USERS</code> na Vercel: não saem desta tela, nem por engano. É a "chave-mestra" para ninguém se trancar fora.</li>
+<li>Para ser owner, a pessoa precisa de conta no GitHub. Não precisa ser membro da organização para entrar no site.</li></ul></details>
+
+<details><summary>Tarefas de casa (/semanas)</summary>
+<ul>
+<li>Mostra, por semana, o texto da aula e a tarefa que o aluno receberá. Fica em <code>liberacao/nivel-XX/semana-NN/</code> (<code>aula.md</code> e <code>tarefa.md</code>) no <code>liga-curriculo</code>.</li>
+<li><b>Sugerir alteração</b> abre o arquivo no GitHub: edite, escreva uma mensagem curta e clique em <i>Commit changes</i>. A página mostra a versão nova em cerca de 1 minuto.</li>
+<li><b>Nada é enviado aos alunos por esta página.</b> O envio é feito depois, pelo script <code>ferramentas/liberar-semana.py</code> (primeiro em simulação; só envia de verdade com <code>--executar</code>). Nessa hora a <code>tarefa.md</code> vira uma Issue no repositório de cada aluno.</li></ul></details>
+
+<details><summary>Quanto tempo leva para valer? E se algo der errado?</summary>
+<ul>
+<li>As mudanças feitas aqui valem em até 1 minuto (o site guarda uma cópia curta para ser rápido).</li>
+<li>Se der erro ao salvar (mensagem vermelha), recarregue a página e tente de novo. Se duas pessoas salvarem ao mesmo tempo, o site tenta de novo sozinho.</li>
+<li>Todo histórico fica no GitHub: em <code>liga-curriculo</code> → <code>acesso/acesso.json</code> → <i>History</i> você vê quem mudou o quê e quando, e pode voltar a uma versão anterior.</li>
+<li>O login dura 7 dias. Se der "Só owners" estando logado, saia e entre de novo.</li></ul></details>
+
+<details><summary>Dicas de segurança para owners</summary>
+<ul>
+<li>Não coloque como owner quem só precisa ver aulas: use <i>Aluno</i> ou <i>Monitor</i>.</li>
+<li>Antes de tornar uma aula pública, abra-a em aba anônima e confira se não há nada interno (nomes, contatos, links privados).</li>
+<li>Para trocar quem é "owner fixo", é preciso editar <code>ADMIN_USERS</code> na Vercel (Settings → Environment Variables) e fazer redeploy.</li></ul></details>
+</div>
 </main><div id="msg" class="msg" hidden></div>
 <script>
 const $=id=>document.getElementById(id);

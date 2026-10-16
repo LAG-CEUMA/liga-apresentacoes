@@ -26,3 +26,6 @@ textarea{width:100%;min-height:140px}.msg{position:fixed;left:50%;bottom:20px;tr
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tabs button{background:var(--card);color:var(--txt);border:1px solid #fff3;border-radius:99px;padding:8px 16px;font:inherit;cursor:pointer}
 .tabs button.on{background:var(--ouro);color:#12141c;font-weight:700}
 .topo .acoes{display:flex;gap:8px;flex-wrap:wrap}
+.guia details{background:var(--card);border:1px solid #fff2;border-radius:12px;padding:4px 16px;margin:8px 0}
+.guia summary{cursor:pointer;font-weight:700;padding:10px 0}.guia details[open] summary{color:var(--ouro)}
+.guia li,.guia p{line-height:1.6;color:#e6e2d8}.guia ul,.guia ol{padding-left:22px}
