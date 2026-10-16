@@ -29,3 +29,11 @@ textarea{width:100%;min-height:140px}.msg{position:fixed;left:50%;bottom:20px;tr
 .guia details{background:var(--card);border:1px solid #fff2;border-radius:12px;padding:4px 16px;margin:8px 0}
 .guia summary{cursor:pointer;font-weight:700;padding:10px 0}.guia details[open] summary{color:var(--ouro)}
 .guia li,.guia p{line-height:1.6;color:#e6e2d8}.guia ul,.guia ol{padding-left:22px}
+details.nivel{background:var(--card);border:1px solid #fff2;border-radius:14px;margin:10px 0;padding:0 14px}
+details.nivel>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;padding:14px 0;list-style:none}
+details.nivel>summary::-webkit-details-marker{display:none}
+details.nivel>summary::before{content:"▸";color:var(--ouro);margin-right:8px}details.nivel[open]>summary::before{content:"▾"}
+details.nivel .nvt{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;flex:1}
+details.nivel .nvc{color:var(--mut);font-size:13px}
+details.nivel .massa{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 0 10px}
+details.nivel .nvcorpo{padding-bottom:10px}details.nivel.pequeno{margin:6px 0}details.nivel.pequeno>summary{padding:10px 0}details.nivel.pequeno .nvt{font-size:15px}

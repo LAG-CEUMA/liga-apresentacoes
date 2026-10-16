@@ -21,9 +21,10 @@ module.exports = async (req, res) => {
     const existe = new Set(aulas.map((a) => a.chave));
     let msg;
     if (b.acao === 'acesso') {
-      if (!existe.has(b.chave) || !u.NIVEIS.includes(b.nivel)) return u.json(res, 400, { erro: 'Aula ou nível inválido.' });
-      if (b.nivel === 'owners') delete novo.aulas[b.chave]; else novo.aulas[b.chave] = b.nivel;
-      msg = `Portal: ${usuario} definiu ${b.chave} como ${b.nivel}`;
+      const chaves = Array.isArray(b.chaves) ? b.chaves : [b.chave];
+      if (!chaves.length || chaves.length > 500 || !chaves.every((c) => existe.has(c)) || !u.NIVEIS.includes(b.nivel)) return u.json(res, 400, { erro: 'Aula ou nível inválido.' });
+      for (const c of chaves) { if (b.nivel === 'owners') delete novo.aulas[c]; else novo.aulas[c] = b.nivel; }
+      msg = chaves.length === 1 ? `Portal: ${usuario} definiu ${chaves[0]} como ${b.nivel}` : `Portal: ${usuario} definiu ${chaves.length} aulas (${b.nivel_nome || 'várias'}) como ${b.nivel}`;
     } else if (b.acao === 'listas') {
       const own = ler(b.owners), alu = ler(b.alunos);
       const ruim = [...own, ...alu].filter((x) => !u.USER_RE.test(x));

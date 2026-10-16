@@ -88,18 +88,41 @@ const $=id=>document.getElementById(id);
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
 function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?' erro':'');m.hidden=false;setTimeout(()=>m.hidden=true,3500)}
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
+function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
+function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a>';return}
   const d=await r.json();
   const box=$('aulas');box.textContent='';
-  for(const a of d.aulas){const l=el('div','linha');const t=el('div','t');t.append(el('b','',a.titulo),el('br'),el('small','',`${a.nivel} · ${a.chave}`));
-    const INFO={owners:'Quem vê: só owners.',membros:'Quem vê: owners, monitores e alunos da lista (precisa entrar com o GitHub).',publico:'Quem vê: qualquer pessoa com o link, sem login.'};
-    const info=el('div','nivelinfo',INFO[a.acesso]);const seg=el('div','seg');
-    for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const b=el('button',(v===a.acesso?'on ':'')+v,n);b.type='button';
-      b.onclick=async()=>{if(b.classList.contains('on'))return;try{await enviar({acao:'acesso',chave:a.chave,nivel:v});seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');info.textContent=INFO[v];aviso(`${a.titulo}: ${n}`)}catch(e){aviso(e.message,1);carregar()}};seg.append(b)}
-    const v=el('a','btn sec','Slides');v.href=a.url;v.target='_blank';l.append(t,seg,v);
-    if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}l.append(info);box.append(l)}
+  const INFO={owners:'Quem vê: só owners.',membros:'Quem vê: owners, monitores e alunos da lista (precisa entrar com o GitHub).',publico:'Quem vê: qualquer pessoa com o link, sem login.'};
+  const NOMES={owners:'Só owners',membros:'Membros',publico:'Público'};
+  const grupos={};for(const a of d.aulas)(grupos[a.nivel]=grupos[a.nivel]||[]).push(a);
+  const aberto=lerAbertos();const nomesNiveis=Object.keys(grupos).sort();
+  const barra=el('div','linha');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px';
+  const bx=el('button','btn sec','Expandir tudo'),br=el('button','btn sec','Recolher tudo');
+  barra.append(bx,br,el('small','',`${d.aulas.length} aulas em ${nomesNiveis.length} nível(is)`));box.append(barra);
+  const todos=[];
+  nomesNiveis.forEach((nv,i)=>{const lista=grupos[nv];
+    const det=el('details','nivel');det.dataset.nv=nv;det.open=aberto===null?i===0:aberto.includes(nv);todos.push(det);
+    det.addEventListener('toggle',()=>salvarAbertos(todos));
+    const sm=el('summary');const tt=el('span','nvt',nv);const cont=el('span','nvc');sm.append(tt,cont);
+    const atualizaCont=()=>{const c={owners:0,membros:0,publico:0};lista.forEach(a=>c[a.acesso]++);cont.textContent=`${lista.length} aula(s) · ${c.publico} público · ${c.membros} membros · ${c.owners} só owners`};atualizaCont();
+    const massa=el('div','massa');massa.append(el('small','','Todas deste nível:'));
+    const corpo=el('div','nvcorpo');
+    const pintar=(l)=>{l.seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===l.a.acesso));l.info.textContent=INFO[l.a.acesso]};
+    const linhas=[];
+    for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const m=el('button','btn sec',n);m.type='button';
+      m.onclick=async()=>{if(!confirm(`Definir as ${lista.length} aulas de "${nv}" como "${n}"?`))return;try{await enviar({acao:'acesso',chaves:lista.map(a=>a.chave),nivel:v,nivel_nome:nv});lista.forEach(a=>a.acesso=v);linhas.forEach(pintar);atualizaCont();aviso(`${nv}: todas em "${n}"`)}catch(e){aviso(e.message,1);carregar()}};massa.append(m)}
+    corpo.append(massa);
+    for(const a of lista){const l=el('div','linha');const t=el('div','t');t.append(el('b','',a.titulo),el('br'),el('small','',a.chave));
+      const info=el('div','nivelinfo',INFO[a.acesso]);const seg=el('div','seg');const reg={a,seg,info};linhas.push(reg);
+      for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const bt=el('button',(v===a.acesso?'on ':'')+v,n);bt.type='button';bt.dataset.v=v;
+        bt.onclick=async()=>{if(a.acesso===v)return;try{await enviar({acao:'acesso',chave:a.chave,nivel:v});a.acesso=v;pintar(reg);atualizaCont();aviso(`${a.titulo}: ${n}`)}catch(e){aviso(e.message,1);carregar()}};seg.append(bt)}
+      const vv=el('a','btn sec','Slides');vv.href=a.url;vv.target='_blank';l.append(t,seg,vv);
+      if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}l.append(info);corpo.append(l)}
+    det.append(sm,corpo);box.append(det)});
+  bx.onclick=()=>{todos.forEach(x=>x.open=true)};br.onclick=()=>{todos.forEach(x=>x.open=false)};
   const mb=$('monitores');mb.textContent='';
   const nomes=Object.keys(d.monitores).sort();
   if(!nomes.length)mb.append(el('p','','Nenhum monitor ainda.'));
@@ -109,12 +132,16 @@ async function carregar(){
     topo.append(el('b','',n));
     const rm=el('button','btn sec','Remover');rm.onclick=async()=>{if(!confirm(`Remover o monitor ${n}?`))return;try{await enviar({acao:'remover_monitor',usuario:n});aviso('Monitor removido');carregar()}catch(e){aviso(e.message,1)}};
     topo.append(rm);c.append(topo,el('p','sub','Marque o que este monitor pode abrir além do nível de aluno.'));
-    const caixas=[];const area=el('div','perm');
-    for(const a of d.aulas){
-      const w=el('label');const s=el('input');s.type='checkbox';s.checked=g.aulas.includes(a.chave);s.dataset.t='aulas';s.dataset.k=a.chave;
-      w.append(s,document.createTextNode(` ${a.titulo} · slides`));area.append(w);caixas.push(s);
-      if(a.tem_roteiro){const w2=el('label');const s2=el('input');s2.type='checkbox';s2.checked=g.roteiros.includes(a.chave);s2.dataset.t='roteiros';s2.dataset.k=a.chave;
-        w2.append(s2,document.createTextNode(` ${a.titulo} · roteiro`));area.append(w2);caixas.push(s2)}}
+    const caixas=[];const area=el('div');
+    nomesNiveis.forEach(nv=>{const dd=el('details','nivel pequeno');const sm=el('summary');sm.append(el('span','nvt',nv));const cnt=el('span','nvc');sm.append(cnt);const inner=el('div','perm');
+      const cx=[];
+      for(const a of grupos[nv]){
+        const w=el('label');const s1=el('input');s1.type='checkbox';s1.checked=g.aulas.includes(a.chave);s1.dataset.t='aulas';s1.dataset.k=a.chave;
+        w.append(s1,document.createTextNode(` ${a.titulo} · slides`));inner.append(w);cx.push(s1);caixas.push(s1);
+        if(a.tem_roteiro){const w2=el('label');const s2=el('input');s2.type='checkbox';s2.checked=g.roteiros.includes(a.chave);s2.dataset.t='roteiros';s2.dataset.k=a.chave;
+          w2.append(s2,document.createTextNode(` ${a.titulo} · roteiro`));inner.append(w2);cx.push(s2);caixas.push(s2)}}
+      const conta=()=>{cnt.textContent=`${cx.filter(x=>x.checked).length}/${cx.length} marcadas`};cx.forEach(x=>x.addEventListener('change',conta));conta();
+      dd.open=cx.some(x=>x.checked);dd.append(sm,inner);area.append(dd)});
     const salvar=async()=>{const corpo={acao:'monitor',usuario:n,aulas:[],roteiros:[]};caixas.forEach(x=>{if(x.checked)corpo[x.dataset.t].push(x.dataset.k)});
       try{await enviar(corpo);aviso(`Permissões de ${n} salvas`)}catch(e){aviso(e.message,1)}};
     caixas.forEach(x=>x.onchange=salvar);

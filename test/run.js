@@ -99,6 +99,9 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await ver('alu1', 'aula-03')).status, 200); // vale na hora
   assert.equal((await post({ ...AC, nivel: 'owners' })).status, 200); assert.equal(cfg.aulas[CH(3)], undefined);
   assert.equal((await post({ acao: 'acesso', chave: 'nao/existe', nivel: 'publico' })).status, 400);
+  r = await post({ acao: 'acesso', chaves: [CH(2), CH(3)], nivel: 'publico', nivel_nome: 'nivel-00-tutorial' }); assert.equal(r.status, 200); assert.equal(cfg.aulas[CH(2)], 'publico'); assert.equal(cfg.aulas[CH(3)], 'publico'); assert(commits[commits.length - 1].includes('2 aulas'));
+  assert.equal((await post({ acao: 'acesso', chaves: [CH(2), 'x/y'], nivel: 'publico' })).status, 400);
+  await post({ acao: 'acesso', chaves: [CH(2)], nivel: 'membros' }); await post({ acao: 'acesso', chaves: [CH(3)], nivel: 'owners' });
   assert.equal((await post({ ...AC, nivel: 'monitores' })).status, 400);
   // permissões de monitor
   assert.equal((await post({ acao: 'monitor', usuario: '@Novo', aulas: [CH(3), 'x/aula-99'], roteiros: [CH(1)] })).status, 200);
