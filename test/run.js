@@ -122,7 +122,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ ...AC, nivel: 'monitores' })).status, 400);
   // permissões de monitor
   assert.equal((await post({ acao: 'monitor', usuario: '@Novo', aulas: [CH(3), 'x/aula-99'], roteiros: [CH(1)] })).status, 200);
-  assert.deepEqual(cfg.monitores.novo, { aulas: [CH(3)], roteiros: [CH(1)] });
+  assert.deepEqual(cfg.monitores.novo, { aulas: [CH(3)], roteiros: [CH(1)], turmas: [] });
   assert.equal((await ver('novo', 'aula-03')).status, 200);
   assert.equal((await post({ acao: 'monitor', usuario: 'mon2', aulas: [], roteiros: [] })).status, 200);
   assert.equal((await ver('mon2', 'aula-03')).status, 403); // revogado
@@ -138,7 +138,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await ver('ana', 'aula-02')).status, 200);
   assert.equal((await ver('prof', 'aula-03')).status, 200);
   // compatibilidade: formato antigo (monitores como lista) vira monitores sem permissão extra
-  assert.deepEqual(u.normalizar({ monitores: ['A', 'b'] }).monitores, { a: { aulas: [], roteiros: [] }, b: { aulas: [], roteiros: [] } });
+  assert.deepEqual(u.normalizar({ monitores: ['A', 'b'] }).monitores, { a: { aulas: [], roteiros: [], turmas: [] }, b: { aulas: [], roteiros: [], turmas: [] } });
   // login: state e redirect seguro
   r = await chamar(h('login'), { query: { next: '//evil.com' } });
   assert.equal(r.status, 302); assert(r.h.Location.startsWith('https://github.com/login/oauth/authorize?client_id=cid')); assert(!r.h.Location.includes('scope='));
@@ -185,7 +185,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   // ---------- equipe: cargos com permissões específicas ----------
   const eq = (usuario, titulo, permissoes, quem = 'dono') => post({ acao: 'equipe', usuario, titulo, permissoes }, {}, quem);
   assert.equal((await eq('mkt', 'Marketing e artes', ['site', 'invalida'])).status, 200);
-  assert.deepEqual(cfg.equipe.mkt, { titulo: 'Marketing e artes', permissoes: ['site'] }); assert(commits[commits.length - 1].includes('dono'));
+  assert.deepEqual(cfg.equipe.mkt, { titulo: 'Marketing e artes', permissoes: ['site'], cargos: [] }); assert(commits[commits.length - 1].includes('dono'));
   assert.equal((await eq('sec', 'Secretaria', ['pessoas', 'tarefas'])).status, 200);
   assert.equal((await eq('aul', 'Ensino', ['aulas'])).status, 200);
   assert.equal((await eq('tes', 'Tesouraria', [])).status, 200);
@@ -255,6 +255,38 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   r = JSON.parse((await getp({ acao: 'sessao', turma: T, chave: CH(1) }, 'pres')).body); assert.equal(r.sessao.chamadas[3].estados.alu3, 'p'); assert.equal(Object.keys(r.sessao.chamadas).length, 3);
   const idp = r.sessao.participacoes[0].id;
   assert.equal((await pres({ acao: 'remover_participacao', turma: T, chave: CH(1), id: idp }, 'pres')).status, 200);
+  // ---------- cargos, turmas e ficha da pessoa ----------
+  assert.deepEqual(Object.keys(u.normalizar({ alunos: ['x'] }).turmas), ['2026']); // migração: turma padrão
+  assert.deepEqual(u.normalizar({ alunos: ['x'] }).turmas['2026'].alunos, ['x']);
+  assert.equal((await post({ acao: 'cargo', nome: 'Marketing e artes', descricao: 'Redes', permissoes: ['site', 'xx'] }, {}, 'sec')).status, 403); // só owner cria cargo
+  assert.equal((await post({ acao: 'cargo', nome: 'Marketing e artes', descricao: 'Redes', permissoes: ['site', 'xx'] })).status, 200);
+  assert.deepEqual(cfg.cargos['marketing-e-artes'].permissoes, ['site']);
+  assert.equal((await post({ acao: 'cargo', nome: 'Tesouraria', permissoes: [] })).status, 200);
+  assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
+  assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site']); assert.equal(r.titulo, 'Marketing e artes, Tesouraria');
+  assert.equal((await chamar(h('personalizar'), { user: 'marina' })).status, 200);
+  assert.equal((await post({ acao: 'cargo', id: 'marketing-e-artes', nome: 'Marketing e artes', permissoes: ['site', 'tarefas'] })).status, 200); // muda o cargo, muda a pessoa
+  r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site', 'tarefas']);
+  assert.equal((await post({ acao: 'turma', id: '2027.1', nome: 'Turma 2027.1', status: 'planejada', inicio: '2027-03-01' }, {}, 'sec')).status, 200);
+  assert.equal((await post({ acao: 'turma', id: '../x' }, {}, 'sec')).status, 400);
+  assert.equal((await post({ acao: 'adicionar', papel: 'aluno', turma: '2027.1', usuarios: ['davi-novato', '@Luiza-Dev', 'https://github.com/pedro-h', 'joao silva', 'ana_clara'] }, {}, 'sec')).status, 200);
+  assert(cfg.alunos.includes('luiza-dev') && cfg.alunos.includes('pedro-h') && !cfg.alunos.includes('ana_clara'));
+  assert.deepEqual(cfg.turmas['2027.1'].alunos.sort(), ['davi-novato', 'luiza-dev', 'pedro-h']);
+  assert.equal((await post({ acao: 'adicionar', papel: 'equipe', usuarios: ['qq'] }, {}, 'sec')).status, 403);
+  assert.equal((await post({ acao: 'pessoa', usuario: 'bia', aluno: true, turmas: ['2026'], monitor: true, aulas: [CH(1)], roteiros: [CH(1)], monitor_turmas: ['2026', 'nada'] }, {}, 'sec')).status, 200);
+  assert.deepEqual(cfg.monitores.bia, { aulas: [CH(1)], roteiros: [CH(1)], turmas: ['2026'] }); assert(cfg.turmas['2026'].alunos.includes('bia'));
+  assert.equal((await post({ acao: 'pessoa', usuario: 'bia', equipe: true, cargos: ['tesouraria'] }, {}, 'sec')).status, 200); // sec não mexe em equipe
+  assert.equal(cfg.equipe.bia, undefined);
+  assert.equal((await post({ acao: 'mover_turma', de: '2027.1', para: '2026', usuarios: ['davi-novato'] }, {}, 'sec')).status, 200);
+  assert(cfg.turmas['2026'].alunos.includes('davi-novato') && !cfg.turmas['2027.1'].alunos.includes('davi-novato'));
+  // chamada usa só os alunos da turma; monitor só nas turmas dele
+  r = await pres({ acao: 'chamada', turma: '2027.1', chave: CH(1), n: 1, estados: { 'luiza-dev': 'p', 'davi-novato': 'p' } }, 'dono'); assert.equal(r.status, 200); assert.equal(JSON.parse(r.body).presentes, 1);
+  assert.equal((await pres({ acao: 'chamada', turma: '2027.1', chave: CH(1), n: 1, estados: {} }, 'bia')).status, 400); // bia só ensina a 2026
+  r = JSON.parse((await getp({ acao: 'contexto' }, 'bia')).body); assert(r.turmas['2026'] && !r.turmas['2027.1']);
+  assert.equal((await post({ acao: 'remover_pessoa', usuario: 'dono' }, {}, 'sec')).status, 400);
+  assert.equal((await post({ acao: 'remover_pessoa', usuario: 'bia' }, {}, 'sec')).status, 200); assert(!cfg.monitores.bia && !cfg.turmas['2026'].alunos.includes('bia'));
+  assert.equal((await post({ acao: 'remover_cargo', id: 'tesouraria' })).status, 200); assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes']);
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)

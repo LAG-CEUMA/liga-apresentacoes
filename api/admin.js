@@ -1,6 +1,7 @@
 'use strict';
 // Painel: nível de cada aula, listas, monitores e equipe. Cada ação exige a permissão certa; só owners mexem na lista de owners e na equipe.
 const u = require('../lib/util');
+const nomeGh = (x) => String(x).trim().replace(/^https?:\/\/github\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, '').toLowerCase();
 const ler = (l) => (Array.isArray(l) ? l : []).map((x) => String(x).trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
 module.exports = async (req, res) => {
   try {
@@ -14,8 +15,9 @@ module.exports = async (req, res) => {
       const v = { usuario, dono, permissoes: perm, fixos: dono ? u.admins() : [] };
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
-      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; }
-      if (dono) { v.equipe = cfg.equipe; v.listaPermissoes = u.PERMISSOES; }
+      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; }
+      if (dono) { v.equipe = cfg.equipe; }
+      v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
     }
     if (req.method !== 'POST') return u.json(res, 405, { erro: 'Método inválido.' });
@@ -49,7 +51,7 @@ module.exports = async (req, res) => {
       const nome = ler([b.usuario])[0];
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
-      novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros) };
+      novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (novo.monitores[nome] || {}).turmas || [] };
       msg = `Portal: ${usuario} definiu permissões do monitor ${nome} (${novo.monitores[nome].aulas.length} aulas, ${novo.monitores[nome].roteiros.length} roteiros)`;
     } else if (b.acao === 'remover_monitor') {
       if (!perm.includes('pessoas')) return nao();
@@ -62,7 +64,7 @@ module.exports = async (req, res) => {
       const nome = ler([b.usuario])[0];
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
       const permissoes = (Array.isArray(b.permissoes) ? b.permissoes : []).filter((x) => u.PERMISSOES.includes(x));
-      novo.equipe[nome] = { titulo: String(b.titulo || '').trim().slice(0, 40), permissoes };
+      novo.equipe[nome] = { titulo: String(b.titulo || '').trim().slice(0, 40), permissoes, cargos: (novo.equipe[nome] || {}).cargos || [] };
       msg = `Portal: ${usuario} definiu a equipe de ${nome} (${novo.equipe[nome].titulo || 'sem título'}: ${permissoes.join(', ') || 'sem permissões'})`;
     } else if (b.acao === 'remover_equipe') {
       if (!dono) return nao();
@@ -70,6 +72,90 @@ module.exports = async (req, res) => {
       if (!nome || !novo.equipe[nome]) return u.json(res, 400, { erro: 'Pessoa não encontrada na equipe.' });
       delete novo.equipe[nome];
       msg = `Portal: ${usuario} removeu ${nome} da equipe`;
+    } else if (b.acao === 'pessoa') {
+      if (!perm.includes('pessoas')) return nao();
+      const nome = nomeGh(b.usuario || '');
+      if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
+      const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
+      const turmasOk = (Array.isArray(b.turmas) ? b.turmas : []).map(String).filter((t) => novo.turmas[t]);
+      if (b.aluno !== undefined) {
+        novo.alunos = novo.alunos.filter((a) => a !== nome);
+        for (const t of Object.values(novo.turmas)) t.alunos = t.alunos.filter((a) => a !== nome);
+        if (b.aluno) {
+          novo.alunos.push(nome);
+          const destino = turmasOk.length ? turmasOk : [Object.keys(novo.turmas).find((k) => novo.turmas[k].status === 'andamento') || Object.keys(novo.turmas)[0]];
+          for (const t of destino) novo.turmas[t].alunos.push(nome);
+        }
+      }
+      if (b.monitor !== undefined) {
+        if (b.monitor) novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (Array.isArray(b.monitor_turmas) ? b.monitor_turmas : []).map(String).filter((t) => novo.turmas[t]) };
+        else delete novo.monitores[nome];
+      }
+      if (dono && b.equipe !== undefined) {
+        if (b.equipe) novo.equipe[nome] = { titulo: '', permissoes: (Array.isArray(b.extras) ? b.extras : []).filter((x) => u.PERMISSOES.includes(x)), cargos: (Array.isArray(b.cargos) ? b.cargos : []).map(String).filter((c) => novo.cargos[c]) };
+        else delete novo.equipe[nome];
+      }
+      if (dono && b.owner !== undefined) {
+        if (b.owner) { if (!novo.owners.includes(nome)) novo.owners.push(nome); }
+        else {
+          if (nome === usuario || u.admins().includes(nome)) return u.json(res, 400, { erro: 'Este owner não pode ser removido por aqui.' });
+          novo.owners = novo.owners.filter((o) => o !== nome);
+        }
+      }
+      msg = `Portal: ${usuario} atualizou a ficha de ${nome}`;
+    } else if (b.acao === 'adicionar') {
+      if (!perm.includes('pessoas')) return nao();
+      const papelNovo = String(b.papel || 'aluno');
+      if (!['aluno', 'monitor', 'equipe'].includes(papelNovo) || (papelNovo === 'equipe' && !dono)) return nao();
+      const turma = novo.turmas[b.turma] ? b.turma : (Object.keys(novo.turmas).find((k) => novo.turmas[k].status === 'andamento') || Object.keys(novo.turmas)[0]);
+      const bruto = (Array.isArray(b.usuarios) ? b.usuarios : []).slice(0, 300).map(nomeGh);
+      const validos = [...new Set(bruto.filter((x) => u.USER_RE.test(x)))];
+      if (!validos.length) return u.json(res, 400, { erro: 'Nenhum usuário válido.' });
+      for (const nome of validos) {
+        if (papelNovo === 'aluno') { if (!novo.alunos.includes(nome)) novo.alunos.push(nome); if (!novo.turmas[turma].alunos.includes(nome)) novo.turmas[turma].alunos.push(nome); }
+        else if (papelNovo === 'monitor') { if (!novo.monitores[nome]) novo.monitores[nome] = { aulas: [], roteiros: [], turmas: [turma] }; }
+        else if (!novo.equipe[nome]) novo.equipe[nome] = { titulo: '', permissoes: [], cargos: [] };
+      }
+      msg = `Portal: ${usuario} adicionou ${validos.length} pessoa(s) como ${papelNovo}`;
+    } else if (b.acao === 'remover_pessoa') {
+      if (!perm.includes('pessoas')) return nao();
+      const nome = nomeGh(b.usuario || '');
+      if (!nome || novo.owners.includes(nome) || u.admins().includes(nome)) return u.json(res, 400, { erro: 'Esta pessoa não pode ser removida por aqui (owner).' });
+      novo.alunos = novo.alunos.filter((a) => a !== nome);
+      for (const t of Object.values(novo.turmas)) t.alunos = t.alunos.filter((a) => a !== nome);
+      delete novo.monitores[nome];
+      if (dono) delete novo.equipe[nome];
+      msg = `Portal: ${usuario} removeu ${nome} das listas`;
+    } else if (b.acao === 'cargo') {
+      if (!dono) return nao();
+      const nomeC = String(b.nome || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 40);
+      if (!nomeC) return u.json(res, 400, { erro: 'Dê um nome ao cargo.' });
+      const id = /^[a-z0-9][a-z0-9-]{0,29}$/.test(String(b.id || '')) ? b.id : nomeC.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+      if (!id) return u.json(res, 400, { erro: 'Nome inválido.' });
+      novo.cargos[id] = { nome: nomeC, descricao: String(b.descricao || '').trim().slice(0, 100), permissoes: (Array.isArray(b.permissoes) ? b.permissoes : []).filter((x) => u.PERMISSOES.includes(x)) };
+      msg = `Portal: ${usuario} definiu o cargo ${nomeC} (${novo.cargos[id].permissoes.join(', ') || 'sem permissões'})`;
+    } else if (b.acao === 'remover_cargo') {
+      if (!dono) return nao();
+      if (!novo.cargos[b.id]) return u.json(res, 400, { erro: 'Cargo não encontrado.' });
+      delete novo.cargos[b.id];
+      for (const e of Object.values(novo.equipe)) e.cargos = (e.cargos || []).filter((c) => c !== b.id);
+      msg = `Portal: ${usuario} removeu o cargo ${b.id}`;
+    } else if (b.acao === 'turma') {
+      if (!perm.includes('pessoas')) return nao();
+      const id = String(b.id || '').trim();
+      if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código da turma: até 20 letras, números, ponto ou traço (ex.: 2027.1).' });
+      const atual = novo.turmas[id] || { alunos: [] };
+      novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status: ['andamento', 'planejada', 'arquivada'].includes(b.status) ? b.status : (atual.status || 'planejada'),
+        inicio: /^\d{4}-\d{2}-\d{2}$/.test(String(b.inicio || '')) ? b.inicio : (atual.inicio || ''), alunos: atual.alunos };
+      msg = `Portal: ${usuario} salvou a turma ${id} (${novo.turmas[id].status})`;
+    } else if (b.acao === 'mover_turma') {
+      if (!perm.includes('pessoas')) return nao();
+      if (!novo.turmas[b.de] || !novo.turmas[b.para] || b.de === b.para) return u.json(res, 400, { erro: 'Turmas inválidas.' });
+      const quem = Array.isArray(b.usuarios) && b.usuarios.length ? new Set(ler(b.usuarios)) : new Set(novo.turmas[b.de].alunos);
+      const mover = novo.turmas[b.de].alunos.filter((a) => quem.has(a));
+      novo.turmas[b.de].alunos = novo.turmas[b.de].alunos.filter((a) => !quem.has(a));
+      for (const a of mover) if (!novo.turmas[b.para].alunos.includes(a)) novo.turmas[b.para].alunos.push(a);
+      msg = `Portal: ${usuario} moveu ${mover.length} aluno(s) da turma ${b.de} para ${b.para}`;
     } else return u.json(res, 400, { erro: 'Ação inválida.' });
     await u.gravarConfig(novo, msg);
     u.json(res, 200, { ok: true });

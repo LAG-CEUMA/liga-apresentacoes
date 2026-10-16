@@ -26,7 +26,8 @@ function escolherChamada(n,redesenhar=true){N=n;let rasc=null;try{rasc=JSON.pars
   const salva=SESSAO&&SESSAO.chamadas&&SESSAO.chamadas[n];ESTADO=rasc||(salva?{...salva.estados}:{});ESTADO.__rasc=!!rasc;if(redesenhar)desenhar()}
 function rascunho(){const e={...ESTADO};delete e.__rasc;ls.set(chaveRasc(),JSON.stringify(e));ESTADO.__rasc=true}
 function seletores(){
-  const turma=h('input',{type:'text',value:TURMA,maxLength:20,style:'width:100px'});turma.addEventListener('change',async()=>{TURMA=turma.value.trim()||'2026';ls.set('liga_turma',TURMA);await carregarSessao();desenhar()});
+  const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA)){TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0];ls.set('liga_turma',TURMA)}
+  const turma=h('select',{},...ids.map(t=>h('option',{value:t},CTX.turmas[t].nome)));turma.value=TURMA;turma.addEventListener('change',async()=>{TURMA=turma.value;ls.set('liga_turma',TURMA);await carregarSessao();desenhar()});
   const sel=h('select',{},h('option',{value:''},'Escolha a aula…'));const niveis={};for(const a of CTX.aulas)(niveis[a.nivel]=niveis[a.nivel]||[]).push(a);
   for(const nv of Object.keys(niveis).sort()){const g=h('optgroup',{label:nv});for(const a of niveis[nv])g.append(h('option',{value:a.chave},a.titulo));sel.append(g)}
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
@@ -35,7 +36,7 @@ function seletores(){
 function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)))}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
-  if(!CTX.roster.length)return h('p',{},'Ainda não há alunos cadastrados. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
+  if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
   const passos=h('div',{class:'passos'},...[1,2,3].map(n=>{const c=SESSAO&&SESSAO.chamadas&&SESSAO.chamadas[n];return h('button',{type:'button',class:N===n?'on':'',onclick:()=>escolherChamada(n)},h('b',{},`${n}. ${ROT[n-1]}`),h('small',{},c?`salva ${hora(c.em)} por ${c.por}`:'ainda não salva'))}));
   const cont=h('b',{});const conta=()=>{let p=0,a=0,j=0,s=0;for(const k of CTX.roster){const e=ESTADO[k];if(e==='p')p++;else if(e==='a')a++;else if(e==='j')j++;else s++}cont.textContent=`Presentes ${p} · Faltas ${a} · Justificados ${j} · Sem marca ${s}`;return s};
   const lista=h('div',{});
@@ -87,6 +88,6 @@ function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba
   const r=await fetch('/api/presenca?acao=contexto');
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}
   if(r.status===403){$('corpo').innerHTML='<p>Você não tem permissão para fazer chamadas. Peça a um owner a permissão <b>Presença</b> (equipe) ou a liberação da sua aula (monitor).</p>';return}
-  CTX=await r.json();if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;
+  CTX=await r.json();if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;{const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA))TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0]}
   await carregarSessao();desenhar()})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>

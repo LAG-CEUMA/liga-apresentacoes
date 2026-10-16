@@ -19,3 +19,10 @@ Siga o **[COMO-USAR-PASSO-A-PASSO.md](COMO-USAR-PASSO-A-PASSO.md)**: criar o app
 
 ## Dica da Liga
 Use os termos e programas **em inglês**.
+
+## Pessoas, cargos e turmas (painel `/admin`)
+
+- **Cargos** (`cargos` em `acesso/acesso.json`): modelos de permissão reutilizáveis. Uma pessoa da `equipe` pode ter vários cargos; as permissões somam (mais as extras dela).
+- **Turmas** (`turmas`): `{nome, status: andamento|planejada|arquivada, inicio, alunos[]}`. Todo aluno pertence a pelo menos uma turma (migração automática para a turma `2026`). A chamada usa só os alunos da turma; monitores têm `turmas` (vazio = todas).
+- Ações da API `/api/admin` (POST): `pessoa`, `adicionar`, `remover_pessoa`, `cargo`, `remover_cargo`, `turma`, `mover_turma` (além das antigas).
+- O painel (`public/admin.html` + `public/admin.js`) tem abas Pessoas, Cargos, Turmas, Níveis das aulas e Guia, com ficha lateral, "Ver como" e "Adicionar várias".

@@ -14,7 +14,10 @@ module.exports = async (req, res) => {
     const podeChamar = (chave) => geral || (u.papel(cfg, usuario) === 'monitor' && cfg.monitores[usuario].aulas.includes(chave));
     const minhas = aulas.filter((a) => podeChamar(a.chave));
     const q = req.query || {};
-    const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
+    const turmaMon = (turma) => { const m = cfg.monitores[usuario]; return geral || !m || !m.turmas.length || m.turmas.includes(turma); };
+    const alunosDe = (turma) => (cfg.turmas[turma] ? cfg.turmas[turma].alunos : cfg.alunos);
+    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, alunos: t.alunos }]));
+    const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
 
     if (req.method === 'GET') {
       if (q.acao === 'minha') {
@@ -31,12 +34,12 @@ module.exports = async (req, res) => {
       }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
       if (q.acao === 'contexto') {
-        return u.json(res, 200, { usuario, geral, aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
+        return u.json(res, 200, { usuario, geral, aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, turmas: turmasVisiveis, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
       }
       if (q.acao === 'sessao') {
         if (!validaSessao(q.turma, q.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida.' });
         const { dados } = await d.lerSessao(q.turma, q.chave);
-        return u.json(res, 200, { sessao: dados, roster: cfg.alunos });
+        return u.json(res, 200, { sessao: dados, roster: alunosDe(q.turma) });
       }
       if (q.acao === 'historico') {
         const permitidas = new Set(minhas.map((a) => a.chave));
@@ -52,7 +55,7 @@ module.exports = async (req, res) => {
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (!validaSessao(b.turma, b.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida (ou sem permissão para esta aula).' });
-    const alunos = new Set(cfg.alunos);
+    const alunos = new Set(alunosDe(b.turma));
     if (b.acao === 'chamada') {
       const n = Number(b.n);
       if (![1, 2, 3].includes(n)) return u.json(res, 400, { erro: 'A chamada deve ser 1, 2 ou 3.' });
