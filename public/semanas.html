@@ -3,6 +3,10 @@
 <body><main>
 <div class="topo"><div><p class="tag">SÓ OWNERS</p><h1>Semanas e tarefas de casa</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/admin">Painel</a></div></div>
 <p>Aqui estão o <b>texto da aula</b> e a <b>tarefa de casa</b> de cada semana, como o aluno vai receber (a tarefa vira uma Issue no repositório dele). Leia, avalie e use <b>Sugerir alteração</b>: abre o arquivo no GitHub para editar e salvar (commit). <b>Nada é enviado aos alunos por esta página</b>; o envio é feito depois pelo script de liberação. Mais detalhes no <a href="/admin#guia">Guia do painel</a>.</p>
+<div class="cartao" style="padding:14px 22px"><b>Onde isso fica?</b><ol style="line-height:1.7">
+<li><b>No GitHub</b> (não na Vercel): repositório privado <b>LAG-CEUMA/liga-curriculo</b>, pasta <code>liberacao/</code>. É lá que os textos moram de verdade.</li>
+<li><b>Nesta página</b> (Vercel) você só <b>lê</b> uma cópia deles, de forma bonita. Não dá para editar aqui.</li>
+<li>Para <b>mudar</b> algo: botão <b>Sugerir alteração</b> em cada bloco, que abre o arquivo no GitHub. Para ver a pasta inteira: <a href="https://github.com/LAG-CEUMA/liga-curriculo/tree/main/liberacao" target="_blank" rel="noopener">abrir a pasta liberacao/ no GitHub</a>.</li></ol></div>
 <div class="tabs" id="abas"></div><div id="corpo"><p>Carregando…</p></div>
 </main>
 <script>
@@ -26,7 +30,7 @@ fetch('/api/semanas').then(async r=>{
  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/semanas">Entrar com GitHub</a>';return}
  const d=await r.json();const abas=document.getElementById('abas'),corpo=document.getElementById('corpo');
  function mostrar(i){[...abas.children].forEach((b,k)=>b.classList.toggle('on',k===i));corpo.textContent='';const s=d.semanas[i];
-  corpo.append(secao('O que o aluno recebe na aula','liberacao/.../'+s.semana+'/aula.md',s.aula),secao('Tarefa de casa (vira Issue)','liberacao/.../'+s.semana+'/tarefa.md',s.tarefa))}
+  corpo.append(secao('O que o aluno recebe na aula','GitHub · '+s.aula.path,s.aula),secao('Tarefa de casa (vira Issue)','GitHub · '+s.tarefa.path,s.tarefa))}
  if(!d.semanas.length){corpo.textContent='Nenhuma semana encontrada.';return}
  d.semanas.forEach((s,i)=>{const b=el('button','',(/nivel-(\d+)/.exec(s.dir)?'N'+Number(/nivel-(\d+)/.exec(s.dir)[1])+' · ':'')+'Semana '+Number(s.semana.slice(7)));b.onclick=()=>mostrar(i);abas.append(b)});
  mostrar(0)}).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
