@@ -43,7 +43,7 @@
     v = v || {};
     const url = /^https:\/\/[^\s"'<>\\]{1,300}$/.test(String(v.url || '')) ? String(v.url) : '';
     const embed = embedPermitido(v.embed) ? v.embed : (embedDe(url) || '');
-    return { url, embed, modo: MODOS[v.modo] ? v.modo : 'cartao', origem: origemDe(url || embed), altura: Math.min(800, Math.max(150, Math.round(Number(v.altura)) || 360)) };
+    return { url, embed, modo: MODOS[v.modo] ? v.modo : 'cartao', origem: origemDe(url || embed), altura: Math.min(800, Math.max(150, Math.round(Number(v.altura)) || 360)), largura: Number(v.largura) >= 200 ? Math.min(1200, Math.round(Number(v.largura))) : 0 };
   }
   // ---- só no navegador ----
   function render(item, modo, opts) {
@@ -51,8 +51,8 @@
     const el = (t, c, x) => { const e = d.createElement(t); if (c) e.className = c; if (x !== undefined) e.textContent = x; return e; };
     const card = el('div', 'vit-card'); const emb = n.embed && modo !== 'cartao';
     const abrir = () => { const a = el('a', 'btn' + (emb ? ' sec' : ''), item.botao || ('Abrir no ' + n.origem)); a.href = n.url || n.embed || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a; };
-    const ifr = () => { const f = d.createElement('iframe'); f.src = n.embed; f.loading = 'lazy'; f.title = item.titulo || 'Conteúdo'; f.style.cssText = 'width:100%;border:0;border-radius:10px;height:' + n.altura + 'px;background:#000';
-      f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-presentation'); f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); f.setAttribute('allow', 'fullscreen; encrypted-media; picture-in-picture'); f.allowFullscreen = true; return f; };
+    const ifr = () => { const f = d.createElement('iframe'); f.src = n.embed; f.loading = 'lazy'; f.title = item.titulo || 'Conteúdo'; f.style.cssText = (n.largura ? 'width:100%;max-width:' + n.largura + 'px;display:block;margin:0 auto;' : 'width:100%;') + 'border:0;border-radius:10px;height:' + n.altura + 'px;background:#000';
+      f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation'); f.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin'); f.setAttribute('allow', 'fullscreen; encrypted-media; picture-in-picture'); f.allowFullscreen = true; return f; };
     const topo = el('div', 'vit-topo'); topo.append(el('b', '', item.titulo || 'Sem título'), el('span', 'badge', n.origem)); card.append(topo);
     const capa = () => { const c = el('div', 'vit-capa'); if (item.imagem) { const i = d.createElement('img'); i.src = '/api/imagem?n=' + encodeURIComponent(item.imagem); i.alt = item.titulo || ''; i.loading = 'lazy'; c.append(i); } else c.append(el('span', '', n.origem)); return c; };
     if (modo === 'direto' && emb) card.append(ifr());
