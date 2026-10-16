@@ -11,7 +11,7 @@
 const $=id=>document.getElementById(id);
 function h(t,p,...f){const e=document.createElement(t);for(const [k,v] of Object.entries(p||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k in e&&k!=='list')e[k]=v;else e.setAttribute(k,v)}
   for(const c of f.flat())if(c!==null&&c!==undefined&&c!==false)e.append(c.nodeType?c:document.createTextNode(c));return e}
-function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?' erro':'');m.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>m.hidden=true,4000)}
+function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?' erro':'');m.hidden=false;clearTimeout(aviso.t);aviso.t=setTimeout(()=>m.hidden=true,erro?7000:5000)}
 async function api(corpo){const r=await fetch('/api/personalizar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 const COR=[['bg','Fundo da página'],['card','Cartões e caixas'],['txt','Texto'],['mut','Texto secundário'],['primaria','Cor principal (botões e destaques)'],['botaoTxt','Texto dos botões'],['sucesso','Cor de "público"']];
 const TELAS=[['inicio','Tela inicial (login e avisos)'],['painel','Painel e personalização'],['semanas','Tarefas de casa']];
