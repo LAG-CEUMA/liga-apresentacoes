@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     const q = req.query || {};
     const turmaMon = (turma) => { const m = cfg.monitores[usuario]; return geral || !m || !m.turmas.length || m.turmas.includes(turma); };
     const alunosDe = (turma) => (cfg.turmas[turma] ? cfg.turmas[turma].alunos : cfg.alunos);
-    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, alunos: t.alunos }]));
+    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos }]));
     const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
 
     if (req.method === 'GET') {

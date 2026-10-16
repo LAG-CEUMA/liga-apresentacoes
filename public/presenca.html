@@ -28,7 +28,7 @@ function rascunho(){const e={...ESTADO};delete e.__rasc;ls.set(chaveRasc(),JSON.
 function seletores(){
   const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA)){TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0];ls.set('liga_turma',TURMA)}
   const turma=h('select',{},...ids.map(t=>h('option',{value:t},CTX.turmas[t].nome)));turma.value=TURMA;turma.addEventListener('change',async()=>{TURMA=turma.value;ls.set('liga_turma',TURMA);await carregarSessao();desenhar()});
-  const sel=h('select',{},h('option',{value:''},'Escolha a aula…'));const niveis={};for(const a of CTX.aulas)(niveis[a.nivel]=niveis[a.nivel]||[]).push(a);
+  const sel=h('select',{},h('option',{value:''},'Escolha a aula…'));const niveis={};const nvT=(CTX.turmas[TURMA]||{}).nivel;for(const a of CTX.aulas.filter(a=>!nvT||a.chave.startsWith(nvT+'/')))(niveis[a.nivel]=niveis[a.nivel]||[]).push(a);
   for(const nv of Object.keys(niveis).sort()){const g=h('optgroup',{label:nv});for(const a of niveis[nv])g.append(h('option',{value:a.chave},a.titulo));sel.append(g)}
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
   const data=h('input',{type:'date',value:DATA||CTX.hoje});data.addEventListener('change',()=>{DATA=data.value});

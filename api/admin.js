@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
     const aulas = await u.listarAulas();
     if (req.method === 'GET') {
       const v = { usuario, dono, permissoes: perm, fixos: dono ? u.admins() : [] };
-      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
+      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; }
       if (dono) { v.equipe = cfg.equipe; }
@@ -27,6 +27,7 @@ module.exports = async (req, res) => {
     const nao = () => u.json(res, 403, { erro: 'Você não tem permissão para esta ação.' });
     const novo = JSON.parse(JSON.stringify(cfg));
     const existe = new Set(aulas.map((a) => a.chave));
+    const dirs = new Set(aulas.map((a) => a.dir));
     let msg;
     if (b.acao === 'acesso') {
       if (!perm.includes('aulas')) return nao();
@@ -146,8 +147,19 @@ module.exports = async (req, res) => {
       if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código da turma: até 20 letras, números, ponto ou traço (ex.: 2027.1).' });
       const atual = novo.turmas[id] || { alunos: [] };
       novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status: ['andamento', 'planejada', 'arquivada'].includes(b.status) ? b.status : (atual.status || 'planejada'),
-        inicio: /^\d{4}-\d{2}-\d{2}$/.test(String(b.inicio || '')) ? b.inicio : (atual.inicio || ''), alunos: atual.alunos };
+        inicio: /^\d{4}-\d{2}-\d{2}$/.test(String(b.inicio || '')) ? b.inicio : (atual.inicio || ''),
+        fim: b.fim === undefined ? (atual.fim || '') : (/^\d{4}-\d{2}-\d{2}$/.test(String(b.fim || '')) ? b.fim : ''),
+        nivel: b.nivel === undefined ? (atual.nivel || '') : (dirs.has(b.nivel) ? b.nivel : ''),
+        acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, alunos: atual.alunos };
       msg = `Portal: ${usuario} salvou a turma ${id} (${novo.turmas[id].status})`;
+    } else if (b.acao === 'promover') {
+      // Promover = copiar: os escolhidos entram na turma nova e continuam na de origem (que guarda o histórico e o acesso ao material).
+      if (!perm.includes('pessoas')) return nao();
+      if (!novo.turmas[b.de] || !novo.turmas[b.para] || b.de === b.para) return u.json(res, 400, { erro: 'Turmas inválidas.' });
+      const quem = ler(Array.isArray(b.usuarios) ? b.usuarios : []).filter((a) => novo.turmas[b.de].alunos.includes(a));
+      if (!quem.length) return u.json(res, 400, { erro: 'Escolha pelo menos um aluno.' });
+      for (const a of quem) if (!novo.turmas[b.para].alunos.includes(a)) novo.turmas[b.para].alunos.push(a);
+      msg = `Portal: ${usuario} promoveu ${quem.length} aluno(s) da turma ${b.de} para ${b.para}`;
     } else if (b.acao === 'mover_turma') {
       if (!perm.includes('pessoas')) return nao();
       if (!novo.turmas[b.de] || !novo.turmas[b.para] || b.de === b.para) return u.json(res, 400, { erro: 'Turmas inválidas.' });

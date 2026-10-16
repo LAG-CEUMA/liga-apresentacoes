@@ -171,32 +171,54 @@ function desenharCargos(){
   p.append(det)}
 
 // ---------- aba Turmas ----------
+function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;return Object.entries(m).sort((x,y)=>x[0].localeCompare(y[0]))}
+const nomeNivel=d=>d?((niveisLista().find(x=>x[0]===d)||[])[1]||d):'Todos os níveis';
 function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Uma turma é um grupo de alunos que percorre os níveis junto. A chamada, a presença e os certificados sempre pertencem a uma turma. O conteúdo das aulas é o mesmo para todas.'));
   const g=h('div',{class:'grade'});const ROT={andamento:'Em andamento',planejada:'Planejada',arquivada:'Arquivada'};
   for(const id of Object.keys(D.turmas)){const t=D.turmas[id];const mons=Object.keys(D.monitores).filter(n=>D.monitores[n].turmas.includes(id)).length;
-    const trocar=async(status)=>{try{await enviar({acao:'turma',id,nome:t.nome,status,inicio:t.inicio});aviso('Turma atualizada');await carregar()}catch(e){aviso(e.message,1)}};
+    const trocar=async(status)=>{try{await enviar({acao:'turma',id,nome:t.nome,status});aviso('Turma atualizada');await carregar()}catch(e){aviso(e.message,1)}};
     g.append(h('div',{class:'cartao2'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h3',{},t.nome),h('span',{class:'st '+t.status},ROT[t.status])),
-      h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início'),
+      h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
+      h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'mantém acesso ao material':'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',
-        t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover alunos…'):'',
+        t.alunos.length?h('button',{class:'btn',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
         h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalTurma('')},'+ Nova turma'),h('div',{class:'sub'},'Dê um código curto (ex.: 2027.2). Alunos novos entram na turma em andamento ou na que você escolher.')));
   p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
 function modalTurma(id){
-  const t=id?D.turmas[id]:{nome:'',status:'planejada',inicio:''};
-  const cod=h('input',{type:'text',value:id,maxLength:20,disabled:!!id,placeholder:'ex.: 2027.1'}),nome=h('input',{type:'text',value:t.nome,maxLength:40,placeholder:'nome (opcional)'}),ini=h('input',{type:'date',value:t.inicio}),st=h('select',{},...[['planejada','Planejada'],['andamento','Em andamento'],['arquivada','Arquivada']].map(([k,x])=>h('option',{value:k},x)));st.value=t.status;
-  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código',cod),h('label',{},'Nome',nome),h('label',{},'Início',ini),h('label',{},'Situação',st)),
-    h('div',{style:'display:flex;justify-content:flex-end;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'turma',id:id||cod.value.trim(),nome:nome.value,inicio:ini.value,status:st.value});aviso('Turma salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'))],'modal');}
+  const t=id?D.turmas[id]:{nome:'',status:'planejada',inicio:'',fim:'',nivel:'',acessoApos:true};
+  const cod=h('input',{type:'text',value:id,maxLength:20,disabled:!!id,placeholder:'ex.: 2026.2-N1'}),nome=h('input',{type:'text',value:t.nome,maxLength:40,placeholder:'ex.: Nível 1 · 2026.2'}),ini=h('input',{type:'date',value:t.inicio}),fim=h('input',{type:'date',value:t.fim||''}),
+    st=h('select',{},...[['planejada','Planejada'],['andamento','Em andamento'],['arquivada','Arquivada']].map(([k,x])=>h('option',{value:k},x))),
+    nv=h('select',{},h('option',{value:''},'Todos os níveis (sem restrição)'),...niveisLista().map(([k,x])=>h('option',{value:k},x))),
+    ap=h('input',{type:'checkbox',checked:t.acessoApos!==false});
+  st.value=t.status;nv.value=t.nivel||'';
+  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código',cod),h('label',{},'Nome',nome),h('label',{},'Nível da turma',nv),h('label',{},'Situação',st),h('label',{},'Início',ini),h('label',{},'Fim previsto',fim)),
+    h('label',{class:'ck'},ap,'Mantém acesso ao material (slides) depois de arquivada'),
+    h('p',{class:'sub'},'Os alunos da turma só veem as aulas do nível dela (e que estejam como Membros ou Público). Roteiros nunca aparecem para alunos.'),
+    h('div',{style:'display:flex;justify-content:flex-end;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'turma',id:id||cod.value.trim(),nome:nome.value,inicio:ini.value,fim:fim.value,nivel:nv.value,status:st.value,acessoApos:ap.checked});aviso('Turma salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'))],'modal');}
+function modalPromover(de){
+  const outras=Object.keys(D.turmas).filter(t=>t!==de&&D.turmas[t].status!=='arquivada');
+  if(!outras.length){aviso('Crie a turma de destino primeiro (+ Nova turma).',1);return}
+  const para=h('select',{},...outras.map(t=>h('option',{value:t},D.turmas[t].nome+' · '+nomeNivel(D.turmas[t].nivel))));
+  const marcados=new Set(D.turmas[de].alunos);const lista=h('div',{style:'max-height:42vh;overflow:auto;border:1px solid #fff2;border-radius:10px;padding:6px 12px'});
+  const cont=h('b',{});const conta=()=>{cont.textContent=`${marcados.size} de ${D.turmas[de].alunos.length} marcados`};
+  for(const a of D.turmas[de].alunos)lista.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:true,onchange:e=>{e.target.checked?marcados.add(a):marcados.delete(a);conta()}}),'@'+a));
+  const todos=(v)=>{lista.querySelectorAll('input').forEach((x,i)=>{x.checked=v;const a=D.turmas[de].alunos[i];v?marcados.add(a):marcados.delete(a)});conta()};
+  conta();
+  const {fechar}=camada([h('h2',{style:'margin:0 0 6px'},'Promover alunos de '+D.turmas[de].nome),
+    h('p',{class:'sub'},'Os alunos marcados entram na turma de destino. Quem você desmarcar (não passou, desistiu) fica só na turma atual. Os promovidos continuam também na turma de origem, que guarda o histórico de presença e, se arquivada com acesso, o material do nível concluído. Depois você pode editar a lista da turma nova.'),
+    h('label',{},'Para a turma ',para),h('div',{style:'display:flex;gap:8px;align-items:center;margin:10px 0'},h('button',{class:'chipx',type:'button',onclick:()=>todos(true)},'Marcar todos'),h('button',{class:'chipx',type:'button',onclick:()=>todos(false)},'Desmarcar todos'),cont),lista,
+    h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'promover',de,para:para.value,usuarios:[...marcados]});aviso(`${marcados.size} aluno(s) promovido(s)`);fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Promover'))],'modal');}
 function modalMover(de){
   const outras=Object.keys(D.turmas).filter(t=>t!==de);if(!outras.length){aviso('Crie outra turma primeiro.',1);return}
   const para=h('select',{},...outras.map(t=>h('option',{value:t},D.turmas[t].nome)));
-  const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Mover alunos da turma '+D.turmas[de].nome),h('p',{class:'sub'},`Move todos os ${D.turmas[de].alunos.length} aluno(s) para outra turma. O histórico de presença antigo continua na turma de origem.`),h('label',{},'Para a turma ',para),
+  const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Mover alunos da turma '+D.turmas[de].nome),h('p',{class:'sub'},`Move todos os ${D.turmas[de].alunos.length} aluno(s) (saem desta turma). Use para corrigir cadastro; para avançar de nível use Promover.`),h('label',{},'Para a turma ',para),
     h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'mover_turma',de,para:para.value});aviso('Alunos movidos');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Mover'))],'modal');}
 
 // ---------- aba Níveis das aulas ----------
