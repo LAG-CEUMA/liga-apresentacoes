@@ -3,6 +3,7 @@
 <body data-pg="inicio"><main>
 <div class="topo"><div><p class="tag" data-site="tag">LIGA ACADÊMICA DE GAMES · CEUMA</p><h1 id="titulo">Início</h1></div><div class="acoes" id="conta"></div></div>
 <div id="hero" class="hero" hidden></div>
+<nav class="atalhos" id="atalhos" aria-label="Atalhos" hidden></nav>
 <div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
@@ -27,19 +28,19 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   const c=document.getElementById('corpo');c.textContent='';
   // anúncios
   const an=site.anuncios||[];
-  if(an.length){const s=secao('Anúncios',an.length+(an.length===1?' aviso':' avisos'));lembrar(s,'anuncios',true);
+  if(an.length){const s=secao('Anúncios',an.length+(an.length===1?' aviso':' avisos'));s.id='sec-anuncios';lembrar(s,'anuncios',true);
     for(const a of an){const i=el('div','item');if(a.fixo)i.append(el('span','pin','FIXADO'));i.append(el('h3','',a.titulo));if(a.texto)i.append(el('p','',a.texto));
       if(a.link)i.append(link('Saiba mais',a.link));if(a.visivel==='membros'){i.append(document.createTextNode(' '),el('span','badge','membros'))}s.append(i)}c.append(s)}
   // agenda
   const ag=site.agenda||[];
-  if(ag.length){const s=secao('Agenda',ag.length+(ag.length===1?' evento':' eventos'));lembrar(s,'agenda',true);
+  if(ag.length){const s=secao('Agenda',ag.length+(ag.length===1?' evento':' eventos'));s.id='sec-agenda';lembrar(s,'agenda',true);
     for(const e of ag){const [y,m,dd]=e.data.split('-');const dt=new Date(+y,+m-1,+dd);const i=el('div','item agitem');
       const b=el('div','data',`${dd}/${m}`);b.append(el('small','',DIAS[dt.getDay()]));const t=el('div');t.style.flex='1';
       t.append(el('b','',e.titulo));const q=[e.hora,e.local].filter(Boolean).join(' · ');if(q){t.append(el('br'),el('small','',q))}
       if(e.link){t.append(el('br'),link('Mais informações',e.link))}i.append(b,t);if(e.visivel==='membros')i.append(el('span','badge','membros'));s.append(i)}c.append(s)}
   // aulas por nível
   const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);const niveis=Object.keys(por).sort();
-  const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));lembrar(sa,'aulas',true);
+  const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));sa.id='sec-aulas';lembrar(sa,'aulas',true);
   if(!d.aulas.length)sa.append(el('p','',d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
   niveis.forEach((nv,i)=>{const g=secao(nv,por[nv].length+' aula(s)');g.classList.add('pequeno');lembrar(g,'nv_'+nv,i===0);
     for(const a of por[nv]){const k=el('a','aula');k.href=a.url;const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.chave));k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));g.append(k);
@@ -47,5 +48,9 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     sa.append(g)});
   if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));sa.append(p)}
   c.append(sa);
+  // atalhos fixos no topo: Aulas sempre em primeiro e em destaque
+  const at=document.getElementById('atalhos');at.hidden=false;
+  for(const [id,t,pri] of [['sec-aulas','Aulas',true],['sec-anuncios','Anúncios'],['sec-agenda','Agenda']]){const alvo=document.getElementById(id);if(!alvo)continue;
+    const b=el('button','btn'+(pri?'':' sec'),t);b.type='button';b.onclick=()=>{alvo.open=true;alvo.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>
