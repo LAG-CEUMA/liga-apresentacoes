@@ -7,7 +7,7 @@
 <li><b>No GitHub</b> (não na Vercel): repositório privado <b>LAG-CEUMA/liga-curriculo</b>, pasta <code>liberacao/</code>. É lá que os textos moram de verdade.</li>
 <li><b>Nesta página</b> (Vercel) você só <b>lê</b> uma cópia deles, de forma bonita. Não dá para editar aqui.</li>
 <li>Para <b>mudar</b> algo: botão <b>Sugerir alteração</b> em cada bloco, que abre o arquivo no GitHub. Para ver a pasta inteira: <a href="https://github.com/LAG-CEUMA/liga-curriculo/tree/main/liberacao" target="_blank" rel="noopener">abrir a pasta liberacao/ no GitHub</a>.</li></ol></div>
-<div class="tabs" id="abas"></div><div id="corpo"><p>Carregando…</p></div>
+<div class="linha" id="barra" style="display:none;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 8px"><button class="btn sec" id="exp">Expandir tudo</button><button class="btn sec" id="rec">Recolher tudo</button><small id="cont"></small></div><div id="corpo"><p>Carregando…</p></div>
 </main>
 <script>
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
@@ -26,12 +26,23 @@ function secao(titulo,sub,a){const c=el('div','cartao');const h=el('div');h.styl
  const t=el('div');t.append(el('b','',titulo),el('br'),el('small','',sub));h.append(t);
  if(a){const b=el('a','btn sec','Sugerir alteração');b.href=a.editar;b.target='_blank';b.rel='noopener';h.append(b)}
  c.append(h);const m=el('div','md');m.innerHTML=a&&a.texto.trim()?md(a.texto):'<p><i>Ainda não existe.</i></p>';c.append(m);return c}
+function abertos(){try{const v=localStorage.getItem('liga_semanas_abertas');return v?JSON.parse(v):null}catch{return null}}
+function guardar(ds){try{localStorage.setItem('liga_semanas_abertas',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.k)))}catch{}}
 fetch('/api/semanas').then(async r=>{
  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/semanas">Entrar com GitHub</a>';return}
- const d=await r.json();const abas=document.getElementById('abas'),corpo=document.getElementById('corpo');
- function mostrar(i){[...abas.children].forEach((b,k)=>b.classList.toggle('on',k===i));corpo.textContent='';const s=d.semanas[i];
-  corpo.append(secao('O que o aluno recebe na aula','GitHub · '+s.aula.path,s.aula),secao('Tarefa de casa (vira Issue)','GitHub · '+s.tarefa.path,s.tarefa))}
+ const d=await r.json();const corpo=document.getElementById('corpo');corpo.textContent='';
  if(!d.semanas.length){corpo.textContent='Nenhuma semana encontrada.';return}
- d.semanas.forEach((s,i)=>{const b=el('button','',(/nivel-(\d+)/.exec(s.dir)?'Nível '+Number(/nivel-(\d+)/.exec(s.dir)[1])+' · ':'')+'Semana '+Number(s.semana.slice(7)));b.onclick=()=>mostrar(i);abas.append(b)});
- mostrar(0)}).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
+ const por={};for(const s of d.semanas)(por[s.dir]=por[s.dir]||[]).push(s);
+ const dirs=Object.keys(por).sort();const salvos=abertos();const todos=[];
+ const nomeNivel=dir=>{const m=/nivel-(\d+)/.exec(dir);return m?'Nível '+Number(m[1]):dir};
+ dirs.forEach((dir,i)=>{const lista=por[dir];
+  const nv=el('details','nivel');nv.dataset.k=dir;nv.open=salvos===null?i===0:salvos.includes(dir);todos.push(nv);nv.addEventListener('toggle',()=>guardar(todos));
+  const sm=el('summary');sm.append(el('span','nvt',nomeNivel(dir)),el('span','nvc',lista.length+' semana(s)'));nv.append(sm);
+  lista.forEach((s,j)=>{const k=dir+'/'+s.semana;const sd=el('details','nivel pequeno');sd.dataset.k=k;sd.open=salvos===null?(i===0&&j===0):salvos.includes(k);todos.push(sd);sd.addEventListener('toggle',()=>guardar(todos));
+   const t=/^#\s+(.*)/m.exec((s.aula&&s.aula.texto)||'');const ssm=el('summary');ssm.append(el('span','nvt','Semana '+Number(s.semana.slice(7))+(t?' · '+t[1].replace(/^Semana\s*\d+:\s*/i,''):'')),el('span','nvc',s.tarefa&&s.tarefa.texto.trim()?'tarefa pronta':'sem tarefa'));
+   sd.append(ssm,secao('O que o aluno recebe na aula','GitHub · '+(s.aula?s.aula.path:''),s.aula),secao('Tarefa de casa (vira Issue)','GitHub · '+(s.tarefa?s.tarefa.path:''),s.tarefa));nv.append(sd)});
+  corpo.append(nv)});
+ document.getElementById('barra').style.display='flex';document.getElementById('cont').textContent=d.semanas.length+' semanas em '+dirs.length+' nível(is)';
+ document.getElementById('exp').onclick=()=>todos.forEach(x=>x.open=true);document.getElementById('rec').onclick=()=>todos.forEach(x=>x.open=false);
+}).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>
