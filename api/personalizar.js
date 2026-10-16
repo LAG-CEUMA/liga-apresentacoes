@@ -5,7 +5,7 @@ module.exports = async (req, res) => {
   try {
     const usuario = u.usuarioDaSessao(req);
     const { cfg } = await u.lerConfig();
-    if (u.papel(cfg, usuario) !== 'owner') return u.json(res, 403, { erro: 'Só owners.' });
+    if (!u.temPerm(cfg, usuario, 'site')) return u.json(res, 403, { erro: 'Só owners.' });
     if (req.method === 'GET') {
       const [{ site }, imagens] = await Promise.all([s.lerSite(), s.listarImagens()]);
       return u.json(res, 200, { usuario, site, imagens, redes: s.REDES, padrao: s.padrao() });

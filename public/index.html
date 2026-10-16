@@ -16,8 +16,9 @@ function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
-  if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.papel}`));
-    if(d.papel==='owner'){for(const [t,h] of [['Painel','/admin'],['Personalizar','/personalizar'],['Tarefas de casa','/semanas']]){const a=el('a','btn sec',t);a.href=h;conta.append(a)}}
+  if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.titulo||d.papel}`));const P=d.permissoes||[];
+    const botoes=[[P.includes('aulas')||P.includes('pessoas'),'Painel','/admin'],[P.includes('site'),'Personalizar','/personalizar'],[P.includes('tarefas'),'Tarefas de casa','/semanas']];
+    for(const [ok,t,h] of botoes)if(ok){const a=el('a','btn sec',t);a.href=h;conta.append(a)}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
   const bv=site.boasVindas||{};

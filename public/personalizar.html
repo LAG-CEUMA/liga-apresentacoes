@@ -97,7 +97,7 @@ function resumo(){const o=JSON.parse(ORIG),n=S,r=[];
 $('salvar').onclick=async()=>{const b=$('salvar');b.disabled=true;try{await api({acao:'salvar',site:S,resumo:resumo()});const d=await fetch('/api/personalizar').then(r=>r.json());S=d.site;ORIG=JSON.stringify(S);desenhar();mudou();aviso('Publicado! Aparece para todos em até 1 minuto.')}catch(e){aviso(e.message,1)}b.disabled=false};
 $('descartar').onclick=()=>{if(confirm('Descartar as alterações não salvas?'))location.reload()};
 fetch('/api/personalizar').then(async r=>{
-  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/personalizar">Entrar com GitHub</a>';return}
+  if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Entre com a sua conta ou peça a permissão a um owner.</p><a class="btn" href="/api/login?next=/personalizar">Entrar com GitHub</a>';return}
   const d=await r.json();S=d.site;ORIG=JSON.stringify(S);IMGS=d.imagens;REDES=d.redes;desenhar();previa()
 }).catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>

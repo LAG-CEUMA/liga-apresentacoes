@@ -2,12 +2,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
 <style>.perm{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px}.perm label{font-size:14px;color:#cfcbc0}.sub{color:var(--mut);font-size:13px;margin:10px 0 0}input[type=text]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}</style></head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag">PAINEL DOS OWNERS</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="#guia">Guia</a></div></div>
+<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Quem vê o quê</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="#guia">Guia</a></div></div>
 <p><b>Owners</b> veem tudo e liberam. <b>Monitores</b> têm acesso de aluno e só veem a mais o que você marcar para cada um. <b>Alunos</b> veem as aulas de nível membros e públicas. Cada mudança vira um commit no <code>liga-curriculo</code>, com seu nome; pode levar até 1 minuto para valer para todos.</p>
 
+<section id="sec-aulas" hidden>
 <h2>1. Nível de cada aula</h2>
 <p><small>Para <b>tornar uma aula pública</b>, clique em <b>Público</b> na linha dela. <b>Só owners</b> (padrão): só vocês veem. <b>Membros</b>: alunos e monitores logados. <b>Público</b>: qualquer pessoa com o link, sem login. O roteiro nunca depende desse nível: só owners e monitores com permissão.</small></p>
 <div id="aulas"><p>Carregando…</p></div>
+</section>
+<section id="sec-pessoas" hidden>
 
 <h2>2. Monitores e permissões</h2>
 <div class="linha"><input type="text" id="novoMon" placeholder="usuário do GitHub"><button class="btn" id="addMon">Adicionar monitor</button></div>
@@ -16,6 +19,13 @@
 <h2>3. Owners e alunos (usuário do GitHub, um por linha)</h2>
 <div class="grid"><div><b>Owners</b><textarea id="own"></textarea></div><div><b>Alunos</b><textarea id="alu"></textarea></div></div>
 <p><small id="fixos"></small></p><button class="btn" id="salvar">Salvar listas</button>
+</section>
+<section id="sec-equipe" hidden>
+<h2>4. Equipe: cargos e permissões</h2>
+<p><small>Para quem ajuda a coordenar a liga <b>sem ser owner</b>. Dê um título (ex.: "Marketing e artes") e marque só o que a pessoa precisa. <b>Owners</b> sempre têm todas as permissões. Só owners mexem nesta seção e na lista de owners.</small></p>
+<div class="linha"><input type="text" id="novoEq" placeholder="usuário do GitHub"><input type="text" id="novoEqT" placeholder="título do cargo (opcional)" maxlength="40"><button class="btn" id="addEq">Adicionar à equipe</button></div>
+<div id="equipe"></div>
+</section>
 
 <h2 id="guia">Guia: o que acontece quando você faz cada coisa</h2>
 <p><small>Leia uma vez; serve também para novos owners. Clique em cada item para abrir.</small></p>
@@ -27,6 +37,17 @@
 <li><b>Quem é quem:</b> o site identifica a pessoa pelo <b>login do GitHub</b> (só o nome de usuário; nenhuma permissão sobre a conta dela é pedida).</li>
 <li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
 </ol></details>
+
+<details><summary>Equipe: cargos e as 4 permissões</summary>
+<ul>
+<li><b>Para que serve:</b> quem ajuda a coordenar a liga (marketing, artes, secretaria, tesouraria...) recebe <i>só</i> o que precisa, sem virar owner. Um cargo sem tarefa no portal pode ficar só com o título e nenhuma caixa marcada.</li>
+<li><b>Site:</b> abre o <code>/personalizar</code> (cores, logo, fundos, avisos, agenda, redes). Quem tem isso publica textos e imagens para todo mundo, então dê com cuidado. Tudo fica no histórico do GitHub.</li>
+<li><b>Aulas:</b> muda o nível de cada aula (só owners / membros / público).</li>
+<li><b>Pessoas:</b> edita a lista de alunos e os monitores. <b>Não</b> mexe na lista de owners nem na equipe.</li>
+<li><b>Tarefas:</b> vê e revisa as tarefas de casa em <code>/semanas</code>.</li>
+<li><b>Owners</b> sempre têm tudo e são os únicos que mexem na lista de owners e na equipe.</li>
+<li>A pessoa da equipe também vê as aulas de nível <i>Membros</i>, como um aluno. Ela entra pelo mesmo login do GitHub.</li>
+<li><b>Onde fica:</b> em <code>acesso/acesso.json</code> (campo <code>equipe</code>) no <code>liga-curriculo</code>; cada mudança é um commit com o seu nome.</li></ul></details>
 
 <details><summary>Os 4 tipos de pessoa</summary>
 <ul>
@@ -101,10 +122,32 @@ function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
 function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
+let DADOS=null;
+const PERM_INFO={site:['Site','usar /personalizar: cores, logo, fundos, anúncios, agenda e redes'],aulas:['Aulas','mudar o nível de cada aula (só owners / membros / público)'],pessoas:['Pessoas','editar as listas de alunos e os monitores (não mexe em owners nem na equipe)'],tarefas:['Tarefas','ver e revisar as tarefas de casa em /semanas']};
+function desenharEquipe(d){
+  if(!d.dono)return;const box=$('equipe');box.textContent='';const nomes=Object.keys(d.equipe||{}).sort();
+  if(!nomes.length)box.append(el('p','','Ninguém na equipe ainda.'));
+  for(const n of nomes){const g=d.equipe[n];const c=el('div','linha');c.style.display='block';
+    const topo=el('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap';
+    const tit=el('input');tit.type='text';tit.value=g.titulo||'';tit.placeholder='título do cargo';tit.maxLength=40;
+    const nome=el('b','',n);const rm=el('button','btn sec','Remover da equipe');
+    rm.onclick=async()=>{if(!confirm(`Remover ${n} da equipe?`))return;try{await enviar({acao:'remover_equipe',usuario:n});aviso('Removido da equipe');carregar()}catch(e){aviso(e.message,1)}};
+    topo.append(nome,tit,rm);c.append(topo);
+    const caixas=[];const area=el('div','perm');area.style.display='block';
+    for(const k of d.listaPermissoes){const w=el('label');w.style.cssText='display:block;margin:6px 0';const x=el('input');x.type='checkbox';x.checked=g.permissoes.includes(k);x.dataset.k=k;caixas.push(x);
+      w.append(x,document.createTextNode(' '),el('b','',PERM_INFO[k][0]),document.createTextNode(' · '+PERM_INFO[k][1]));area.append(w)}
+    const salvar=async()=>{try{await enviar({acao:'equipe',usuario:n,titulo:tit.value,permissoes:caixas.filter(x=>x.checked).map(x=>x.dataset.k)});aviso(`Equipe: ${n} salvo`)}catch(e){aviso(e.message,1)}};
+    caixas.forEach(x=>x.onchange=salvar);tit.onchange=salvar;c.append(area);box.append(c)}
+}
+$('addEq').onclick=async()=>{const n=$('novoEq').value.trim();if(!n)return;try{await enviar({acao:'equipe',usuario:n,titulo:$('novoEqT').value,permissoes:[]});$('novoEq').value='';$('novoEqT').value='';aviso('Adicionado (sem permissões: marque o que a pessoa pode fazer)');carregar()}catch(e){aviso(e.message,1)}};
 async function carregar(){
   const r=await fetch('/api/admin');
-  if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a>';return}
-  const d=await r.json();
+  if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
+  const d=await r.json();DADOS=d;
+  $('sec-aulas').hidden=!d.permissoes.includes('aulas');$('sec-pessoas').hidden=!d.permissoes.includes('pessoas');$('sec-equipe').hidden=!d.dono;
+  if(!d.permissoes.includes('aulas')&&!d.permissoes.includes('pessoas'))return;
+  desenharEquipe(d);
+  if(!d.permissoes.includes('aulas')&&!d.permissoes.includes('pessoas'))return;
   const box=$('aulas');box.textContent='';
   const INFO={owners:'Quem vê: só owners.',membros:'Quem vê: owners, monitores e alunos da lista (precisa entrar com o GitHub).',publico:'Quem vê: qualquer pessoa com o link, sem login.'};
   const NOMES={owners:'Só owners',membros:'Membros',publico:'Público'};
@@ -134,6 +177,7 @@ async function carregar(){
       if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}l.append(info);corpo.append(l)}
     det.append(sm,corpo);box.append(det)});
   bx.onclick=()=>{todos.forEach(x=>x.open=true)};br.onclick=()=>{todos.forEach(x=>x.open=false)};
+  if(!d.permissoes.includes('pessoas')){return}
   const mb=$('monitores');mb.textContent='';
   const nomes=Object.keys(d.monitores).sort();
   if(!nomes.length)mb.append(el('p','','Nenhum monitor ainda.'));
@@ -159,7 +203,8 @@ async function carregar(){
     const todos=el('button','btn sec','Marcar todas');todos.style.marginTop='8px';todos.onclick=()=>{caixas.forEach(x=>x.checked=true);salvar()};
     const nenhum=el('button','btn sec','Desmarcar todas');nenhum.style.cssText='margin:8px 0 0 8px';nenhum.onclick=()=>{caixas.forEach(x=>x.checked=false);salvar()};
     c.append(area,todos,nenhum);mb.append(c)}
-  $('own').value=d.owners.join('\n');$('alu').value=d.alunos.join('\n');
+  if(!d.permissoes.includes('pessoas'))return;
+  $('own').value=d.owners.join('\n');$('alu').value=d.alunos.join('\n');$('own').disabled=!d.dono;
   $('fixos').textContent=d.fixos.length?`Owners fixos (variável ADMIN_USERS na Vercel): ${d.fixos.join(', ')}`:'';
 }
 $('addMon').onclick=async()=>{const n=$('novoMon').value.trim();if(!n)return;try{await enviar({acao:'monitor',usuario:n,aulas:[],roteiros:[]});$('novoMon').value='';aviso('Monitor adicionado (sem permissões extras)');carregar()}catch(e){aviso(e.message,1)}};

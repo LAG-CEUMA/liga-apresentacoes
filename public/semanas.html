@@ -1,7 +1,7 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Tarefas de casa</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"></head>
 <body data-pg="semanas"><main>
-<div class="topo"><div><p class="tag">SÓ OWNERS</p><h1>Semanas e tarefas de casa</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/admin">Painel</a><a class="btn sec" href="/personalizar">Personalizar site</a></div></div>
+<div class="topo"><div><p class="tag">TAREFAS DE CASA</p><h1>Semanas e tarefas de casa</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/admin">Painel</a><a class="btn sec" href="/personalizar">Personalizar site</a></div></div>
 <p>Aqui estão o <b>texto da aula</b> e a <b>tarefa de casa</b> de cada semana, como o aluno vai receber (a tarefa vira uma Issue no repositório dele). Leia, avalie e use <b>Sugerir alteração</b>: abre o arquivo no GitHub para editar e salvar (commit). <b>Nada é enviado aos alunos por esta página</b>; o envio é feito depois pelo script de liberação. Mais detalhes no <a href="/admin#guia">Guia do painel</a>.</p>
 <div class="cartao" style="padding:14px 22px"><b>Onde isso fica?</b><ol style="line-height:1.7">
 <li><b>No GitHub</b> (não na Vercel): repositório privado <b>LAG-CEUMA/liga-curriculo</b>, pasta <code>liberacao/</code>. É lá que os textos moram de verdade.</li>
@@ -30,7 +30,7 @@ function secao(titulo,sub,a){const c=el('div','cartao');const h=el('div');h.styl
 function abertos(){try{const v=localStorage.getItem('liga_semanas_abertas');return v?JSON.parse(v):null}catch{return null}}
 function guardar(ds){try{localStorage.setItem('liga_semanas_abertas',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.k)))}catch{}}
 fetch('/api/semanas').then(async r=>{
- if(r.status===403){document.querySelector('main').innerHTML='<h1>Só owners</h1><p>Entre com uma conta de owner.</p><a class="btn" href="/api/login?next=/semanas">Entrar com GitHub</a>';return}
+ if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Entre com a sua conta ou peça a permissão a um owner.</p><a class="btn" href="/api/login?next=/semanas">Entrar com GitHub</a>';return}
  const d=await r.json();const corpo=document.getElementById('corpo');corpo.textContent='';
  if(!d.semanas.length){corpo.textContent='Nenhuma semana encontrada.';return}
  const por={};for(const s of d.semanas)(por[s.dir]=por[s.dir]||[]).push(s);

@@ -174,6 +174,40 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   let v = JSON.parse((await chamar(h('site'))).body); assert.deepEqual(v.anuncios.map((a) => a.titulo), ['Público']); assert.deepEqual(v.agenda.map((a) => a.titulo), ['Hoje']); assert.equal(v.redes.length, 1);
   v = JSON.parse((await chamar(h('site'), { user: 'dono' })).body); assert.deepEqual(v.anuncios.map((a) => a.titulo), ['Só membros', 'Público']); assert.deepEqual(v.agenda.map((a) => a.titulo), ['Hoje', 'Membros']);
   assert(!JSON.stringify(v).includes('"owners"')); // não vaza configuração de acesso
+  // ---------- equipe: cargos com permissões específicas ----------
+  const eq = (usuario, titulo, permissoes, quem = 'dono') => post({ acao: 'equipe', usuario, titulo, permissoes }, {}, quem);
+  assert.equal((await eq('mkt', 'Marketing e artes', ['site', 'invalida'])).status, 200);
+  assert.deepEqual(cfg.equipe.mkt, { titulo: 'Marketing e artes', permissoes: ['site'] }); assert(commits[commits.length - 1].includes('dono'));
+  assert.equal((await eq('sec', 'Secretaria', ['pessoas', 'tarefas'])).status, 200);
+  assert.equal((await eq('aul', 'Ensino', ['aulas'])).status, 200);
+  assert.equal((await eq('tes', 'Tesouraria', [])).status, 200);
+  // marketing: só o site
+  assert.equal((await chamar(h('personalizar'), { user: 'mkt' })).status, 200);
+  assert.equal((await salvarSite({ nome: 'Marketing mudou' }, 'mkt')).status, 200);
+  assert.equal((await chamar(h('semanas'), { user: 'mkt' })).status, 403);
+  assert.equal((await chamar(h('admin'), { user: 'mkt' })).status, 403);
+  assert.equal((await post({ ...AC, chave: CH(3) }, {}, 'mkt')).status, 403);
+  assert.equal((await eq('mkt', 'Chefe', ['site', 'aulas', 'pessoas', 'tarefas'], 'mkt')).status, 403); // não se promove
+  // secretaria: pessoas + tarefas, sem site e sem aulas
+  assert.equal((await chamar(h('semanas'), { user: 'sec' })).status, 200);
+  assert.equal((await chamar(h('personalizar'), { user: 'sec' })).status, 403);
+  r = await chamar(h('admin'), { user: 'sec' }); assert.equal(r.status, 200); const ad = JSON.parse(r.body); assert(ad.alunos && !ad.equipe && ad.dono === false);
+  assert.equal((await post({ ...AC, chave: CH(3) }, {}, 'sec')).status, 403);
+  assert.equal((await eq('sec', 'x', ['site'], 'sec')).status, 403);
+  assert.equal((await post({ acao: 'listas', owners: ['sec', 'intruso'], alunos: ['alu1', 'novo1'] }, {}, 'sec')).status, 200);
+  assert(!cfg.owners.includes('intruso') && cfg.owners.includes('dono') && cfg.alunos.includes('novo1')); // não mexe em owners
+  assert.equal((await post({ acao: 'monitor', usuario: 'mon9', aulas: [], roteiros: [] }, {}, 'sec')).status, 200);
+  await post({ acao: 'listas', owners: cfg.owners, alunos: ['alu1'] });
+  // ensino: só níveis de aula
+  assert.equal((await post({ ...AC, chave: CH(3), nivel: 'membros' }, {}, 'aul')).status, 200); assert.equal(cfg.aulas[CH(3)], 'membros');
+  assert.equal((await post({ acao: 'listas', owners: [], alunos: [] }, {}, 'aul')).status, 403);
+  await post({ ...AC, chave: CH(3), nivel: 'owners' });
+  // tesouraria: só título, vê como membro
+  assert.equal((await chamar(h('admin'), { user: 'tes' })).status, 403); assert.equal((await ver('tes', 'aula-02')).status, 200); assert.equal((await ver('tes', 'aula-03')).status, 403);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'tes' })).body); assert.equal(r.papel, 'equipe'); assert.equal(r.titulo, 'Tesouraria'); assert.deepEqual(r.permissoes, []);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 4);
+  assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' }, {}, 'sec')).status, 403);
+  assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' })).status, 200); assert.equal((await chamar(h('personalizar'), { user: 'mkt' })).status, 403);
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   console.log('Todos os testes passaram.');

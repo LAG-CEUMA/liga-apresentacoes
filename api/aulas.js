@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
     const visiveis = todas.filter((a) => u.pode(cfg, usuario, a.chave, false));
     const exigeLogin = p === 'visitante' ? todas.filter((a) => u.nivelDe(cfg, a.chave) === 'membros').length : 0;
     u.json(res, 200, {
-      usuario, papel: p, exigeLogin,
+      usuario, papel: p, titulo: u.tituloDe(cfg, usuario), permissoes: u.permissoes(cfg, usuario), exigeLogin,
       aulas: visiveis.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id,
         url: `/aula/${a.chave}`, roteiro: a.roteiro && u.pode(cfg, usuario, a.chave, true) ? `/aula/${a.chave}/roteiro` : null,
         acesso: p === 'owner' ? u.nivelDe(cfg, a.chave) : undefined })),
