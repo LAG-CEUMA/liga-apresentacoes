@@ -1,6 +1,6 @@
 'use strict';
 // Painel: nível de cada aula, listas, monitores e equipe. Cada ação exige a permissão certa; só owners mexem na lista de owners e na equipe.
-const u = require('../lib/util'); const d = require('../lib/dados');
+const u = require('../lib/util'); const d = require('../lib/dados'); const P = require('../lib/pontos');
 const nomeGh = (x) => String(x).trim().replace(/^https?:\/\/github\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, '').toLowerCase();
 const ler = (l) => (Array.isArray(l) ? l : []).map((x) => String(x).trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
 module.exports = async (req, res) => {
@@ -16,6 +16,7 @@ module.exports = async (req, res) => {
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
+      if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
@@ -159,7 +160,10 @@ module.exports = async (req, res) => {
       else if (!acessoAte) acessoAte = u.maisUmAno(); // arquivou: material continua por 1 ano (editável)
       novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status, inicio, fim,
         nivel: b.nivel === undefined ? (atual.nivel || '') : (dirs.has(b.nivel) ? b.nivel : ''),
-        acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, acessoAte, alunos: atual.alunos };
+        acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, acessoAte, alunos: atual.alunos,
+        ...(atual.pesos ? { pesos: atual.pesos } : {}), ...(atual.rankingFinal ? { rankingFinal: atual.rankingFinal } : {}) };
+      if (status === 'arquivada' && atual.status !== 'arquivada') novo.turmas[id].rankingFinal = P.ranking(novo, id, await d.listarSessoes()).slice(0, 5).map((x) => ({ usuario: x.usuario, total: x.total })); // congela o Top 5
+      if (status !== 'arquivada') delete novo.turmas[id].rankingFinal;
       msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
     } else if (b.acao === 'renomear_turma') {
       // Trocar o código é seguro só se ainda não há presença gravada (os arquivos de presença usam o código).
@@ -183,6 +187,22 @@ module.exports = async (req, res) => {
       delete novo.turmas[id];
       for (const m of Object.values(novo.monitores)) m.turmas = m.turmas.filter((x) => x !== id);
       msg = `Portal: ${usuario} excluiu a turma ${id} (vazia)`;
+    } else if (b.acao === 'pontuacao') {
+      if (!dono) return nao();
+      const n = (v, a, z) => { const x = Number(v); return Number.isFinite(x) ? Math.min(z, Math.max(a, Math.round(x * 10) / 10)) : null; };
+      const alvo = b.turma ? String(b.turma).toUpperCase() : '';
+      if (alvo) {
+        if (!novo.turmas[alvo]) return u.json(res, 400, { erro: 'Turma não encontrada.' });
+        if (b.padrao) delete novo.turmas[alvo].pesos;
+        else { const ps = {}; for (const k of ['presenca', 'participacao', 'exercicios']) { const x = n((b.pesos || {})[k], 0, 100); if (x !== null) ps[k] = x; } novo.turmas[alvo].pesos = ps; }
+        msg = `Portal: ${usuario} ajustou os pesos da turma ${alvo}`;
+      } else {
+        for (const k of ['presenca', 'participacao', 'exercicios']) { const x = n((b.pesos || {})[k], 0, 100); if (x !== null) novo.pontuacao.pesos[k] = x; }
+        for (const k of Object.keys(novo.pontuacao.tipos)) { const x = n((b.tipos || {})[k], 0, 5); if (x !== null) novo.pontuacao.tipos[k] = x; }
+        const m = n(b.meta, 1, 500); if (m !== null) novo.pontuacao.meta = m;
+        if (b.top5Visivel !== undefined) novo.pontuacao.top5Visivel = !!b.top5Visivel;
+        msg = `Portal: ${usuario} ajustou a pontuação padrão`;
+      }
     } else if (b.acao === 'promover') {
       // Promover = copiar: os escolhidos entram na turma nova e continuam na de origem (que guarda o histórico e o acesso ao material).
       if (!perm.includes('pessoas')) return nao();

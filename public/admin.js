@@ -234,6 +234,28 @@ function modalMover(de){
   const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Mover alunos da turma '+D.turmas[de].nome),h('p',{class:'sub'},`Move todos os ${D.turmas[de].alunos.length} aluno(s) (saem desta turma). Use para corrigir cadastro; para avançar de nível use Promover.`),h('label',{},'Para a turma ',para),
     h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'mover_turma',de,para:para.value});aviso('Alunos movidos');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Mover'))],'modal');}
 
+// ---------- aba Pontuação (owners) ----------
+async function desenharPontos(){
+  const p=$('p-pontos');p.textContent='';const c=D.pontuacao;if(!c){p.append(h('p',{},'Só owners configuram a pontuação.'));return}
+  const inp=(v,max=100,step=1)=>h('input',{type:'number',min:0,max,step,value:v,style:'width:90px'});
+  const pr=inp(c.pesos.presenca),pa=inp(c.pesos.participacao),ex=inp(c.pesos.exercicios),meta=inp(c.meta,500),top=h('input',{type:'checkbox',checked:c.top5Visivel});
+  const tipos={};const linhasTipos=Object.entries(D.tiposParticipacao).map(([k,t])=>{const i=inp(c.tipos[k],5,0.5);tipos[k]=i;return h('label',{class:'ck'},i,t)});
+  const soma=h('b',{});const calc=()=>{soma.textContent=String((+pr.value||0)+(+pa.value||0)+(+ex.value||0))};[pr,pa,ex].forEach(x=>x.addEventListener('input',calc));calc();
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Nota final do aluno = presença + participação + exercícios − penalidades. Os pesos abaixo valem para todas as turmas; você pode mudar só uma turma mais abaixo.'),
+    h('div',{class:'grade'},
+      h('div',{class:'cartao2'},h('h3',{},'Pesos padrão'),h('label',{class:'ck'},pr,'Presença'),h('label',{class:'ck'},pa,'Participação'),h('label',{class:'ck'},ex,'Exercícios'),h('div',{class:'sub'},'Soma dos pesos (nota máxima): ',soma),
+        h('label',{class:'ck',style:'margin-top:10px'},meta,'Meta de participação (pontos para ganhar o peso inteiro)'),h('label',{class:'ck'},top,'Alunos veem o Top 5 da turma')),
+      h('div',{class:'cartao2'},h('h3',{},'Valor de cada tipo de participação'),h('div',{class:'sub'},'Multiplicador dos pontos que o professor dá (1 = normal, 2 = vale o dobro, 0 = não conta).'),...linhasTipos)),
+    h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'pontuacao',pesos:{presenca:pr.value,participacao:pa.value,exercicios:ex.value},meta:meta.value,top5Visivel:top.checked,tipos:Object.fromEntries(Object.entries(tipos).map(([k,i])=>[k,i.value]))});aviso('Pontuação padrão salva');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar pontuação padrão'));
+  const ids=Object.keys(D.turmas);const sel=h('select',{},...ids.map(t=>h('option',{value:t},D.turmas[t].nome)));
+  const box=h('div',{class:'cartao2',style:'margin-top:16px'});
+  const ver=async()=>{box.textContent='';const t=D.turmas[sel.value];const o=t.pesos||{};const a=inp(o.presenca===undefined?c.pesos.presenca:o.presenca),b=inp(o.participacao===undefined?c.pesos.participacao:o.participacao),d=inp(o.exercicios===undefined?c.pesos.exercicios:o.exercicios);
+    box.append(h('h3',{},'Turma '+t.nome),h('div',{class:'sub'},t.pesos?'Esta turma tem pesos próprios.':'Esta turma usa os pesos padrão.'),h('div',{style:'display:flex;gap:14px;flex-wrap:wrap'},h('label',{class:'ck'},a,'Presença'),h('label',{class:'ck'},b,'Participação'),h('label',{class:'ck'},d,'Exercícios')),
+      h('div',{style:'display:flex;gap:8px;margin:8px 0'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'pontuacao',turma:sel.value,pesos:{presenca:a.value,participacao:b.value,exercicios:d.value}});aviso('Pesos da turma salvos');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar para esta turma'),t.pesos?h('button',{class:'btn sec',type:'button',onclick:async()=>{try{await enviar({acao:'pontuacao',turma:sel.value,padrao:true});aviso('Voltou ao padrão');await carregar()}catch(e){aviso(e.message,1)}}},'Voltar ao padrão'):''));
+    const r=await fetch('/api/presenca?acao=ranking&turma='+encodeURIComponent(sel.value));
+    if(r.ok){const R=await r.json();box.append(h('div',{style:'font-weight:700;margin:8px 0 4px'},t.status==='arquivada'&&t.rankingFinal?'Top 5 final (congelado)':'Top 5 agora'),...(t.status==='arquivada'&&t.rankingFinal?t.rankingFinal.map((x,i)=>({posicao:i+1,usuario:x.usuario,total:x.total})):R.ranking.slice(0,5)).map(x=>h('div',{class:'permlinha',style:'grid-template-columns:40px 1fr auto'},h('span',{},x.posicao+'º'),h('span',{},'@'+x.usuario),h('b',{},String(x.total)))),R.ranking.length?'':h('div',{class:'sub'},'Ainda sem alunos nesta turma.'))}};
+  sel.addEventListener('change',ver);p.append(h('h3',{style:'margin:22px 0 8px'},'Pesos por turma e Top 5'),sel,box);ver()}
+
 // ---------- aba Níveis das aulas ----------
 function desenharAulas(d){
   const box=$('aulas');box.textContent='';
@@ -268,12 +290,12 @@ function desenharAulas(d){
 }
 
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  for(const [id] of [['pessoas'],['cargos'],['turmas'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}

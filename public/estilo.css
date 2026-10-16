@@ -80,3 +80,4 @@ footer.rodape a.rede{border:1px solid #fff3;border-radius:99px;padding:6px 14px;
 .banner-ver{background:#c9b3ff;color:#1a1230;padding:12px 16px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 14px}.filtros input[type=search]{background:var(--bg);color:var(--txt);border:1px solid #fff3;border-radius:99px;padding:8px 14px;font:inherit;min-width:180px}
 .aulaln{display:grid;grid-template-columns:1fr 70px 70px;gap:8px;align-items:center;padding:6px 0;font-size:14px;border-top:1px dashed #fff2}
+input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:7px;font:inherit}

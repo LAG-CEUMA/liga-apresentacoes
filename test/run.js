@@ -332,6 +332,33 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await ver('ex-aluno', 'aula-02')).status, 200); // aula-02 está como membros
   assert.equal((await post({ acao: 'pessoa', usuario: 'ex-aluno', acessos: [] }, {}, 'sec')).status, 200); assert(!cfg.acessos['ex-aluno']);
   assert.equal((await ver('ex-aluno', 'aula-02')).status, 403);
+  // ---------- pontuação: presença + participação + exercícios − penalidades ----------
+  {
+    const P = require('../lib/pontos');
+    const c = u.normalizar({ alunos: ['a', 'b', 'c'], turmas: { T: { nome: 'T', status: 'andamento', alunos: ['a', 'b', 'c'] } } });
+    const mk = (ch, part, ent) => ({ turma: 'T', chave: 'n/aula-01', chamadas: { 1: { estados: ch }, 2: { estados: ch } }, participacoes: part, ...(ent ? { entregas: ent } : {}) });
+    const s1 = mk({ a: 'p', b: 'p', c: 'j' }, [{ usuario: 'a', tipo: 'pergunta', pontos: 15 }, { usuario: 'b', tipo: 'penalidade', pontos: 3 }, { usuario: 'a', tipo: 'ajuda', pontos: 15 }], { a: { estado: 'prazo', nota: 10 }, b: { estado: 'atraso' }, c: { estado: 'nao' } });
+    const r = P.ranking(c, 'T', [s1]);
+    assert.deepEqual(r.map((x) => x.usuario), ['a', 'b', 'c']);
+    assert.equal(r[0].total, 100); assert.equal(r[0].partes.participacao, 30); // 30 pts = meta
+    assert.equal(r[1].total, 40 + 0 + 15 - 3); // presente + atraso (50%) − penalidade
+    assert.equal(r[2].total, 20); // justificado = 50% da presença
+    assert.equal(P.ranking(c, 'T', [s1, { ...s1, chave: 'n/aula-02', participacoes: [{ usuario: 'c', tipo: 'penalidade', pontos: 10 }] }]).find((x) => x.usuario === 'c').total >= 0, true); // nunca negativo
+    const c2 = u.normalizar({ ...c, pontuacao: { pesos: { presenca: 100, participacao: 0, exercicios: 0 } }, turmas: { T: { ...c.turmas.T, pesos: { presenca: 10 } } } });
+    assert.equal(P.ranking(c2, 'T', [s1])[0].partes.presenca, 10); // peso da turma vale mais que o padrão
+    assert.deepEqual(P.configPontos(u.normalizar({})).pesos, { presenca: 40, participacao: 30, exercicios: 30 });
+  }
+  assert.equal((await post({ acao: 'pontuacao', pesos: { presenca: 50, participacao: 20, exercicios: 30 }, meta: 25, tipos: { pergunta: 2 } }, {}, 'sec')).status, 403); // só owner
+  assert.equal((await post({ acao: 'pontuacao', pesos: { presenca: 50, participacao: 20, exercicios: 30 }, meta: 25, tipos: { pergunta: 2 }, top5Visivel: false })).status, 200);
+  assert.deepEqual(cfg.pontuacao.pesos, { presenca: 50, participacao: 20, exercicios: 30 }); assert.equal(cfg.pontuacao.tipos.pergunta, 2); assert.equal(cfg.pontuacao.top5Visivel, false);
+  assert.equal((await post({ acao: 'pontuacao', turma: '2026', pesos: { presenca: 60 } })).status, 200); assert.equal(cfg.turmas['2026'].pesos.presenca, 60);
+  await post({ acao: 'pontuacao', turma: '2026', padrao: true }); await post({ acao: 'pontuacao', top5Visivel: true });
+  r = await pres({ acao: 'entregas', turma: T, chave: CH(1), estados: { alu1: { estado: 'prazo', nota: 9 }, alu2: { estado: 'atraso' }, intruso: { estado: 'prazo' } } }, 'pres'); assert.equal(r.status, 200); assert.equal(JSON.parse(r.body).entregues, 2);
+  assert.equal((await pres({ acao: 'participacao', turma: T, chave: CH(1), usuario: 'alu3', tipo: 'penalidade', nota: 'conversa', pontos: 0 }, 'pres')).status, 400);
+  assert.equal((await pres({ acao: 'participacao', turma: T, chave: CH(1), usuario: 'alu3', tipo: 'penalidade', nota: 'conversa', pontos: 2 }, 'pres')).status, 200);
+  r = JSON.parse((await getp({ acao: 'ranking', turma: T }, 'dono')).body); assert(r.ranking.length >= 3 && r.ranking[0].posicao === 1);
+  assert.equal((await getp({ acao: 'ranking', turma: T }, 'alu1')).status, 403);
+  r = JSON.parse((await getp({ acao: 'minhapontuacao' }, 'alu1')).body); assert(r.turmas[0].top5.length > 0 && r.turmas[0].posicao >= 1 && r.turmas[0].total > 0);
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)

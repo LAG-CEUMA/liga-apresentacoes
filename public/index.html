@@ -57,6 +57,15 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     c.insertBefore(s,sa.nextSibling);
     const at=document.getElementById('atalhos');if(at){const b=el('button','btn sec','Minha presença');b.type='button';b.onclick=()=>{s.open=true;s.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
   }).catch(()=>{});
+  if(d.usuario)fetch('/api/presenca?acao=minhapontuacao').then(r=>r.ok?r.json():null).then(m=>{
+    if(!m||!m.turmas.length)return;
+    const s=secao('Minha pontuação',m.turmas.map(t=>`${t.nome}: ${t.total} pts · ${t.posicao}º de ${t.de}`).join(' | '));s.id='sec-pontos';lembrar(s,'pontos',true);
+    for(const t of m.turmas){const i=el('div','item');i.append(el('b','',t.nome+(t.status==='arquivada'?' (encerrada)':'')),el('br'),
+      el('small','',`Presença ${t.partes.presenca} · Participação ${t.partes.participacao} · Exercícios ${t.partes.exercicios}${t.partes.penalidades?' · Penalidades −'+t.partes.penalidades:''} = ${t.total}`));
+      if(t.top5.length){i.append(el('br'),el('small','','Top 5 da turma:'));for(const x of t.top5){i.append(el('br'),el('small','',`${x.posicao}º @${x.usuario} · ${x.total} pts`+(x.usuario===d.usuario?' (você)':'')))}}
+      s.append(i)}
+    const ref=document.getElementById('sec-presenca')||sa.nextSibling;c.insertBefore(s,ref);
+  }).catch(()=>{});
   // atalhos fixos no topo: Aulas sempre em primeiro e em destaque
   const at=document.getElementById('atalhos');at.hidden=false;
   for(const [id,t,pri] of [['sec-aulas','Aulas',true],['sec-anuncios','Anúncios'],['sec-agenda','Agenda']]){const alvo=document.getElementById(id);if(!alvo)continue;

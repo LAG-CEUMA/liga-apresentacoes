@@ -33,7 +33,7 @@ function seletores(){
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
   const data=h('input',{type:'date',value:DATA||CTX.hoje});data.addEventListener('change',()=>{DATA=data.value});
   return h('div',{class:'linha'},h('label',{},'Turma ',turma),h('label',{style:'flex:1;min-width:220px'},'Aula ',sel),h('label',{},'Data ',data))}
-function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)))}
+function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ent','Entregas'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)))}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
   if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
@@ -59,8 +59,27 @@ function telaPart(){
   if(!ps.length)lista.append(h('p',{},'Nenhuma participação registrada nesta aula.'));
   for(const p of ps)lista.append(h('div',{class:'linha'},h('div',{class:'t'},h('b',{},p.usuario),' · '+(CTX.tipos[p.tipo]||p.tipo)+' · '+p.pontos+' ponto(s)',h('br'),h('small',{},(p.nota||'')+' (por '+p.por+')')),
     h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Remover esta participação?'))return;try{await api({acao:'remover_participacao',turma:TURMA,chave:CHAVE,id:p.id});await carregarSessao();desenhar()}catch(e){aviso(e.message,1)}}},'Remover')));
-  return h('div',{},h('div',{class:'linha'},aluno,tipo,h('label',{},'Pontos ',pts),nota,h('button',{class:'btn',type:'button',onclick:async()=>{try{await api({acao:'participacao',turma:TURMA,chave:CHAVE,usuario:aluno.value,tipo:tipo.value,nota:nota.value,pontos:pts.value});aviso('Participação registrada');await carregarSessao();desenhar()}catch(e){aviso(e.message,1)}}},'Registrar')),
-    h('p',{class:'sub'},'Por enquanto as participações só formam histórico (e pontos), sem efeito automático.'),lista)}
+  return h('div',{},h('div',{class:'linha'},aluno,tipo,h('label',{},'Pontos (se for penalidade, são os perdidos) ',pts),nota,h('button',{class:'btn',type:'button',onclick:async()=>{try{await api({acao:'participacao',turma:TURMA,chave:CHAVE,usuario:aluno.value,tipo:tipo.value,nota:nota.value,pontos:pts.value});aviso('Participação registrada');await carregarSessao();desenhar()}catch(e){aviso(e.message,1)}}},'Registrar')),
+    h('p',{class:'sub'},'Os pontos entram no ranking da turma (aba Ranking). "Atrapalhou a aula" tira pontos do total do aluno.'),lista)}
+function telaEntregas(){
+  if(!CHAVE)return h('p',{},'Escolha uma aula para registrar as entregas da tarefa de casa.');
+  if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos.');
+  const salvo=(SESSAO&&SESSAO.entregas)||{};const E={};for(const k of CTX.roster)E[k]={estado:(salvo[k]||{}).estado||'nao',nota:(salvo[k]||{}).nota===undefined?'':salvo[k].nota};
+  const lista=h('div',{});
+  for(const k of CTX.roster){const seg=h('div',{class:'seg tri'});const nota=h('input',{type:'number',min:0,max:10,step:0.5,placeholder:'nota 0–10',value:E[k].nota,style:'width:100px',oninput:e=>{E[k].nota=e.target.value}});
+    const pinta=()=>seg.querySelectorAll('button').forEach((x,i)=>x.className=E[k].estado===['prazo','atraso','nao'][i]?'on '+['p','j','a'][i]:'');
+    for(const [v,t] of [['prazo','No prazo'],['atraso','Atrasada'],['nao','Não entregou']]){const b=h('button',{type:'button'},t);b.addEventListener('click',()=>{E[k].estado=v;pinta()});seg.append(b)}pinta();
+    lista.append(h('div',{class:'linha'},h('div',{class:'t'},h('b',{},k)),seg,nota))}
+  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{if(!confirm('Salvar as entregas desta aula? Quem está como "Não entregou" fica com 0 nesta tarefa.'))return;salvar.disabled=true;try{const r=await api({acao:'entregas',turma:TURMA,chave:CHAVE,estados:E});aviso(`Entregas salvas: ${r.entregues} de ${CTX.roster.length}`);await carregarSessao();desenhar()}catch(x){aviso(x.message,1)}salvar.disabled=false}},'Salvar entregas');
+  return h('div',{},h('p',{class:'sub'},'No prazo vale 100% do peso da tarefa, atrasada vale 50%, não entregou vale 0. A nota (opcional) multiplica: nota 8 em tarefa no prazo = 80%.'),lista,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar))}
+async function telaRank(alvo){
+  alvo.append(h('p',{},'Carregando…'));
+  const r=await fetch('/api/presenca?acao=ranking&turma='+encodeURIComponent(TURMA));
+  if(!r.ok){alvo.textContent='Não consegui carregar o ranking desta turma.';return}
+  const R=await r.json();alvo.textContent='';const max=R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios;
+  alvo.append(h('p',{class:'sub'},`Pontuação máxima ${max}: presença ${R.pesos.presenca} + participação ${R.pesos.participacao} (meta ${R.config.meta} pontos) + exercícios ${R.pesos.exercicios}, menos penalidades. Empate: presença e depois exercícios.`));
+  const tb=h('tbody',{});for(const x of R.ranking)tb.append(h('tr',{style:x.posicao<=5?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},x.usuario),h('td',{},h('b',{},String(x.total))),h('td',{},String(x.partes.presenca)),h('td',{},String(x.partes.participacao)),h('td',{},String(x.partes.exercicios)),h('td',{style:x.partes.penalidades?'color:var(--err)':''},x.partes.penalidades?'−'+x.partes.penalidades:'0')));
+  alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['#','Aluno','Total','Presença','Particip.','Exercícios','Penal.'].map(t=>h('th',{},t)))),tb)),h('p',{class:'sub'},'As linhas em destaque são o Top 5 da turma.'))}
 let HIST=null;
 async function telaHist(alvo){
   alvo.append(h('p',{},'Carregando…'));
@@ -83,7 +102,7 @@ async function telaHist(alvo){
     const txt=linhas.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type:'text/csv'}));a.download='presenca.csv';a.click()};
   alvo.append(h('div',{class:'linha'},h('label',{},'Turma ',filtro),h('span',{style:'flex:1'}),h('button',{class:'btn sec',type:'button',onclick:csv},'Baixar CSV (Excel / Power BI)')),corpo,h('p',{class:'sub'},'P = presente, F = falta, J = justificado, – = sem registro. Presença = % das aulas com chamada em que o aluno foi considerado presente.'))}
 function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba());
-  if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else{const d=h('div');c.append(d);telaHist(d)}}
+  if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='ent')c.append(telaEntregas());else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
 (async()=>{
   const r=await fetch('/api/presenca?acao=contexto');
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}

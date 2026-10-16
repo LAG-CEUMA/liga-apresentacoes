@@ -1,6 +1,6 @@
 'use strict';
 // Chamada de aula (até 3 por aula, salvas pelo instrutor), participações e histórico. Cada aluno só vê a própria presença.
-const u = require('../lib/util'); const d = require('../lib/dados');
+const u = require('../lib/util'); const d = require('../lib/dados'); const P = require('../lib/pontos');
 const hoje = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
 const txt = (v, n) => String(v === undefined || v === null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 module.exports = async (req, res) => {
@@ -32,7 +32,21 @@ module.exports = async (req, res) => {
         lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
         return u.json(res, 200, { usuario, sessoes: lista });
       }
+      if (q.acao === 'minhapontuacao') {
+        const sess = await d.listarSessoes(); const conf = P.configPontos(cfg); const out = [];
+        for (const [id, t] of Object.entries(cfg.turmas)) {
+          if (!t.alunos.includes(usuario)) continue;
+          const rk = P.ranking(cfg, id, sess); const eu = rk.find((x) => x.usuario === usuario);
+          out.push({ turma: id, nome: t.nome, status: t.status, pesos: P.pesosDa(cfg, id), total: eu.total, partes: eu.partes, posicao: eu.posicao, de: rk.length,
+            top5: conf.top5Visivel ? (t.status === 'arquivada' && t.rankingFinal ? t.rankingFinal.map((x, i) => ({ posicao: i + 1, usuario: x.usuario, total: x.total })) : rk.slice(0, 5).map((x) => ({ posicao: x.posicao, usuario: x.usuario, total: x.total }))) : [] });
+        }
+        return u.json(res, 200, { usuario, turmas: out });
+      }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
+      if (q.acao === 'ranking') {
+        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+        return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes()) });
+      }
       if (q.acao === 'contexto') {
         return u.json(res, 200, { usuario, geral, aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, turmas: turmasVisiveis, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
       }
@@ -68,10 +82,21 @@ module.exports = async (req, res) => {
       `Portal: ${usuario} salvou a chamada ${n} de ${b.chave} (turma ${b.turma}: ${p} presentes, ${a} ausentes, ${j} justificados)`);
       return u.json(res, 200, { ok: true, presentes: p, ausentes: a, justificados: j });
     }
+    if (b.acao === 'entregas') {
+      const est = {};
+      for (const k of alunos) { const v = (b.estados || {})[k] || {}; const e = ['prazo', 'atraso'].includes(v.estado) ? v.estado : 'nao';
+        const nota = v.nota === '' || v.nota === undefined || v.nota === null ? null : Math.min(10, Math.max(0, Math.round(Number(v.nota) * 10) / 10));
+        est[k] = { estado: e, ...(nota !== null && Number.isFinite(nota) && e !== 'nao' ? { nota } : {}) }; }
+      const cont = Object.values(est).filter((x) => x.estado !== 'nao').length;
+      await d.atualizarSessao(b.turma, b.chave, (s) => { s.turma = b.turma; s.chave = b.chave; s.entregas = Object.fromEntries(Object.entries(est).map(([k, v]) => [k, { ...v, por: usuario, em: new Date().toISOString() }])); return s; },
+        `Portal: ${usuario} salvou as entregas de ${b.chave} (turma ${b.turma}: ${cont} entregues de ${Object.keys(est).length})`);
+      return u.json(res, 200, { ok: true, entregues: cont });
+    }
     if (b.acao === 'participacao') {
       const alvo = String(b.usuario || '').toLowerCase();
       if (!alunos.has(alvo) || !d.TIPOS[b.tipo]) return u.json(res, 400, { erro: 'Aluno ou tipo inválido.' });
       const pontos = Math.min(10, Math.max(0, Math.round(Number(b.pontos))) || 0);
+      if (b.tipo === 'penalidade' && !pontos) return u.json(res, 400, { erro: 'Informe quantos pontos a penalidade tira (1 a 10).' });
       const item = { id: d.novoId(), usuario: alvo, tipo: b.tipo, nota: txt(b.nota, 140), pontos, por: usuario, em: new Date().toISOString() };
       await d.atualizarSessao(b.turma, b.chave, (s) => { s.participacoes = (s.participacoes || []).concat(item); return s; },
         `Portal: ${usuario} registrou participação (${b.tipo}) em ${b.chave} (turma ${b.turma})`);
