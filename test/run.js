@@ -321,6 +321,17 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     const c = u.normalizar({ alunos: ['a', 'b'], aulas: { 'n0/aula-01': 'membros' }, turmas: { X: { status: 'arquivada', nivel: 'n0', acessoApos: true, acessoAte: '2020-01-01', alunos: ['a'] }, Y: { status: 'arquivada', nivel: 'n0', acessoApos: true, acessoAte: '2999-01-01', alunos: ['b'] } } });
     assert(!u.pode(c, 'a', 'n0/aula-01', false) && u.pode(c, 'b', 'n0/aula-01', false)); // prazo vencido corta; no prazo mantém
   }
+  // ---------- acesso extra por pessoa ----------
+  {
+    const c = u.normalizar({ alunos: [], aulas: { 'n0/aula-01': 'membros', 'n1/aula-01': 'membros' }, acessos: { Ex: [{ nivel: 'n0', ate: '2999-01-01', motivo: 'pediu para rever' }, { nivel: 'n1', ate: '2020-01-01' }] } });
+    assert(u.pode(c, 'ex', 'n0/aula-01', false) && !u.pode(c, 'ex', 'n1/aula-01', false) && !u.pode(c, 'ex', 'n0/aula-01', true)); // vence, e roteiro nunca
+    assert(!u.pode(c, 'outro', 'n0/aula-01', false));
+  }
+  assert.equal((await post({ acao: 'pessoa', usuario: 'ex-aluno', acessos: [{ nivel: 'nivel-00-tutorial', ate: '2999-01-01', motivo: 'pediu para rever' }, { nivel: 'inexistente' }] }, {}, 'sec')).status, 200);
+  assert.deepEqual(cfg.acessos['ex-aluno'].map((x) => x.nivel), ['nivel-00-tutorial']);
+  assert.equal((await ver('ex-aluno', 'aula-02')).status, 200); // aula-02 está como membros
+  assert.equal((await post({ acao: 'pessoa', usuario: 'ex-aluno', acessos: [] }, {}, 'sec')).status, 200); assert(!cfg.acessos['ex-aluno']);
+  assert.equal((await ver('ex-aluno', 'aula-02')).status, 403);
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)

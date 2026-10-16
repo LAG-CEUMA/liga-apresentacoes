@@ -28,3 +28,4 @@ Use os termos e programas **em inglês**.
 - O painel (`public/admin.html` + `public/admin.js`) tem abas Pessoas, Cargos, Turmas, Níveis das aulas e Guia, com ficha lateral, "Ver como" e "Adicionar várias".
 - **Nível por turma:** `turmas.<id>.nivel` (pasta da aula, ex.: `nivel-00-tutorial`; vazio = todos), `fim`, `acessoApos` (turma arquivada mantém acesso aos slides do nível). O aluno só abre aulas Membros dos níveis das suas turmas; roteiros nunca. Ação `promover` copia alunos para a turma nova sem tirá-los da origem.
 - Códigos de turma são salvos em MAIÚSCULAS. Arquivar define `acessoAte` (1 ano, editável). Ações `renomear_turma` (só sem chamadas) e `excluir_turma` (só vazia e sem chamadas).
+- Acesso extra por pessoa: `acessos.<usuario>: [{nivel, ate, motivo}]` (slides do nível até a data; nunca roteiro). Editado na ficha (ação `pessoa`, campo `acessos`).

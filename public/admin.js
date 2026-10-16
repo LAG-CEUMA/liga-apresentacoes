@@ -13,16 +13,16 @@ const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'
 let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='';
 
 // ---------- cálculo por pessoa ----------
-function todasPessoas(){const s=new Set([...(D.owners||[]),...(D.fixos||[]),...(D.alunos||[]),...Object.keys(D.monitores||{}),...Object.keys(D.equipe||{})]);return [...s].sort()}
+function todasPessoas(){const s=new Set([...(D.owners||[]),...(D.fixos||[]),...(D.alunos||[]),...Object.keys(D.monitores||{}),...Object.keys(D.equipe||{}),...Object.keys(D.acessos||{})]);return [...s].sort()}
 function info(n){
   const owner=(D.owners||[]).includes(n)||(D.fixos||[]).includes(n),fixo=(D.fixos||[]).includes(n);
   const mon=(D.monitores||{})[n],eq=(D.equipe||{})[n],aluno=(D.alunos||[]).includes(n);
-  const turmas=Object.keys(D.turmas||{}).filter(t=>D.turmas[t].alunos.includes(n));
+  const turmas=Object.keys(D.turmas||{}).filter(t=>D.turmas[t].alunos.includes(n));const extras=((D.acessos||{})[n]||[]);
   const cargos=(eq&&eq.cargos)||[];const origem={};
   let perms=new Set();
   if(owner)Object.keys(PERM_INFO).forEach(p=>perms.add(p));
   else if(eq){(eq.permissoes||[]).forEach(p=>{perms.add(p);(origem[p]=origem[p]||[]).push('extra')});for(const c of cargos)for(const p of ((D.cargos||{})[c]||{}).permissoes||[]){perms.add(p);(origem[p]=origem[p]||[]).push(D.cargos[c].nome)}}
-  return {n,owner,fixo,aluno,mon,eq,turmas,cargos,perms:[...perms],origem}
+  return {n,owner,fixo,aluno,mon,eq,turmas,cargos,extras,perms:[...perms],origem}
 }
 function emPalavras(i,aulasMap){
   const pode=[],nao=[];
@@ -30,6 +30,7 @@ function emPalavras(i,aulasMap){
   for(const p of Object.keys(PODE)){if(i.perms.includes(p))pode.push(PODE[p]);else if(!(p==='presenca'&&i.mon))nao.push(NAO[p])}
   if(i.mon){const a=i.mon.aulas.length,r=i.mon.roteiros.length;
     pode.push(a||r?`abrir slides de ${a} aula(s) e roteiro de ${r}; fazer a chamada dessas aulas${i.mon.turmas.length?' nas turmas '+i.mon.turmas.join(', '):' em todas as turmas'}`:'nada além do que um aluno vê (nenhuma aula liberada ainda)')}
+  for(const x of (i.extras||[]).filter(x=>x.ate>=(D.hoje||'')))pode.push(`ver os slides de ${nomeNivel(x.nivel)} até ${x.ate.split('-').reverse().join('/')} (acesso extra)`);
   if(i.aluno||i.mon||i.eq)pode.push('ver as aulas de nível Membros'+(i.aluno?' e a própria presença':''));
   if(!i.perms.includes('aulas')&&!i.perms.includes('pessoas'))nao.unshift('abrir o Painel');
   return {pode,nao:[...new Set(nao)]}
@@ -41,6 +42,7 @@ function pillsPapel(i){const s=[];
   if(i.mon)s.push(h('span',{class:'pill m'},'Monitor'));
   if(i.aluno)s.push(h('span',{class:'pill'},'Aluno'));
   for(const t of i.turmas)s.push(h('span',{class:'pill t'},(D.turmas[t]||{}).nome||t));
+  for(const x of i.extras||[])s.push(h('span',{class:'pill t',title:x.motivo||''},'Extra: '+nomeNivel(x.nivel)+(x.ate<(D.hoje||'')?' (vencido)':' até '+x.ate.split('-').reverse().join('/'))));
   return s}
 
 // ---------- modal / gaveta ----------
@@ -70,11 +72,11 @@ function abrirGaveta(nome){
   const i0=nome?info(nome):null;const dono=D.dono;
   const E={usuario:nome,owner:i0?i0.owner:false,aluno:i0?i0.aluno:true,turmas:new Set(i0?i0.turmas:[Object.keys(D.turmas).find(t=>D.turmas[t].status==='andamento')||Object.keys(D.turmas)[0]]),
     monitor:!!(i0&&i0.mon),mturmas:new Set(i0&&i0.mon?i0.mon.turmas:[]),aulas:new Set(i0&&i0.mon?i0.mon.aulas:[]),roteiros:new Set(i0&&i0.mon?i0.mon.roteiros:[]),
-    equipe:!!(i0&&i0.eq),cargos:new Set(i0?i0.cargos:[]),extras:new Set(i0&&i0.eq?i0.eq.permissoes:[])};
+    acessos:(i0?i0.extras:[]).map(x=>({...x})),equipe:!!(i0&&i0.eq),cargos:new Set(i0?i0.cargos:[]),extras:new Set(i0&&i0.eq?i0.eq.permissoes:[])};
   if(!nome){E.aluno=true}
   const {fechar,box}=camada([],'gaveta');
   const rascunhoInfo=()=>info2(E);
-  function info2(e){const eq=e.equipe?{permissoes:[...e.extras],cargos:[...e.cargos]}:null;const x={n:e.usuario,owner:e.owner,fixo:i0&&i0.fixo,aluno:e.aluno,mon:e.monitor?{aulas:[...e.aulas],roteiros:[...e.roteiros],turmas:[...e.mturmas]}:null,eq,turmas:[...e.turmas],cargos:eq?eq.cargos:[],perms:[],origem:{}};
+  function info2(e){const eq=e.equipe?{permissoes:[...e.extras],cargos:[...e.cargos]}:null;const x={n:e.usuario,owner:e.owner,fixo:i0&&i0.fixo,aluno:e.aluno,extras:e.acessos,mon:e.monitor?{aulas:[...e.aulas],roteiros:[...e.roteiros],turmas:[...e.mturmas]}:null,eq,turmas:[...e.turmas],cargos:eq?eq.cargos:[],perms:[],origem:{}};
     if(e.owner)Object.keys(PERM_INFO).forEach(p=>x.perms.push(p));else if(eq){const s=new Set(eq.permissoes);eq.permissoes.forEach(p=>(x.origem[p]=x.origem[p]||[]).push('extra'));for(const c of eq.cargos)for(const p of (D.cargos[c]||{}).permissoes||[]){s.add(p);(x.origem[p]=x.origem[p]||[]).push(D.cargos[c].nome)}x.perms=[...s]}return x}
   const chip=(txt,on,fn,cls)=>h('button',{type:'button',class:'chipx '+(cls||'')+(on?' on':''),onclick:fn},txt);
   const ck=(txt,on,fn,dis,extra)=>h('label',{class:'ck',style:'display:inline-flex;margin-right:16px'},h('input',{type:'checkbox',checked:on,disabled:!!dis,onchange:e=>fn(e.target.checked)}),txt,extra||'');
@@ -108,11 +110,16 @@ function abrirGaveta(nome){
       const det=h('details',{style:'margin-top:10px'},h('summary',{style:'cursor:pointer;font-size:14px'},'Permissões extras só para esta pessoa (opcional)'));
       for(const p of Object.keys(PERM_INFO))det.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:E.extras.has(p),onchange:e=>{e.target.checked?E.extras.add(p):E.extras.delete(p);desenhar()}}),h('b',{},PERM_INFO[p][0])));
       det.open=E.extras.size>0;bl.append(det);box.append(bl)}
+    {const bl=h('div',{class:'sec'},h('h3',{},'Acesso extra ao material'),h('div',{class:'sub'},'Libera os slides de um nível para esta pessoa por um tempo (ex.: ex-aluno que pediu para rever). Não inclui roteiro nem chamada.'));
+      E.acessos.forEach((a,k)=>{const nv=h('select',{onchange:e=>{a.nivel=e.target.value}},...niveisLista().map(([d,t])=>h('option',{value:d},t)));nv.value=a.nivel;
+        bl.append(h('div',{style:'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin:8px 0;align-items:center'},nv,h('input',{type:'date',value:a.ate,onchange:e=>{a.ate=e.target.value}}),h('button',{class:'chipx',type:'button',onclick:()=>{E.acessos.splice(k,1);desenhar()}},'Remover'),
+          h('input',{type:'text',value:a.motivo||'',maxLength:80,placeholder:'motivo (ex.: pediu para rever)',style:'grid-column:1/-1',oninput:e=>{a.motivo=e.target.value}})))});
+      const nvs=niveisLista();bl.append(nvs.length?h('button',{class:'chipx',type:'button',onclick:()=>{const d=new Date();d.setFullYear(d.getFullYear()+1);E.acessos.push({nivel:nvs[0][0],ate:d.toISOString().slice(0,10),motivo:''});desenhar()}},'+ Acrescentar acesso'):h('p',{class:'sub'},'Carregando níveis…'));box.append(bl)}
     const x=rascunhoInfo();const w=emPalavras(x);
     box.append(h('div',{class:'palavras',style:'margin-top:12px'},h('b',{},'Em palavras: o que '+(E.usuario?'@'+E.usuario:'a pessoa')+' poderá fazer'),h('br'),h('span',{class:'pode-s'},'Pode: '),w.pode.join('; ')+'.',h('br'),w.nao.length?[h('span',{class:'nao-s'},'Não pode: '),w.nao.join('; ')+'.']:''));
     const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{
       if(!/^[a-z0-9][a-z0-9-]{0,38}$/i.test(E.usuario)){aviso('Informe um usuário do GitHub válido.',1);return}
-      const c={acao:'pessoa',usuario:E.usuario,aluno:E.aluno,turmas:[...E.turmas],monitor:E.monitor,aulas:[...E.aulas],roteiros:[...E.roteiros],monitor_turmas:[...E.mturmas]};
+      const c={acao:'pessoa',usuario:E.usuario,acessos:E.acessos,aluno:E.aluno,turmas:[...E.turmas],monitor:E.monitor,aulas:[...E.aulas],roteiros:[...E.roteiros],monitor_turmas:[...E.mturmas]};
       if(dono){c.owner=E.owner;c.equipe=E.equipe;c.cargos=[...E.cargos];c.extras=[...E.extras]}
       try{await enviar(c);aviso('Ficha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar');
     const rm=nome?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Remover @${nome} de alunos, monitores${dono?' e equipe':''}? (Owners saem pela ficha, desmarcando Owner.)`))return;try{await enviar({acao:'remover_pessoa',usuario:nome});aviso('Removido');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Remover pessoa'):'';

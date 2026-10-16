@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
       const v = { usuario, dono, permissoes: perm, fixos: dono ? u.admins() : [] };
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
-      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; }
+      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (dono) { v.equipe = cfg.equipe; }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
@@ -92,6 +92,10 @@ module.exports = async (req, res) => {
         if (b.monitor) novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (Array.isArray(b.monitor_turmas) ? b.monitor_turmas : []).map(String).filter((t) => novo.turmas[t]) };
         else delete novo.monitores[nome];
       }
+      if (Array.isArray(b.acessos)) {
+        const itens = b.acessos.filter((x) => x && dirs.has(x.nivel)).slice(0, 20).map((x) => ({ nivel: x.nivel, ate: /^\d{4}-\d{2}-\d{2}$/.test(String(x.ate || '')) ? x.ate : u.maisUmAno(), motivo: String(x.motivo || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 80) }));
+        if (itens.length) novo.acessos[nome] = itens; else delete novo.acessos[nome];
+      }
       if (dono && b.equipe !== undefined) {
         if (b.equipe) novo.equipe[nome] = { titulo: '', permissoes: (Array.isArray(b.extras) ? b.extras : []).filter((x) => u.PERMISSOES.includes(x)), cargos: (Array.isArray(b.cargos) ? b.cargos : []).map(String).filter((c) => novo.cargos[c]) };
         else delete novo.equipe[nome];
@@ -124,7 +128,7 @@ module.exports = async (req, res) => {
       if (!nome || novo.owners.includes(nome) || u.admins().includes(nome)) return u.json(res, 400, { erro: 'Esta pessoa não pode ser removida por aqui (owner).' });
       novo.alunos = novo.alunos.filter((a) => a !== nome);
       for (const t of Object.values(novo.turmas)) t.alunos = t.alunos.filter((a) => a !== nome);
-      delete novo.monitores[nome];
+      delete novo.monitores[nome]; delete novo.acessos[nome];
       if (dono) delete novo.equipe[nome];
       msg = `Portal: ${usuario} removeu ${nome} das listas`;
     } else if (b.acao === 'cargo') {
