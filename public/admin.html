@@ -58,11 +58,16 @@
 <li><b>Owners fixos</b> (linha cinza abaixo das caixas) vêm da variável <code>ADMIN_USERS</code> na Vercel: não saem desta tela, nem por engano. É a "chave-mestra" para ninguém se trancar fora.</li>
 <li>Para ser owner, a pessoa precisa de conta no GitHub. Não precisa ser membro da organização para entrar no site.</li></ul></details>
 
-<details><summary>Tarefas de casa (/semanas)</summary>
-<ul>
-<li>Mostra, por semana, o texto da aula e a tarefa que o aluno receberá. Fica em <code>liberacao/nivel-XX/semana-NN/</code> (<code>aula.md</code> e <code>tarefa.md</code>) no <code>liga-curriculo</code>.</li>
-<li><b>Sugerir alteração</b> abre o arquivo no GitHub: edite, escreva uma mensagem curta e clique em <i>Commit changes</i>. A página mostra a versão nova em cerca de 1 minuto.</li>
-<li><b>Nada é enviado aos alunos por esta página.</b> O envio é feito depois, pelo script <code>ferramentas/liberar-semana.py</code> (primeiro em simulação; só envia de verdade com <code>--executar</code>). Nessa hora a <code>tarefa.md</code> vira uma Issue no repositório de cada aluno.</li></ul></details>
+<details><summary>Tarefas de casa e "liberação" (/semanas): explicado do zero</summary>
+<p><b>O que é "liberação"?</b> É o ato de <i>entregar aos alunos o material de uma semana</i>: o resumo da aula e a tarefa de casa. Não tem relação com "liberar acesso" do item 1 (aquilo é sobre quem pode <i>ver os slides</i>).</p>
+<p><b>Como funciona, em 4 passos:</b></p>
+<ol>
+<li><b>Preparar (já feito):</b> para cada semana existe uma pasta <code>liberacao/nivel-00/semana-01/</code> (depois <code>semana-02</code>, etc.) no <code>liga-curriculo</code>, com 2 textos: <code>aula.md</code> (o resumo/material da aula) e <code>tarefa.md</code> (a tarefa de casa).</li>
+<li><b>Revisar (você, aqui):</b> a página <a href="/semanas">/semanas</a> só <i>mostra</i> esses textos bonitinhos para vocês lerem. Se quiser mudar algo, clique em <b>Sugerir alteração</b>, edite e salve no GitHub.</li>
+<li><b>Enviar (depois, no dia certo):</b> um owner roda o script <code>ferramentas/liberar-semana.py</code>. Primeiro em <b>simulação</b> (não envia nada, só mostra o que faria). Só com <code>--executar</code> ele envia de verdade.</li>
+<li><b>Resultado para o aluno:</b> o <code>aula.md</code> é publicado no repositório compartilhado <code>liga-aulas</code>, e o <code>tarefa.md</code> vira uma <b>Issue</b> (um "cartão de tarefa" do GitHub) no repositório pessoal de cada aluno, que ele resolve e fecha.</li>
+</ol>
+<p><b>Resumindo:</b> <code>/semanas</code> = vitrine para revisar. Nada chega aos alunos enquanto o script não for executado com <code>--executar</code>.</p></details>
 
 <details><summary>Quanto tempo leva para valer? E se algo der errado?</summary>
 <ul>
