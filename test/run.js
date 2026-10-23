@@ -19,6 +19,7 @@ const arquivos = {
   'niveis/nivel-00-tutorial/slides/indice.json': JSON.stringify({ 'aula-01': 'Aula 1: X', 'aula-02': 'Aula 2: Y', 'aula-03': 'Aula 3: Z' }),
 };
 const resp = (status, corpo) => ({ status, ok: status < 300, json: async () => corpo, text: async () => (typeof corpo === 'string' ? corpo : JSON.stringify(corpo)) });
+const reservados = {}; let nRes = 0;
 global.fetch = async (url, op = {}) => {
   const p = new URL(url).pathname;
   if (p.endsWith('/git/trees/main')) return resp(200, { tree: [...Object.keys(arquivos).map((path) => ({ path })), ...Object.keys(dadosArq).map((path) => ({ path })), { path: 'niveis/../segredo/slides/aula-09.html' }, { path: 'docs/x.html' }] });
@@ -32,6 +33,13 @@ global.fetch = async (url, op = {}) => {
       if (!dadosArq[k]) return resp(404, {});
       if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, dadosArq[k].texto);
       return resp(200, { sha: dadosArq[k].sha, content: Buffer.from(dadosArq[k].texto).toString('base64') }); } }
+  { const mr0 = /\/contents\/(reservado\/.+)$/.exec(p);
+    if (mr0) { const k = decodeURIComponent(mr0[1]);
+      if (op.method === 'PUT') { const b = JSON.parse(op.body); if (reservados[k] && reservados[k].sha !== b.sha) return resp(409, {}); if (!reservados[k] && b.sha) return resp(422, {}); reservados[k] = { sha: 'r' + (++nRes), texto: Buffer.from(b.content, 'base64').toString() }; return resp(200, {}); }
+      if (op.method === 'DELETE') { const b = JSON.parse(op.body); if (!reservados[k] || reservados[k].sha !== b.sha) return resp(409, {}); delete reservados[k]; return resp(200, {}); }
+      if (!reservados[k]) return resp(404, {});
+      if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, reservados[k].texto);
+      return resp(200, { sha: reservados[k].sha, content: Buffer.from(reservados[k].texto).toString('base64') }); } }
   if (p.endsWith('/contents/site/site.json')) {
     if (op.method === 'PUT') { const b = JSON.parse(op.body); if (siteSha && b.sha !== siteSha) return resp(409, {}); siteJson = Buffer.from(b.content, 'base64').toString(); siteSha = 's' + (siteCommits.push(b.message) + 1); return resp(200, {}); }
     return siteJson === null ? resp(404, {}) : resp(200, { sha: siteSha, content: Buffer.from(siteJson).toString('base64') });
@@ -57,7 +65,7 @@ global.fetch = async (url, op = {}) => {
   return resp(404, {});
 };
 const u = require('../lib/util');
-const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado'];
+const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado'];
 const h = (n) => require((ROTAS.includes(n) ? '../lib/rotas/' : '../api/') + n);
 function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {} } = {}) {
   const req = { query, method, body, headers: { host: 'site.test', ...headers } };
@@ -531,6 +539,23 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal(JSON.parse((await get({ acao: 'versao', dir: N, id: 'aula-31', sha: vs[1].sha })).body).modelo.titulo, 'V1'); assert.equal(JSON.parse((await get({ acao: 'versao', dir: N, id: 'aula-31', sha: vs[0].sha })).body).modelo.titulo, 'V2');
     assert.equal((await get({ acao: 'versao', dir: N, id: 'aula-31', sha: '../etc' })).status, 400); assert.equal((await get({ acao: 'versoes', dir: N, id: 'aula-31' }, 'alu1')).status, 403);
   }
+  // páginas reservadas: só owners criam; o link secreto abre sem login e não aparece em lista pública
+  { const body0 = (x) => ({ acao: 'reservado_salvar', titulo: 'Plano X', html: x });
+    assert.equal((await post(body0('<h1>oi</h1>'), {}, 'alu1')).status, 403);
+    assert.equal((await post(body0(''))).status, 400);
+    let rr = JSON.parse((await post(body0('<title>Plano</title><h1>SEGREDO1</h1>'))).body); assert(rr.ok && /^[a-f0-9]{24}$/.test(rr.item.token));
+    const tk = rr.item.token;
+    let pg = await chamar(h('reservado'), { query: { t: tk } }); assert.equal(pg.status, 200); assert(pg.body.includes('SEGREDO1') && pg.body.toLowerCase().startsWith('<!doctype'));
+    assert(/noindex/.test(pg.h['X-Robots-Tag']) && /no-store/.test(pg.h['Cache-Control']) && pg.h['Content-Security-Policy']);
+    assert.equal((await chamar(h('reservado'), { query: { t: '../x' } })).status, 404); assert.equal((await chamar(h('reservado'), { query: { t: 'a'.repeat(24) } })).status, 404);
+    rr = JSON.parse((await post({ acao: 'reservado_salvar', token: tk, titulo: 'Plano X', html: '<h1>SEGREDO2</h1>' })).body); assert.equal(rr.item.token, tk);
+    assert((await chamar(h('reservado'), { query: { t: tk } })).body.includes('SEGREDO2'));
+    const lst = JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).reservadas; assert.equal(lst.length, 1);
+    assert(!JSON.parse((await chamar(h('site'))).body ? (await chamar(h('site'))).body : '{}') || !(await chamar(h('site'))).body.includes(tk));
+    assert.equal((await post({ acao: 'reservado_remover', token: tk }, {}, 'alu1')).status, 403);
+    assert.equal((await post({ acao: 'reservado_remover', token: tk })).status, 200);
+    assert.equal((await chamar(h('reservado'), { query: { t: tk } })).status, 404);
+    assert.equal(JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).reservadas.length, 0); }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)

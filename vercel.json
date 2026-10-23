@@ -8,6 +8,10 @@
   ],
   "rewrites": [
     {
+      "source": "/r/:t",
+      "destination": "/api/publico?rota=reservado&t=:t"
+    },
+    {
       "source": "/certificado/:c",
       "destination": "/api/publico?rota=certificado&c=:c"
     },

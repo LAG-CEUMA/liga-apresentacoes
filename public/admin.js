@@ -296,13 +296,43 @@ function desenharAulas(d){
   bx.onclick=()=>{todos.forEach(x=>x.open=true)};br.onclick=()=>{todos.forEach(x=>x.open=false)};
 }
 
+
+// ---------- páginas reservadas (só owners) ----------
+function lerHtml(arq){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>no(new Error('Não consegui ler o arquivo.'));r.readAsText(arq)})}
+function desenharReservadas(){
+  const raiz=$('p-reservadas');raiz.textContent='';
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Páginas com link secreto: ',h('b',null,'não aparecem em nenhuma lista do site'),', não são indexadas e abrem sem login para quem receber o link. Só owners veem esta lista e podem trocar o conteúdo. O endereço não muda quando você substitui o arquivo.'));
+  const lista=D.reservadas||[];const base=location.origin;
+  const caixa=h('div',{class:'card',style:'margin:12px 0;max-width:760px'});
+  const nome=h('input',{type:'text',id:'res-nome',placeholder:'Nome (ex.: Plano 2026.2/2027.1)',maxlength:'80',style:'width:100%;margin:6px 0'});
+  const arq=h('input',{type:'file',id:'res-arq',accept:'.html,.htm,text/html'});
+  const bt=h('button',{type:'button',class:'btn'},'Criar página');
+  bt.onclick=async()=>{try{
+    if(!nome.value.trim())throw new Error('Dê um nome para a página.');if(!arq.files[0])throw new Error('Escolha o arquivo .html.');
+    bt.disabled=true;await enviar({acao:'reservado_salvar',titulo:nome.value,html:await lerHtml(arq.files[0])});aviso('Página criada.');await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
+  caixa.append(h('h3',null,'Nova página'),nome,arq,h('div',{style:'margin-top:8px'},bt));raiz.append(caixa);
+  if(!lista.length){raiz.append(h('p',{class:'sub'},'Nenhuma página reservada ainda.'));return}
+  for(const p of lista){
+    const url=base+'/r/'+p.token;
+    const troca=h('input',{type:'file',accept:'.html,.htm,text/html',style:'display:none'});
+    troca.onchange=async()=>{try{if(!troca.files[0])return;await enviar({acao:'reservado_salvar',token:p.token,titulo:p.titulo,html:await lerHtml(troca.files[0])});aviso('Conteúdo substituído. O link continua o mesmo.');await carregar()}catch(e){aviso(e.message,true)}};
+    const copiar=h('button',{type:'button',class:'btn sec'},'Copiar link');
+    copiar.onclick=async()=>{try{await navigator.clipboard.writeText(url);aviso('Link copiado.')}catch{aviso('Copie manualmente: '+url,true)}};
+    const rem=h('button',{type:'button',class:'btn sec'},'Remover');
+    rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
+      try{await enviar({acao:'reservado_remover',token:p.token});aviso('Página removida.');await carregar()}catch(e){aviso(e.message,true)}};
+    raiz.append(h('div',{class:'card',style:'margin:10px 0;max-width:760px'},h('b',null,p.titulo),h('div',{class:'sub',style:'word-break:break-all'},url),
+      h('div',{class:'sub'},'Atualizada em '+(p.atualizado||p.criado||'')+(p.por?' por '+p.por:'')),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},h('a',{class:'btn',href:'/r/'+p.token,target:'_blank',rel:'noopener'},'Abrir'),copiar,h('button',{type:'button',class:'btn sec',onclick:()=>troca.click()},'Substituir HTML'),troca,rem)))}
+}
+
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}

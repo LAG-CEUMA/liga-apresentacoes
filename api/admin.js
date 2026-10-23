@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
-      if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; }
+      if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
     }
@@ -26,6 +26,15 @@ module.exports = async (req, res) => {
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     const nao = () => u.json(res, 403, { erro: 'Você não tem permissão para esta ação.' });
+    if (b.acao === 'reservado_salvar' || b.acao === 'reservado_remover') {
+      if (!dono) return nao();
+      const RS = require('../lib/reservado');
+      try {
+        if (b.acao === 'reservado_remover') { await RS.remover(String(b.token || ''), usuario); return u.json(res, 200, { ok: true }); }
+        const item = await RS.salvar({ token: b.token ? String(b.token) : '', titulo: b.titulo, html: b.html }, usuario);
+        return u.json(res, 200, { ok: true, item });
+      } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+    }
     const novo = JSON.parse(JSON.stringify(cfg));
     const existe = new Set(aulas.map((a) => a.chave));
     const dirs = new Set(aulas.map((a) => a.dir));
