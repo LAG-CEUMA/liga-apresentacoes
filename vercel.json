@@ -8,6 +8,10 @@
     {
       "source": "/wiki/ajuda",
       "destination": "/ajuda"
+    },
+    {
+      "source": "/semanas",
+      "destination": "/presenca"
     }
   ],
   "rewrites": [
