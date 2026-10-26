@@ -46,14 +46,9 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   const vt=site.vitrine||[];
   if(vt.length){const s=secao('Vitrine da liga',vt.length+(vt.length===1?' destaque':' destaques'));s.id='sec-vitrine';lembrar(s,'vitrine',true);
     s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
-  // aulas por nível
-  const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);const niveis=Object.keys(por).sort();
-  const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));sa.id='sec-aulas';lembrar(sa,'aulas',true);
-  if(!d.aulas.length)sa.append(el('p','',d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
-  niveis.forEach((nv,i)=>{const g=secao(nv,por[nv].length+' aula(s)');g.classList.add('pequeno');lembrar(g,'nv_'+nv,false);
-    for(const a of por[nv]){const k=el('a','aula');k.href=a.url;const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.chave));k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));g.append(k);
-      if(a.roteiro){const r=el('a','aula');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','','Roteiro do apresentador (não projetar)'));g.append(r)}}
-    sa.append(g)});
+  // aulas: a lista completa fica em /aulas (níveis recolhidos); aqui só o atalho
+  const sa=el('div','');sa.id='sec-aulas';const ca=el('a','aula');ca.href='/aulas';const na=el('div');na.style.flex='1';
+  na.append(el('b','','Aulas'),el('br'),el('small','',d.aulas.length?d.aulas.length+(d.aulas.length===1?' aula disponível para você':' aulas disponíveis para você'):(d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.')));ca.append(na,el('span','badge','abrir'));sa.append(ca);
   if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));sa.append(p)}
   BL.aulas=sa;organizar();
   if(d.usuario)fetch('/api/presenca?acao=minha').then(r=>r.ok?r.json():null).then(m=>{
@@ -87,6 +82,6 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   // atalhos fixos no topo: Aulas sempre em primeiro e em destaque
   const at=document.getElementById('atalhos');at.hidden=false;
   for(const [id,t,pri] of [['sec-aulas','Aulas',true],['sec-anuncios','Anúncios'],['sec-agenda','Agenda']]){const alvo=document.getElementById(id);if(!alvo)continue;
-    const b=el('button','btn'+(pri?'':' sec'),t);b.type='button';b.onclick=()=>{alvo.open=true;alvo.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
+    const b=el('button','btn'+(pri?'':' sec'),t);b.type='button';b.onclick=()=>{if(id==='sec-aulas'){location.href='/aulas';return}alvo.open=true;alvo.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script></body></html>
