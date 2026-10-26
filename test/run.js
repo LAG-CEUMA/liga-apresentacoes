@@ -620,6 +620,9 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await w({ acao: 'pendente_salvar', anterior: 'a101526@ceuma.com.br', email: 'a101526@ceuma.com.br', cargo: 'Vice presidente', usuario: '@Fulano' })).status, 200);
     const L = (await require('../lib/pendentes').ler()).lista; assert.equal(L.length, 2); assert.equal(L[0].email, 'a101526@ceuma.com.br'); assert.equal(L[0].usuario, 'fulano');
     assert.equal((await w({ acao: 'pendente_remover', email: 'a194678@ceuma.com.br' })).status, 200); assert.equal((await require('../lib/pendentes').ler()).lista.length, 1); }
+  { const Mo = require('../public/editor-modelos.js'); const sl = [{ tempo: '0:00 a 0:05' }, { tempo: '' }, { tempo: '0:05 a 0:15' }];
+    Mo.refazerTempos(sl, 1, 5); assert.equal(sl[1].tempo, '0:05 a 0:10'); assert.equal(sl[2].tempo, '0:10 a 0:20'); assert.equal(Mo.totalMin(sl), 20);
+    assert.equal(Mo.lerDur('7 min'), 7); assert.equal(Mo.lerDur('x'), null); assert.equal(Mo.checarTempos(sl).erros.length, 0); }
   // Guias e dúvidas (wiki): visibilidade por função
   { const W = require('../lib/wiki'); const w = (b, user = 'dono') => post(b, {}, user);
     assert.equal((await w({ acao: 'wiki_salvar', titulo: 'X', visibilidade: 'equipe', html: '<h1>a</h1>' }, 'alu1')).status, 403);

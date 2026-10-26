@@ -81,6 +81,16 @@ ${rodape(RODAPE)}` },
     else if (fim && fim < LIMITE - 5 && !erros.length) avisos.push(`A aula termina em ${fim} min; sobram ${LIMITE - fim} min. Confira se o roteiro está completo.`);
     return { erros, avisos, fim };
   }
-  const api = { SLIDES, ELEMENTOS, ICONES, checarTempos, lerTempo };
+  // Duração em minutos por slide: o início vem do fim do slide anterior; o "tempo" guardado continua no formato "0:05 a 0:10".
+  const fmt = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+  function durDe(s) { const t = lerTempo(s && s.tempo); return t && t.f > t.i ? t.f - t.i : null; }
+  function lerDur(txt) { const t = String(txt == null ? '' : txt).trim(); if (!t) return null; const r = lerTempo(t); if (r && /:/.test(t)) return r.f > r.i ? r.f - r.i : null; const m = /^(\d{1,3})(?:[.,]\d+)?\s*(?:min\w*|m)?$/i.exec(t); return m && +m[1] > 0 ? +m[1] : null; }
+  function refazerTempos(slides, k, dur) {
+    const d = slides.map(durDe); d[k] = dur; let c = 0;
+    slides.forEach((x, j) => { if (d[j] == null || d[j] <= 0) { if (j === k) x.tempo = ''; return; } x.tempo = `${fmt(c)} a ${fmt(c + d[j])}`; c += d[j]; });
+    return { total: c };
+  }
+  function totalMin(slides) { return slides.reduce((a, x) => a + (durDe(x) || 0), 0); }
+  const api = { SLIDES, ELEMENTOS, ICONES, checarTempos, lerTempo, fmt, durDe, lerDur, refazerTempos, totalMin };
   if (typeof module !== 'undefined') module.exports = api; else g.EditorModelos = api;
 })(typeof window !== 'undefined' ? window : globalThis);

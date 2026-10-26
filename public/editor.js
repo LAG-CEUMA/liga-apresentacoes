@@ -247,7 +247,13 @@ function painel() {
   P.append(h('div', { class: 'pg' }, h('h4', {}, 'Este slide ' + (cur + 1)),
     campoCor('Cor de fundo do slide', /^#/.test(s.fundo) ? s.fundo : '#12141c', (v) => { s.fundo = v; slideEl().style.background = v; commit(); }),
     campoCor('Cor padrão do texto', /^#/.test(s.cor) ? s.cor : '#f3efe6', (v) => { s.cor = v; slideEl().style.color = v; commit(); }),
-    h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Tempo previsto, obrigatório (ex.: 0:05 a 0:10). A aula não pode passar de 1 hora.'), h('input', { type: 'text', value: s.tempo, maxlength: 30, oninput: (e) => { s.tempo = e.target.value; marcarSujo(true); agendarSnap(); } })),
+    (() => {
+      const info = h('span', { class: 'sub' }), tot = h('b', {});
+      const mostra = () => { const d = M0.durDe(s), t = M0.totalMin(M.slides); info.textContent = d ? `Este slide: ${s.tempo.replace(' a ', ' → ')}` : 'Digite só o número de minutos (ex.: 5).'; tot.textContent = `Aula: ${t} de 60 min`; tot.style.color = t > 60 ? '#ff6b6b' : ''; };
+      const inp = h('input', { type: 'text', inputmode: 'numeric', maxlength: 12, style: 'width:90px', value: M0.durDe(s) || '', placeholder: 'min', oninput: (e) => { const d = M0.lerDur(e.target.value); M0.refazerTempos(M.slides, cur, d); mostra(); marcarSujo(true); agendarSnap(); } });
+      mostra();
+      return h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Duração em minutos, obrigatória (ex.: 5). O início é o fim do slide anterior.'), h('div', { style: 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px' }, inp, info, tot));
+    })(),
     h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Roteiro do apresentador (uma ideia por linha)'), h('textarea', { rows: 7, maxlength: 4000, placeholder: 'Fica só no arquivo de roteiro. Nunca aparece no slide projetado.', oninput: (e) => { s.notas = e.target.value; marcarSujo(true); agendarSnap(); } }, s.notas))));
 }
 function campoNumPos(rot, k, fn) { const i = h('input', { type: 'number', 'data-k': k, value: k === 'x' ? sel.offsetLeft : k === 'y' ? sel.offsetTop : k === 'w' ? sel.offsetWidth : sel.offsetHeight }); i.oninput = () => { if (i.value !== '') fn(+i.value); }; return h('div', {}, h('label', {}, rot), i); }
