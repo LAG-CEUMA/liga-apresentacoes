@@ -104,7 +104,7 @@ function abrirGaveta(nome,contato){
   const E={usuario:nome,owner:i0?i0.owner:false,aluno:i0?i0.aluno:true,turmas:new Set(i0?i0.turmas:[Object.keys(D.turmas).find(t=>D.turmas[t].status==='andamento')||Object.keys(D.turmas)[0]]),
     monitor:!!(i0&&i0.mon),mturmas:new Set(i0&&i0.mon?i0.mon.turmas:[]),aulas:new Set(i0&&i0.mon?i0.mon.aulas:[]),roteiros:new Set(i0&&i0.mon?i0.mon.roteiros:[]),
     acessos:(i0?i0.extras:[]).map(x=>({...x})),equipe:!!(i0&&i0.eq),cargos:new Set(i0?i0.cargos:[]),extras:new Set(i0&&i0.eq?i0.eq.permissoes:[]),editor:new Set((D.editores||{})[nome]||[])};
-  if(!nome){E.aluno=!contato}else if(i0&&!temPapel(i0)){E.aluno=false}
+  E.aluno=i0?i0.aluno:false;
   const {fechar,box}=camada([],'gaveta');
   const rascunhoInfo=()=>info2(E);
   function info2(e){const eq=e.equipe?{permissoes:[...e.extras],cargos:[...e.cargos]}:null;const x={n:e.usuario,owner:e.owner,fixo:i0&&i0.fixo,aluno:e.aluno,extras:e.acessos,mon:e.monitor?{aulas:[...e.aulas],roteiros:[...e.roteiros],turmas:[...e.mturmas]}:null,eq,turmas:[...e.turmas],cargos:eq?eq.cargos:[],perms:[],origem:{},editor:[...e.editor]};
@@ -119,11 +119,11 @@ function abrirGaveta(nome,contato){
     {const cx=(rot,el,dica)=>h('label',{style:'display:block;font-size:12px;opacity:.9;margin:8px 0 0'},rot,el,dica?h('span',{class:'sub',style:'display:block;font-size:11px;margin-top:2px'},dica):'');
       const inp=(v,ph,on,ro)=>{const e=h('input',{type:'text',placeholder:ph||'',value:v||'',style:'width:100%;margin-top:3px',oninput:e2=>on(e2.target.value)});if(ro)e.readOnly=true;return e};
       box.append(h('div',{class:'sec'},h('h3',{},'Dados da pessoa'),
-        cx('Nome completo (obrigatório)',inp(DADOS.nome,'Ex.: Davi Novato Silva',v=>{DADOS.nome=v})),
-        ...(dono?[cx('E-mail institucional',inp(DADOS.email,'a000000@ceuma.com.br',v=>{DADOS.email=v}),'Só contato (convocações). Não dá acesso. Visível apenas para owners.')]:[]),
-        cx('Usuário do GitHub',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?'Já cadastrado; não pode ser trocado.':'É por ele que a pessoa entra na plataforma. Pode ficar vazio por enquanto (só contato), mas sem ele ela não tem acesso.')))}
+        cx('Nome completo *',inp(DADOS.nome,'Ex.: Davi Novato Silva',v=>{DADOS.nome=v})),
+        cx('E-mail institucional *',inp(DADOS.email,dono?'a000000@ceuma.com.br':(contato?'(já cadastrado; só owners veem)':'a000000@ceuma.com.br'),v=>{DADOS.email=v}),'Só contato (convocações). Não dá acesso. Só owners enxergam os e-mails já salvos.'),
+        cx('Usuário do GitHub *',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?'Já cadastrado; não pode ser trocado.':'É por ele que a pessoa entra na plataforma (o nome que aparece no perfil do GitHub).')))}
     // papéis
-    box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga'),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo.'),
+    box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga'),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo. ',h('b',{},'Nenhum marcado = cadastro inativo (sem acesso à plataforma).'),),
       ck('Owner',E.owner,v=>{E.owner=v;desenhar()},!dono||(i0&&i0.fixo)||(i0&&nome===D.usuario),dono?'':' (só owners definem)'),
       ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()}),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()}),
       dono?ck('Equipe (cargos)',E.equipe,v=>{E.equipe=v;desenhar()}):''));
@@ -163,11 +163,11 @@ function abrirGaveta(nome,contato){
     const rolulo=()=>{const r=[];if(E.owner)r.push('Owner');if(E.equipe){const cs=[...E.cargos].map(c=>(D.cargos[c]||{}).nome).filter(Boolean);r.push(...(cs.length?cs:['Equipe']))}if(E.monitor)r.push('Monitor');if(E.aluno)r.push('Aluno');return r.join(', ').slice(0,60)};
     const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{
       if(!DADOS.nome.trim()){aviso('Preencha o nome completo da pessoa.',1);return}
-      if(!E.usuario){ if(!dono){aviso('Sem usuário do GitHub só owners salvam o contato.',1);return}
-        try{await enviar({acao:'pendente_salvar',anterior:DADOS.anterior,email:DADOS.email,cargo:rolulo(),nome:DADOS.nome,usuario:''});aviso('Cadastro salvo (sem acesso até informar o usuário do GitHub).');fechar();await carregar()}catch(e){aviso(e.message,1)}return}
+      if(!E.usuario){aviso('Preencha o usuário do GitHub: sem ele a pessoa não consegue entrar.',1);return}
+      if(dono&&!DADOS.email.trim()&&!(contato&&contato.email)){aviso('Preencha o e-mail institucional.',1);return}
       if(!/^[a-z0-9][a-z0-9-]{0,38}$/i.test(E.usuario)){aviso('Usuário do GitHub inválido (letras, números e hífen).',1);return}
       const c={acao:'pessoa',usuario:E.usuario,nome:DADOS.nome,cargo:rolulo(),anterior:DADOS.anterior,acessos:E.acessos,aluno:E.aluno,turmas:[...E.turmas],monitor:E.monitor,aulas:[...E.aulas],roteiros:[...E.roteiros],monitor_turmas:[...E.mturmas]};
-      if(dono){c.email=DADOS.email;c.owner=E.owner;c.equipe=E.equipe;c.cargos=[...E.cargos];c.extras=[...E.extras];c.editor=[...E.editor]}
+      if(DADOS.email.trim())c.email=DADOS.email;if(dono){c.owner=E.owner;c.equipe=E.equipe;c.cargos=[...E.cargos];c.extras=[...E.extras];c.editor=[...E.editor]}
       try{await enviar(c);aviso('Ficha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar');
     const comAcesso=i0&&temPapel(i0);
     const rm=comAcesso?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!await confirmaRemocaoPessoa(nome))return;try{await enviar({acao:'remover_pessoa',usuario:nome});aviso('Acesso removido');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Remover acesso')
