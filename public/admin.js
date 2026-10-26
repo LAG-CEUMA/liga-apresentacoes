@@ -47,6 +47,24 @@ function pillsPapel(i){const s=[];
   return s}
 
 // ---------- modal / gaveta ----------
+function confirmar({titulo,corpo,digitar,botao}){return new Promise(ok=>{let fim=false;const fin=(v)=>{if(fim)return;fim=true;fechar();ok(v)};
+  const ent=digitar?h('input',{type:'text',placeholder:'Digite '+digitar+' para confirmar',style:'width:100%;margin-top:10px'}):null;
+  const bt=h('button',{type:'button',class:'btn',style:'background:#e5484d;color:#fff'},botao||'Excluir');bt.disabled=!!digitar;
+  if(ent)ent.oninput=()=>{bt.disabled=ent.value.trim().toLowerCase().replace(/^@/,'')!==String(digitar).toLowerCase().replace(/^@/,'')};
+  bt.onclick=()=>fin(true);
+  const {fechar}=camada([h('h2',{style:'margin:0 0 10px;color:#ff8a8a'},titulo),...corpo,...(ent?[ent]:[]),h('div',{style:'display:flex;gap:8px;justify-content:flex-end;margin-top:16px'},h('button',{type:'button',class:'btn sec',onclick:()=>fin(false)},'Cancelar'),bt)],'modal');})}
+const gh=(t,u)=>h('a',{href:u,target:'_blank',rel:'noopener',style:'color:var(--ouro)'},t);
+
+function confirmaRemocaoPessoa(nome){
+  const k=String(nome).toLowerCase();const li=(t)=>h('li',{style:'margin:4px 0'},t);const itens=[];
+  if((D.alunos||[]).includes(k)){const ts=Object.values(D.turmas||{}).filter(t=>(t.alunos||[]).includes(k)).map(t=>t.nome);itens.push(li('Aluno'+(ts.length?' (turma '+ts.join(', ')+')':'')+': perde as aulas e atividades'))}
+  if((D.monitores||{})[k]||(Array.isArray(D.monitores)&&D.monitores.includes(k)))itens.push(li('Monitor: perde os slides e roteiros liberados e a chamada'));
+  const eq=(D.equipe||{})[k];if(eq)itens.push(li('Equipe'+(eq.titulo?' ('+eq.titulo+')':'')+': perde cargos e permissões'));
+  if((D.acessos||{})[k])itens.push(li('Acessos extras a aulas'));
+  if(!itens.length)itens.push(li('Nenhum papel ativo encontrado; só limpa registros soltos'));
+  const aviso2=h('div',{style:'background:#3a2a10;border:1px solid #b66d00;border-radius:10px;padding:10px 14px;margin-top:12px'},h('b',null,'No GitHub a plataforma NÃO remove nada. Faça você mesmo, se for o caso:'),
+    h('ul',{style:'padding-left:20px;margin:6px 0 0'},li(['Repositório do aluno ',gh('LAG-CEUMA/aluno-'+k,'https://github.com/LAG-CEUMA/aluno-'+k+'/settings/access'),' (Settings → Collaborators → remover; ou apagar o repositório)']),li(['Se ele for membro da organização: ',gh('LAG-CEUMA → People','https://github.com/orgs/LAG-CEUMA/people')])));
+  return confirmar({titulo:'Remover o acesso de @'+nome+'?',corpo:[h('p',{class:'sub'},'A plataforma vai remover:'),h('ul',{style:'padding-left:20px;margin:4px 0'},...itens),h('p',{class:'sub',style:'margin-top:10px'},'O cadastro em Contatos (nome e e-mail) continua; a pessoa só fica "sem acesso". Para apagar o contato, remova o acesso antes.'),aviso2],digitar:k,botao:'Remover acesso'})}
 function camada(corpo,classe){const veu=h('div',{class:'veu'});const box=h('div',{class:classe},corpo);const fechar=()=>{veu.remove();box.remove();document.removeEventListener('keydown',tecla)};
   const tecla=e=>{if(e.key==='Escape')fechar()};document.addEventListener('keydown',tecla);veu.addEventListener('click',fechar);document.body.append(veu,box);return {fechar,box}}
 
@@ -58,7 +76,7 @@ function desenharPessoas(){
   const barra=h('div',{class:'filtros'},...filtros.map(([k,t])=>h('button',{type:'button',class:'chipx'+(FILTRO===k?' on':''),onclick:()=>{FILTRO=k;desenharPessoas()}},t)));
   const sel=h('select',{onchange:e=>{TURMA_F=e.target.value;desenharPessoas()}},h('option',{value:''},'Todas as turmas'),...Object.keys(D.turmas).map(t=>h('option',{value:t},D.turmas[t].nome)));sel.value=TURMA_F;
   const busca=h('input',{type:'search',placeholder:'buscar usuário',value:BUSCA,oninput:e=>{BUSCA=e.target.value.toLowerCase();clearTimeout(busca.t);busca.t=setTimeout(()=>{desenharPessoas();const n=$('p-pessoas').querySelector('input[type=search]');n.focus();n.setSelectionRange(n.value.length,n.value.length)},250)}});
-  barra.append(sel,busca,h('span',{style:'flex:1'}),h('button',{class:'btn sec',type:'button',onclick:()=>modalVarios()},'+ Adicionar várias'),h('button',{class:'btn',type:'button',onclick:()=>abrirGaveta('')},'+ Nova pessoa'));
+  barra.append(sel,busca,h('span',{style:'flex:1'}),h('button',{class:'btn sec',type:'button',onclick:()=>modalVarios()},'+ Atribuir a contatos'),h('button',{class:'btn',type:'button',onclick:()=>abrirGaveta('')},'+ Nova pessoa'));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Uma linha por pessoa. Os selos mostram o que ela é; a frase mostra o que ela pode fazer. Clique em Editar para mudar papéis, turmas, cargos e aulas.'),barra);
   const lista=todos.map(info).filter(i=>(FILTRO==='todos'||(FILTRO==='owner'&&i.owner)||(FILTRO==='equipe'&&i.eq)||(FILTRO==='monitor'&&i.mon)||(FILTRO==='aluno'&&i.aluno))&&(!TURMA_F||i.turmas.includes(TURMA_F))&&(!BUSCA||i.n.includes(BUSCA)));
   const caixa=h('div',{class:'lista-cartao'});
@@ -84,7 +102,7 @@ function abrirGaveta(nome){
   function desenhar(){
     const y=box.scrollTop;box.textContent='';
     const tot=Object.keys(D.turmas).filter(t=>D.turmas[t].status!=='arquivada'||E.turmas.has(t)||E.mturmas.has(t));
-    const nomeIn=h('input',{type:'text',placeholder:'usuário do GitHub (sem @)',value:E.usuario,maxLength:39,oninput:e=>{E.usuario=e.target.value.trim().replace(/^@/,'').toLowerCase()}});
+    const nomeIn=h('select',{style:'margin-top:6px;min-width:260px',onchange:e=>{E.usuario=e.target.value}},h('option',{value:''},(D.contatosLivres||[]).length?'Escolha um contato…':'Nenhum contato disponível'),...(D.contatosLivres||[]).map(x=>{const o=h('option',{value:x.usuario},x.nome+' (@'+x.usuario+')');if(x.usuario===E.usuario)o.selected=true;return o}));
     box.append(h('div',{style:'display:flex;justify-content:space-between;gap:10px;align-items:flex-start'},nome?h('div',{},h('h2',{style:'margin:0;font-size:22px'},'@'+nome),h('div',{class:'sub'},'Ficha da pessoa')):h('div',{},h('h2',{style:'margin:0;font-size:22px'},'Nova pessoa'),nomeIn),h('button',{class:'btn sec',type:'button',onclick:fechar},'Fechar')));
     // 1 papéis
     box.append(h('div',{class:'sec'},h('h3',{},'1. Papéis'),
@@ -125,11 +143,11 @@ function abrirGaveta(nome){
     const x=rascunhoInfo();const w=emPalavras(x);
     box.append(h('div',{class:'palavras',style:'margin-top:12px'},h('b',{},'Em palavras: o que '+(E.usuario?'@'+E.usuario:'a pessoa')+' poderá fazer'),h('br'),h('span',{class:'pode-s'},'Pode: '),w.pode.join('; ')+'.',h('br'),w.nao.length?[h('span',{class:'nao-s'},'Não pode: '),w.nao.join('; ')+'.']:''));
     const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{
-      if(!/^[a-z0-9][a-z0-9-]{0,38}$/i.test(E.usuario)){aviso('Informe um usuário do GitHub válido.',1);return}
+      if(!/^[a-z0-9][a-z0-9-]{0,38}$/i.test(E.usuario)){aviso('Escolha um contato. Cadastre antes na aba Contatos.',1);return}
       const c={acao:'pessoa',usuario:E.usuario,acessos:E.acessos,aluno:E.aluno,turmas:[...E.turmas],monitor:E.monitor,aulas:[...E.aulas],roteiros:[...E.roteiros],monitor_turmas:[...E.mturmas]};
       if(dono){c.owner=E.owner;c.equipe=E.equipe;c.cargos=[...E.cargos];c.extras=[...E.extras];c.editor=[...E.editor]}
       try{await enviar(c);aviso('Ficha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar');
-    const rm=nome?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Remover @${nome} de alunos, monitores${dono?' e equipe':''}? (Owners saem pela ficha, desmarcando Owner.)`))return;try{await enviar({acao:'remover_pessoa',usuario:nome});aviso('Removido');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Remover pessoa'):'';
+    const rm=nome?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!await confirmaRemocaoPessoa(nome))return;try{await enviar({acao:'remover_pessoa',usuario:nome});aviso('Acesso removido');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Remover pessoa'):'';
     box.append(h('div',{class:'rodape-g'},h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:()=>verComo(rascunhoInfo())},'Ver como '+(E.usuario?'@'+E.usuario:'esta pessoa')),rm),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:fechar},'Cancelar'),salvar)));
     box.scrollTop=y}
   desenhar()}
@@ -147,30 +165,22 @@ function verComo(i){
 function modalVarios(){
   const turmasAtivas=Object.keys(D.turmas).filter(t=>D.turmas[t].status!=='arquivada');
   let papel='aluno',turma=turmasAtivas.find(t=>D.turmas[t].status==='andamento')||turmasAtivas[0];
-  const ta=h('textarea',{style:'height:170px;font-family:monospace;width:100%',placeholder:'davi-novato, Davi Novato Silva, a123456@ceuma.com.br\nluiza-dev, Luiza Dev Souza, a654321@ceuma.com.br',oninput:prev});
-  const lado=h('div'),res=h('div',{style:'background:#0006;border-radius:12px;padding:12px 16px;margin-top:14px'}),btn=h('button',{class:'btn',type:'button'},'Adicionar');
-  const conhecidos=new Set(todasPessoas());
-  const emUso=new Set((D.pendentes||[]).map(x=>x.email).filter(Boolean));
-  function analisa(){const out=[];const vistos=new Set();
-    for(const linha of ta.value.split(/\n+/).map(s=>s.trim()).filter(Boolean)){
-      const [bruto='',nome='',mail='']=linha.split(/[,;\t|]/).map(s=>s.trim());
-      const n=bruto.replace(/^https?:\/\/github\.com\//i,'').replace(/[/?#].*$/,'').replace(/^@/,'').toLowerCase();const em=mail.toLowerCase();
-      let erro='';if(/\s/.test(n))erro='espaço no usuário';else if(n.includes('_'))erro='o GitHub não aceita _';else if(!/^[a-z0-9][a-z0-9-]{0,38}$/.test(n))erro='usuário inválido';
-      else if(!nome)erro='falta o nome (formato: usuário, Nome, e-mail)';else if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))erro='e-mail inválido';
-      else if(vistos.has(n))erro='usuário repetido na lista';else if(em&&emUso.has(em)&&!conhecidos.has(n))erro='e-mail já cadastrado para outra pessoa';
-      vistos.add(n);out.push({n,nome,email:em,erro,ja:!erro&&conhecidos.has(n),link:/github\.com/i.test(bruto)})}
-    return out}
-  function prev(){const l=analisa(),ok=l.filter(x=>!x.erro),ruim=l.filter(x=>x.erro);res.textContent='';
-    res.append(h('div',{style:'font-weight:700;margin-bottom:6px'},h('span',{class:'pode-s'},ok.length+' válido(s)'),' · ',h('span',{class:'nao-s'},ruim.length+' inválido(s)'),' · '+l.filter(x=>x.ja).length+' já cadastrado(s)'));
-    for(const x of l)res.append(h('div',{class:'permlinha',style:'grid-template-columns:1fr auto'},h('span',{},'@'+x.n+(x.nome?' · '+x.nome:'')+(x.email?' · '+x.email:'')),h('span',{class:x.erro?'nao-s':'pode-s'},x.erro?'inválido: '+x.erro:(x.ja?'já existe (será atualizado)':'ok'+(x.link?' (do link)':'')))));
-    btn.textContent='Adicionar '+ok.length;btn.disabled=!ok.length}
+  const livres=D.contatosLivres||[];const marc=new Set();
+  const bus=h('input',{type:'text',placeholder:'Buscar contato…',style:'width:100%'});const lista=h('div',{style:'max-height:340px;overflow:auto;margin-top:8px'});
+  const lado=h('div'),btn=h('button',{class:'btn',type:'button'},'Adicionar');
+  function pinta(){const q=bus.value.trim().toLowerCase();lista.textContent='';
+    const vis=livres.filter(x=>!q||(x.nome+' '+x.usuario+' '+(x.cargo||'')).toLowerCase().includes(q));
+    for(const x of vis){const cb=h('input',{type:'checkbox'});cb.checked=marc.has(x.usuario);cb.onchange=()=>{cb.checked?marc.add(x.usuario):marc.delete(x.usuario);atualiza()};
+      lista.append(h('label',{class:'permlinha',style:'grid-template-columns:auto 1fr auto;cursor:pointer;gap:10px'},cb,h('span',{},h('b',null,x.nome),' ',h('span',{class:'sub'},'@'+x.usuario)),h('span',{class:'nvc'},x.cargo||'')))}
+    if(!vis.length)lista.append(h('p',{class:'sub'},livres.length?'Ninguém encontrado.':'Não há contatos disponíveis. Cadastre antes na aba Contatos (nome, e-mail e usuário do GitHub); só quem ainda não tem papel aparece aqui.'))}
+  function atualiza(){btn.textContent='Adicionar '+marc.size;btn.disabled=!marc.size}
   function lados(){lado.textContent='';lado.append(h('div',{style:'font-weight:700;margin-bottom:6px'},'Entram como'),
     ...[['aluno','Aluno'],['monitor','Monitor'],...(D.dono?[['equipe','Equipe']]:[])].map(([k,t])=>h('button',{type:'button',class:'chipx'+(papel===k?' on':''),onclick:()=>{papel=k;lados()}},t)),
     h('div',{style:'font-weight:700;margin:10px 0 6px'},'Na turma'),...turmasAtivas.map(t=>h('button',{type:'button',class:'chipx'+(turma===t?' on':''),onclick:()=>{turma=t;lados()}},D.turmas[t].nome)),h('p',{class:'sub'},'Depois dá para mudar cada pessoa na ficha.'))}
-  btn.onclick=async()=>{const lst=analisa().filter(x=>!x.erro),ok=lst.map(x=>x.n);try{await enviar({acao:'adicionar',usuarios:ok,pessoas:lst.map(x=>({usuario:x.n,nome:x.nome,email:x.email})),papel,turma});aviso(`${ok.length} pessoa(s) adicionada(s)`);fechar();await carregar()}catch(e){aviso(e.message,1)}};
-  const {fechar}=camada([h('div',{style:'display:flex;justify-content:space-between'},h('h2',{style:'margin:0'},'Adicionar várias pessoas'),h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar')),
-    h('p',{class:'sub'},'Uma pessoa por linha, neste formato: usuário do GitHub, Nome completo, e-mail institucional (o e-mail é opcional; o nome é obrigatório). Aceita @ e links do GitHub.'),h('div',{class:'grid'},h('div',{},ta),lado),res,h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),btn)],'modal');
-  lados();prev()}
+  btn.onclick=async()=>{const ok=[...marc];try{await enviar({acao:'adicionar',usuarios:ok,papel,turma});aviso(`${ok.length} pessoa(s) adicionada(s)`);fechar();await carregar()}catch(e){aviso(e.message,1)}};
+  const {fechar}=camada([h('div',{style:'display:flex;justify-content:space-between'},h('h2',{style:'margin:0'},'Atribuir papel a contatos'),h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar')),
+    h('p',{class:'sub'},'Escolha quem já está em Contatos e ainda não tem papel. O cadastro (nome, e-mail, usuário) é feito na aba Contatos.'),h('div',{class:'grid'},h('div',{},bus,lista),lado),h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},btn)],'modal');
+  bus.oninput=pinta;lados();pinta();atualiza()}
 
 // ---------- aba Cargos ----------
 function desenharCargos(){
@@ -182,7 +192,7 @@ function desenharCargos(){
     const cx=Object.keys(PERM_INFO).map(k=>h('label',{class:'ck'},h('input',{type:'checkbox',checked:c.permissoes.includes(k),'data-k':k}),h('b',{},PERM_INFO[k][0]),h('span',{class:'sub'},PERM_INFO[k][1])));
     g.append(h('div',{class:'cartao2'},nome,desc,...cx,h('div',{class:'sub',style:'margin-top:10px'},`Quem ocupa (${ocup.length})`),h('div',{},...ocup.map(n=>h('span',{class:'pill e'},'@'+n))),
       h('div',{style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'cargo',id,nome:nome.value,descricao:desc.value,permissoes:cx.map(l=>l.querySelector('input')).filter(x=>x.checked).map(x=>x.dataset.k)});aviso('Cargo salvo');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'),
-        h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Apagar o cargo "${c.nome}"? Quem o ocupa perde as permissões dele.`))return;try{await enviar({acao:'remover_cargo',id});aviso('Cargo apagado');await carregar()}catch(e){aviso(e.message,1)}}},'Apagar'))))}
+        h('button',{class:'btn sec',type:'button',onclick:async()=>{const ocup=Object.entries(D.equipe||{}).filter(([k,v])=>(v.cargos||[]).includes(id)).map(([k])=>'@'+k);if(!await confirmar({titulo:'Apagar o cargo "'+c.nome+'"?',corpo:[h('p',{class:'sub'},ocup.length?'Estas pessoas perdem as permissões deste cargo: '+ocup.join(', ')+'.':'Ninguém ocupa este cargo agora.'),h('p',{class:'sub'},'Nada é alterado no GitHub.')],digitar:c.nome,botao:'Apagar cargo'}))return;try{await enviar({acao:'remover_cargo',id});aviso('Cargo apagado');await carregar()}catch(e){aviso(e.message,1)}}},'Apagar'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:async()=>{const n=prompt('Nome do novo cargo (ex.: Secretaria, Vice-presidência):');if(!n)return;try{await enviar({acao:'cargo',nome:n,permissoes:[]});aviso('Cargo criado: marque as permissões e salve');await carregar()}catch(e){aviso(e.message,1)}}},'+ Novo cargo'),h('div',{class:'sub'},'Ex.: Vice-presidência, Eventos, Monitoria geral')));
   p.append(g);
   const det=h('div',{class:'cartao2'},h('h3',{},'O que cada permissão libera'),...Object.keys(PERM_INFO).map(k=>h('div',{style:'margin:6px 0;font-size:14px'},h('b',{},PERM_INFO[k][0]+': '),PERM_INFO[k][1]+'.')),h('div',{class:'sub'},'Owners sempre têm tudo.'));
@@ -378,7 +388,7 @@ function desenharPendentes(){
   const linhas=L.map(x=>({...x,papel:papelDe.get((x.usuario||'').toLowerCase())||'',salvo:true}));
   for(const [k,r] of papelDe)if(!ligados.has(k))linhas.push({email:'',cargo:r,nome:'',usuario:k,papel:r,salvo:false});
   const ordem={equipe:0,monitor:1,aluno:2,sem:3};linhas.sort((a,b)=>ordem[grupoDe(a.papel)]-ordem[grupoDe(b.papel)]||(a.cargo||'').localeCompare(b.cargo||'')||(a.nome||a.usuario||a.email).localeCompare(b.nome||b.usuario||b.email));
-  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Lista única de todos: equipe, monitores e alunos. Quem você cadastra em ',h('b',null,'Pessoas'),' aparece aqui sozinho; falta só preencher o e-mail. O e-mail é ',h('b',null,'só contato'),' (o acesso é pelo usuário do GitHub).'));
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Aqui começa todo cadastro: preencha nome, e-mail e usuário do GitHub. Depois, em ',h('b',null,'Pessoas'),', atribua o papel (aluno, monitor, equipe). O e-mail é ',h('b',null,'só contato'),' (o acesso é pelo usuário do GitHub).'));
   const campo=(rot,el)=>h('label',{style:'display:block;font-size:12px;opacity:.75;margin:6px 0 0'},rot,el);
   const inp=(v,ph)=>h('input',{type:'text',placeholder:ph||'',value:v||'',style:'width:100%;margin-top:3px'});
   const mk=(p)=>{const novo=!p;p=p||{};
@@ -387,8 +397,7 @@ function desenharPendentes(){
     const em=inp(p.email,'a000000@ceuma.com.br'),cg=inp(p.cargo,'Ex.: Vice presidente'),no=inp(p.nome,'Nome completo'),us=inp(p.usuario,'Ex.: afonsofarias');
     const bt=h('button',{type:'button',class:'btn'},novo?'Adicionar contato':'Salvar');
     bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',anterior:p.salvo?chv(p):'',email:em.value,cargo:cg.value,nome:no.value,usuario:us.value});
-      const gu=us.value.trim().replace(/^@/,'').toLowerCase();let extra='';if(gu&&!papelDe.has(gu)){await enviar({acao:'equipe',usuario:gu,titulo:cg.value,permissoes:[]});extra=' @'+gu+' também entrou na equipe (sem permissões extras).'}
-      aviso('Salvo.'+extra);await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
+      aviso('Salvo.');await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
     const chave=novo?'__novo':chv(p);const corpo=h('div',{style:'margin-top:10px'});corpo.hidden=!PEND_OPEN.has(chave);
     const seta=h('span',{style:'display:inline-block;transition:transform .15s;font-size:11px'},'▶');const rot=h('span',{style:'font-size:13px;opacity:.8'},'');
     const topo=h('button',{type:'button',style:'all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap'});
@@ -402,7 +411,7 @@ function desenharPendentes(){
     if(!p.usuario&&conhecidos.length){sug.append(h('span',{style:'opacity:.7'},'Já têm acesso:'));for(const k of conhecidos){const b=h('button',{type:'button',style:'all:unset;cursor:pointer;padding:2px 9px;border-radius:99px;border:1px solid #4a5170;font-size:12px'},'@'+k);b.onclick=()=>{us.value=k};sug.append(b)}}
     const cu=campo('Usuário do GitHub',us);cu.append(sug);g.append(campo('Nome',no),campo('E-mail institucional',em),campo('Cargo / função',cg),cu);
     const ac=h('div',{style:'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center'},bt);
-    if(p.salvo){const rem=h('button',{type:'button',class:'btn sec'},'Remover contato');rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover contato'},4000);return}
+    if(p.salvo){const rem=h('button',{type:'button',class:'btn sec'},'Remover contato');rem.onclick=async()=>{if(!await confirmar({titulo:'Excluir o contato de '+(p.nome||p.email||('@'+p.usuario))+'?',corpo:[h('p',{class:'sub'},'Some da lista de contatos: nome, e-mail e cargo. Isso não mexe no acesso. Se a pessoa ainda tiver acesso à plataforma, o sistema vai recusar: remova o acesso antes, em Pessoas.')],botao:'Excluir contato'}))return;
       try{await enviar({acao:'pendente_remover',chave:chv(p)});aviso('Removido.');await carregar()}catch(e){aviso(e.message,true)}};ac.append(rem)}
     if(p.papel)ac.append(h('span',{class:'sub'},'Papel na plataforma: '+p.papel+' (alterar em Pessoas)'));
     corpo.append(g,ac);c.append(topo,corpo);return c};

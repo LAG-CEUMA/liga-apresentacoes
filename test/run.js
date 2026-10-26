@@ -289,6 +289,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'cargo', nome: 'Marketing e artes', descricao: 'Redes', permissoes: ['site', 'xx'] })).status, 200);
   assert.deepEqual(cfg.cargos['marketing-e-artes'].permissoes, ['site']);
   assert.equal((await post({ acao: 'cargo', nome: 'Tesouraria', permissoes: [] })).status, 200);
+  for (const x of ['marina', 'bia', 'ex-aluno', 'davi-novato', 'luiza-dev', 'pedro-h']) await require('../lib/pendentes').salvar({ usuario: x, nome: 'Nome ' + x }, 'teste');
   assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
   assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);
   r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site']); assert.equal(r.titulo, 'Marketing e artes, Tesouraria');
@@ -297,10 +298,9 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site', 'tarefas']);
   assert.equal((await post({ acao: 'turma', id: '2027.1', nome: 'Turma 2027.1', status: 'planejada', inicio: '2027-03-01' }, {}, 'sec')).status, 200);
   assert.equal((await post({ acao: 'turma', id: '../x' }, {}, 'sec')).status, 400);
-  assert.equal((await post({ acao: 'adicionar', papel: 'aluno', turma: '2027.1', usuarios: ['davi-novato', '@Luiza-Dev', 'https://github.com/pedro-h', 'joao silva', 'ana_clara'], pessoas: [{ usuario: 'davi-novato', nome: 'Davi N', email: 'davi@ceuma.com.br' }, { usuario: 'luiza-dev', nome: 'Luiza D' }, { usuario: 'pedro-h', nome: 'Pedro H' }] }, {}, 'sec')).status, 200);
+  assert.equal((await post({ acao: 'adicionar', papel: 'aluno', turma: '2027.1', usuarios: ['davi-novato', '@Luiza-Dev', 'https://github.com/pedro-h', 'joao silva', 'ana_clara'], pessoas: [] }, {}, 'sec')).status, 200);
   assert.equal((await post({ acao: 'adicionar', papel: 'aluno', usuarios: ['semnome1'] }, {}, 'sec')).status, 400);
-  assert.equal((await post({ acao: 'adicionar', papel: 'aluno', usuarios: ['outro-1'], pessoas: [{ usuario: 'outro-1', nome: 'Outro', email: 'DAVI@ceuma.com.br' }] }, {}, 'sec')).status, 400);
-  assert.equal((await post({ acao: 'pendente_remover', chave: 'davi@ceuma.com.br' })).status, 400);
+  assert.equal((await post({ acao: 'pendente_remover', chave: '@davi-novato' })).status, 400);
   assert(cfg.alunos.includes('luiza-dev') && cfg.alunos.includes('pedro-h') && !cfg.alunos.includes('ana_clara'));
   assert.deepEqual(cfg.turmas['2027.1'].alunos.sort(), ['davi-novato', 'luiza-dev', 'pedro-h']);
   assert.equal((await post({ acao: 'adicionar', papel: 'equipe', usuarios: ['qq'] }, {}, 'sec')).status, 403);
@@ -615,7 +615,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.deepEqual(ct(['0:00 a 0:10', '0:00 a 0:10', '0:10 a 1:00']).avisos, []); assert(/passa de 1 hora/.test(ct(['0:00 a 0:30', '0:30 a 1:10']).avisos[0]));
     assert(ct(['0:00 a 0:10', '0:20 a 1:00']).avisos.some((x) => /buraco/.test(x))); }
   // Contatos da equipe (e-mail institucional sem GitHub)
-  { const w = (b, user = 'dono') => post(b, {}, user);
+  { const w = (b, user = 'dono') => post(b, {}, user); const base = (await require('../lib/pendentes').ler()).lista.length;
     assert.equal((await w({ acao: 'pendente_salvar', email: 'a1@ceuma.com.br', cargo: 'Secretário' }, 'alu1')).status, 403);
     assert.equal((await w({ acao: 'pendente_salvar', email: 'invalido' })).status, 400);
     assert.equal((await w({ acao: 'pendente_salvar', email: 'A101526@ceuma.com.br', cargo: 'Vice presidente' })).status, 200);
@@ -623,8 +623,8 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await w({ acao: 'pendente_salvar', anterior: 'a101526@ceuma.com.br', email: 'a101526@ceuma.com.br', cargo: 'Vice presidente', usuario: '@Fulano' })).status, 200);
     assert.equal((await w({ acao: 'pendente_salvar', usuario: 'aluno-x', cargo: 'Aluno', nome: 'Fulano' })).status, 200); assert.equal((await w({ acao: 'pendente_salvar' })).status, 400);
     assert.equal((await w({ acao: 'pendente_remover', chave: '@aluno-x' })).status, 200);
-    const L = (await require('../lib/pendentes').ler()).lista; assert.equal(L.length, 5); assert.equal(L.find((x) => x.email === 'a101526@ceuma.com.br').usuario, 'fulano');
-    assert.equal((await w({ acao: 'pendente_remover', chave: 'a194678@ceuma.com.br' })).status, 200); assert.equal((await require('../lib/pendentes').ler()).lista.length, 4); }
+    const L = (await require('../lib/pendentes').ler()).lista; assert.equal(L.length, base + 2); assert.equal(L.find((x) => x.email === 'a101526@ceuma.com.br').usuario, 'fulano');
+    assert.equal((await w({ acao: 'pendente_remover', chave: 'a194678@ceuma.com.br' })).status, 200); assert.equal((await require('../lib/pendentes').ler()).lista.length, base + 1); }
   { const Mo = require('../public/editor-modelos.js'); const sl = [{ tempo: '0:00 a 0:05' }, { tempo: '' }, { tempo: '0:05 a 0:15' }];
     Mo.refazerTempos(sl, 1, 5); assert.equal(sl[1].tempo, '0:05 a 0:10'); assert.equal(sl[2].tempo, '0:10 a 0:20'); assert.equal(Mo.totalMin(sl), 20);
     assert.equal(Mo.lerDur('7 min'), 7); assert.equal(Mo.lerDur('x'), null); assert.equal(Mo.checarTempos(sl).erros.length, 0);

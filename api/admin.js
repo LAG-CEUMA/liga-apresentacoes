@@ -16,6 +16,7 @@ module.exports = async (req, res) => {
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
+      if (perm.includes('pessoas')) { const PDl = require('../lib/pendentes'); v.contatosLivres = (await PDl.ler()).lista.filter((x) => x.usuario && x.nome && u.papel(cfg, x.usuario) === 'visitante').map((x) => ({ usuario: x.usuario, nome: x.nome, cargo: x.cargo })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.pendentes = (await require('../lib/pendentes').ler()).lista; v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
       v.listaPermissoes = u.PERMISSOES;
@@ -104,6 +105,7 @@ module.exports = async (req, res) => {
       if (!perm.includes('pessoas')) return nao();
       const nome = nomeGh(b.usuario || '');
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
+      if (u.papel(cfg, nome) === 'visitante' && !Object.keys(cfg.acessos || {}).includes(nome)) { const c0 = (await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === nome); if (!c0 || !c0.nome) return u.json(res, 400, { erro: `@${nome} não está nos Contatos com nome. Cadastre primeiro em Contatos, depois atribua o papel.` }); }
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
       const turmasOk = (Array.isArray(b.turmas) ? b.turmas : []).map(String).filter((t) => novo.turmas[t]);
       if (b.aluno !== undefined) {
@@ -147,12 +149,8 @@ module.exports = async (req, res) => {
       const bruto = (Array.isArray(b.usuarios) ? b.usuarios : []).slice(0, 300).map(nomeGh);
       const validos = [...new Set(bruto.filter((x) => u.USER_RE.test(x)))];
       if (!validos.length) return u.json(res, 400, { erro: 'Nenhum usuário válido.' });
-      const PD = require('../lib/pendentes'); const dados = Array.isArray(b.pessoas) ? b.pessoas : [];
-      for (const nome of validos) {
-        const d0 = dados.find((x) => nomeGh(x && x.usuario || '') === nome) || {};
-        if (!String(d0.nome || '').trim()) return u.json(res, 400, { erro: `Falta o nome de @${nome}.` });
-        try { await PD.salvar({ usuario: nome, nome: d0.nome, email: d0.email, cargo: papelNovo === 'aluno' ? 'Aluno' : papelNovo === 'monitor' ? 'Monitor' : 'Equipe' }, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
-      }
+      const contatos = (await require('../lib/pendentes').ler()).lista;
+      for (const nome of validos) { const c0 = contatos.find((x) => x.usuario === nome); if (!c0 || !c0.nome) return u.json(res, 400, { erro: `@${nome} não está nos Contatos com nome. Cadastre primeiro em Contatos (nome, e-mail e usuário do GitHub), depois atribua o papel aqui.` }); }
       for (const nome of validos) {
         if (papelNovo === 'aluno') { if (!novo.alunos.includes(nome)) novo.alunos.push(nome); if (!novo.turmas[turma].alunos.includes(nome)) novo.turmas[turma].alunos.push(nome); }
         else if (papelNovo === 'monitor') { if (!novo.monitores[nome]) novo.monitores[nome] = { aulas: [], roteiros: [], turmas: [turma] }; }
