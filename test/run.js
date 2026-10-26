@@ -291,7 +291,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'cargo', nome: 'Tesouraria', permissoes: [] })).status, 200);
   for (const x of ['marina', 'bia', 'ex-aluno', 'davi-novato', 'luiza-dev', 'pedro-h']) await require('../lib/pendentes').salvar({ usuario: x, nome: 'Nome ' + x, email: x + '@ceuma.com.br' }, 'teste');
   assert.equal((await post({ acao: 'pessoa', usuario: 'novo-aluno', aluno: true, turmas: ['2026'] }, {}, 'sec')).status, 400);
-  assert.equal((await post({ acao: 'pessoa', usuario: 'novo-aluno', nome: 'Novo Aluno', aluno: true, turmas: ['2026'] }, {}, 'sec')).status, 400);
+  assert.equal((await post({ acao: 'pessoa', usuario: 'novo-aluno', nome: 'Novo Aluno', curso: 'ADS', aluno: true, turmas: ['2026'] }, {}, 'sec')).status, 200);
   assert.equal((await post({ acao: 'pessoa', usuario: 'novo-aluno', nome: 'Novo Aluno', email: 'novo@ceuma.com.br', aluno: true, turmas: ['2026'] }, {}, 'sec')).status, 200);
   assert.equal((await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === 'novo-aluno').email, 'novo@ceuma.com.br');
   assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'novo@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);

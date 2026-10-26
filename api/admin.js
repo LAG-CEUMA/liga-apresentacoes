@@ -107,8 +107,8 @@ module.exports = async (req, res) => {
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
       { const PDp = require('../lib/pendentes'); const ex = (await PDp.ler()).lista.find((x) => x.usuario === nome); const nm = String(b.nome || (ex && ex.nome) || '').trim();
         if (!nm) return u.json(res, 400, { erro: 'Falta o nome da pessoa (campo Nome, em Dados da pessoa).' });
-        const em = String(b.email || '').trim() || (ex && ex.email) || ''; if (!em) return u.json(res, 400, { erro: 'Falta o e-mail institucional da pessoa.' });
-        try { await PDp.salvar({ usuario: nome, nome: nm, email: em, cargo: b.cargo !== undefined ? b.cargo : (ex && ex.cargo), anterior: b.anterior || (ex ? (ex.email || ('@' + ex.usuario)) : '') }, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; } }
+        const em = String(b.email || '').trim() || (ex && ex.email) || '';
+        try { await PDp.salvar({ usuario: nome, nome: nm, email: em, curso: b.curso !== undefined ? b.curso : (ex && ex.curso), cargo: b.cargo !== undefined ? b.cargo : (ex && ex.cargo), anterior: b.anterior || (ex ? (ex.email || ('@' + ex.usuario)) : '') }, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; } }
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
       const turmasOk = (Array.isArray(b.turmas) ? b.turmas : []).map(String).filter((t) => novo.turmas[t]);
       if (b.aluno !== undefined) {
