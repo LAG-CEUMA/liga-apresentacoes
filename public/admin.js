@@ -389,6 +389,19 @@ function desenharPendentes(){
   if(L.length){const cp=h('button',{type:'button',class:'btn'},'Copiar todos os e-mails ('+L.length+')');cp.onclick=async()=>{try{await navigator.clipboard.writeText(L.map(x=>x.email).join('; '));aviso('E-mails copiados. Cole no campo Para/CCO do e-mail.')}catch{aviso('Não consegui copiar.',true)}};raiz.append(cp)}
   for(const p of L)raiz.append(mk(p));
   raiz.append(mk());
+  // cadastrados na plataforma que ainda não têm e-mail na lista de contatos
+  const lig=new Set(L.map(x=>(x.usuario||'').toLowerCase()).filter(Boolean));const sem=[];const vistos=new Set();
+  const add=(k,rot)=>{k=String(k).toLowerCase();if(!k||vistos.has(k)||lig.has(k))return;vistos.add(k);sem.push([k,rot])};
+  (D.fixos||[]).forEach(k=>add(k,'Owner'));(D.owners||[]).forEach(k=>add(k,'Owner'));
+  Object.entries(D.equipe||{}).forEach(([k,v])=>add(k,(v&&v.titulo)||'Equipe'));
+  (Array.isArray(D.monitores)?D.monitores:Object.keys(D.monitores||{})).forEach(k=>add(k,'Monitor'));
+  (D.alunos||[]).forEach(k=>add(k,'Aluno'));
+  if(sem.length){const det=h('details',{class:'nivel pequeno',style:'max-width:760px;margin-top:18px'},h('summary',null,h('span',{class:'nvt'},'Cadastrados na plataforma sem e-mail'),h('span',{class:'nvc'},sem.length+' pessoa(s)')));
+    const cx=h('div',{class:'nvcorpo'},h('p',{class:'sub'},'Pessoas já cadastradas em Pessoas que ainda não estão na lista de contatos. Informe o e-mail para incluí-las.'));
+    for(const [k,rot] of sem){const em=h('input',{type:'text',placeholder:'e-mail institucional',style:'flex:1;min-width:200px'});const bt=h('button',{type:'button',class:'btn sec'},'Incluir');
+      bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',email:em.value,cargo:rot,usuario:k});aviso('Incluído nos contatos.');await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
+      cx.append(h('div',{style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0'},h('b',{style:'min-width:150px'},'@'+k),h('span',{class:'nvc'},rot),em,bt))}
+    det.append(cx);raiz.append(det)}
 }
 
 // ---------- abas ----------
