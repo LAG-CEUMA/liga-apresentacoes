@@ -149,7 +149,8 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   d = await lista('dono'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02', 'aula-03']); assert(d.aulas[2].roteiro === null && d.aulas[0].roteiro);
   assert.equal(d.aulas[0].titulo, 'Aula 1: X'); assert.equal(d.aulas[0].nivel, 'Nível 0'); assert.equal(d.papel, 'owner');
   // painel: só owner
-  for (const x of ['alu1', 'mon2', null]) assert.equal((await chamar(h('admin'), { user: x })).status, 403);
+  for (const x of ['alu1', null]) assert.equal((await chamar(h('admin'), { user: x })).status, 403);
+  { const mm = await chamar(h('admin'), { user: 'mon2' }); assert.equal(mm.status, 200); const jm = JSON.parse(mm.body); assert.equal(jm.papel, 'monitor'); assert(!jm.aulas && !jm.owners && !jm.contatos); } // monitor vê só as ferramentas
   d = JSON.parse((await chamar(h('admin'), { user: 'dono' })).body); assert.equal(d.aulas.length, 3); assert(d.monitores.mon2);
   const post = (corpo, extra = {}, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: corpo, headers: { origin: 'https://site.test', 'content-type': 'application/json', ...extra } });
   const AC = { acao: 'acesso', chave: CH(3), nivel: 'membros' };
@@ -241,7 +242,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await chamar(h('personalizar'), { user: 'mkt' })).status, 200);
   assert.equal((await salvarSite({ nome: 'Marketing mudou' }, 'mkt')).status, 200);
   assert.equal((await chamar(h('semanas'), { user: 'mkt' })).status, 403);
-  assert.equal((await chamar(h('admin'), { user: 'mkt' })).status, 403);
+  { const am = await chamar(h('admin'), { user: 'mkt' }); assert.equal(am.status, 200); const jm = JSON.parse(am.body); assert(!jm.aulas && !jm.owners && !jm.contatos && jm.permissoes.includes('site')); } // abre só como central de ferramentas
   assert.equal((await post({ ...AC, chave: CH(3) }, {}, 'mkt')).status, 403);
   assert.equal((await eq('mkt', 'Chefe', ['site', 'aulas', 'pessoas', 'tarefas'], 'mkt')).status, 403); // não se promove
   // secretaria: pessoas + tarefas, sem site e sem aulas

@@ -20,10 +20,10 @@ function organizar(){const c=document.getElementById('corpo');c.textContent='';c
   while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
-  if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.titulo||d.papel}`));const P=d.permissoes||[];
-    const temPainel=P.includes('aulas')||P.includes('pessoas');
-    // Quem tem Painel acessa as ferramentas por ele (sem botões duplicados na Início)
-    const botoes=[[temPainel,'Painel','/admin'],[!temPainel&&P.includes('site'),'Personalizar','/personalizar'],[!temPainel&&(P.includes('presenca')||d.papel==='monitor'),'Presença','/presenca'],[!temPainel&&!!d.editor,'Editor de slides','/editor'],[!temPainel&&['owner','monitor','equipe'].includes(d.papel),'Guias e dúvidas','/wiki'],[d.papel!=='visitante','Central de ajuda','/ajuda'],[true,'Eventos','/eventos']];
+  if(d.usuario){const ident=el('span','badge ident',`${d.usuario} · ${d.titulo||d.papel}`);document.querySelector('.topo').append(ident);const P=d.permissoes||[];
+    // Painel é o centro das ferramentas administrativas; os atalhos aparecem lá dentro, conforme a permissão
+    const temPainel=P.length>0||d.papel==='monitor'||!!d.editor;
+    const botoes=[[temPainel,'Painel','/admin'],[d.papel!=='visitante','Central de ajuda','/ajuda'],[true,'Eventos','/eventos']];
     for(const [ok,t,h] of botoes)if(ok){const a=el('a','btn sec',t);a.href=h;conta.append(a)}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}
@@ -56,9 +56,6 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   organizar();
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
   const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);
-  const sigAulas=(d.aulas||[]).map(a=>a.chave);
-  const marca=(ativ)=>{try{if(LigaNovo.sig([sigAulas,ativ])!==localStorage.getItem('liga_nv_menu')&&(sigAulas.length||ativ.length)){ba.append(el('span','novo','novo'))}}catch{}};
-  if(d.usuario)fetch('/api/presenca?acao=minhasatividades').then(r=>r.ok?r.json():null).then(m=>marca(m?m.atividades.map(x=>x.id):[])).catch(()=>marca([]));else marca([]);
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 </body></html>

@@ -9,10 +9,13 @@ module.exports = async (req, res) => {
     const { cfg } = await u.lerConfig();
     const perm = u.permissoes(cfg, usuario);
     const dono = u.papel(cfg, usuario) === 'owner';
-    if (!dono && !perm.includes('aulas') && !perm.includes('pessoas')) return u.json(res, 403, { erro: 'Sem permissão.' });
+    const papelU = u.papel(cfg, usuario);
+    const editor = !!usuario && (dono || perm.includes('slides') || ((cfg.editores || {})[usuario] || []).length > 0);
+    const temFerramenta = perm.length > 0 || papelU === 'monitor' || editor;
+    if (!dono && !temFerramenta) return u.json(res, 403, { erro: 'Sem permissão.' });
     const aulas = await u.listarAulas();
     if (req.method === 'GET') {
-      const v = { usuario, dono, permissoes: perm, fixos: dono ? u.admins() : [] };
+      const v = { usuario, dono, papel: papelU, editor, titulo: u.tituloDe(cfg, usuario), permissoes: perm, fixos: dono ? u.admins() : [] };
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }

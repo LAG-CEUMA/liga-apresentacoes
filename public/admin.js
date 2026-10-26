@@ -391,17 +391,27 @@ function desenharWiki(){
 
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(!D.dono&&!D.permissoes.includes('pessoas')&&!D.permissoes.includes('aulas'))a.push(['ferramentas','Ferramentas']);if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function desenharFerramentas(){
+  const p=$('p-ferramentas');p.textContent='';const pm=D.permissoes||[];
+  const L=[[pm.includes('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques de ranking da tela inicial.'],
+    [pm.includes('presenca')||D.papel==='monitor','/presenca','Presença e atividades','Chamada, participação, atividades e ranking das turmas.'],
+    [D.editor,'/editor','Editor de slides','Criar e editar as aulas da Liga.'],
+    [['owner','monitor','equipe'].includes(D.papel),'/wiki','Guias e dúvidas','Tutoriais e respostas para a equipe.']].filter(x=>x[0]);
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Estas são as ferramentas liberadas para o seu perfil'+(D.titulo?' ('+D.titulo+')':'')+'. Se faltar algo, peça a um owner para ajustar o seu perfil.'));
+  const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px'});
+  for(const [,url,t,d] of L)g.append(h('a',{class:'cartao2',href:url,style:'text-decoration:none;color:inherit;display:block'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →')));
+  if(!L.length)p.append(h('p',{class:'sub'},'Nenhuma ferramenta liberada ainda.'));p.append(g)}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
   D=await r.json();D.turmas=D.turmas||{};D.cargos=D.cargos||{};D.equipe=D.equipe||(D.dono?{}:undefined);
   const pm=D.permissoes||[],ver=(id,ok)=>{const e=$(id);if(e)e.hidden=!ok};
-  ver('f-site',D.dono||pm.includes('site'));ver('f-pres',D.dono||pm.includes('presenca'));ver('f-ed',D.dono||pm.includes('slides'));ver('f-wiki',!D.dono);
+  const soFerr=!D.dono&&!pm.includes('pessoas')&&!pm.includes('aulas');ver('f-site',!soFerr&&(D.dono||pm.includes('site')));ver('f-pres',!soFerr&&(D.dono||pm.includes('presenca')||D.papel==='monitor'));ver('f-ed',!soFerr&&!!D.editor);ver('f-wiki',!soFerr&&!D.dono&&['owner','monitor','equipe'].includes(D.papel));
   mostrar(ABA||location.hash.slice(1)||'pessoas')}
 carregar();
