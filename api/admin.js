@@ -129,6 +129,7 @@ module.exports = async (req, res) => {
         if (itens.length) novo.acessos[nome] = itens; else delete novo.acessos[nome];
       }
       if (dono && b.equipe !== undefined) {
+        if (b.equipe) { const antigas = ((cfg.equipe || {})[nome] || {}).permissoes || []; const novas = (Array.isArray(b.extras) ? b.extras : []).filter((x) => !antigas.includes(x)); if (novas.length) return u.json(res, 400, { erro: 'Permissão individual não é mais usada. Crie um perfil na aba Perfis com essa permissão e atribua o perfil à pessoa.' }); }
         if (b.equipe) novo.equipe[nome] = { titulo: '', permissoes: (Array.isArray(b.extras) ? b.extras : []).filter((x) => u.PERMISSOES.includes(x)), cargos: (Array.isArray(b.cargos) ? b.cargos : []).map(String).filter((c) => novo.cargos[c]) };
         else delete novo.equipe[nome];
       }
