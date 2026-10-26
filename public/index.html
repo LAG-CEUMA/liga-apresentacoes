@@ -62,11 +62,15 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   }).catch(()=>{});
   if(d.usuario)fetch('/api/presenca?acao=minhapontuacao').then(r=>r.ok?r.json():null).then(m=>{
     if(!m||!m.turmas.length)return;
-    const s=secao('Minha pontuação',m.turmas.map(t=>`${t.nome}: ${t.total} pts · ${t.posicao}º de ${t.de}`).join(' | '));s.id='sec-pontos';lembrar(s,'pontos',true);
-    for(const t of m.turmas){const i=el('div','item');i.append(el('b','',t.nome+(t.status==='arquivada'?' (encerrada)':'')),el('br'),
-      el('small','',`Presença ${t.partes.presenca} · Participação ${t.partes.participacao} · Exercícios ${t.partes.exercicios}${t.partes.penalidades?' · Penalidades −'+t.partes.penalidades:''} = ${t.total}`));
-      if(t.top5.length){i.append(el('br'),el('small','','Top 5 da turma:'));for(const x of t.top5){i.append(el('br'),el('small','',`${x.posicao}º @${x.usuario} · ${x.total} pts`+(x.usuario===d.usuario?' (você)':'')))}}
-      s.append(i)}
+    const resumo=t=>t.total>0?`${t.nome}: ${t.total} pts · ${t.posicao}º de ${t.de}`:`${t.nome}: ainda sem pontos`;
+    const s=secao('Minha pontuação',m.turmas.map(resumo).join(' | '));s.id='sec-pontos';lembrar(s,'pontos',true);
+    for(const t of m.turmas){const c=el('div','pont');
+      const topo=el('div','pont-topo');const tt=el('div','');tt.append(el('b','',t.nome+(t.status==='arquivada'?' (encerrada)':'')),el('small','',t.total>0?`${t.posicao}º lugar de ${t.de}`:'Os pontos aparecem depois das primeiras aulas'));
+      const n=el('div','pont-n',String(t.total));n.append(el('small','',' pts'));topo.append(tt,n);c.append(topo);
+      const ch=el('div','pont-chips');for(const [nm,v] of [['Presença',t.partes.presenca],['Participação',t.partes.participacao],['Exercícios',t.partes.exercicios]])ch.append(el('span','pont-chip',nm+' '+v));
+      if(t.partes.penalidades)ch.append(el('span','pont-chip pen','Penalidades −'+t.partes.penalidades));c.append(ch);
+      if(t.top5.length){c.append(el('div','pont-tit','Top 5 da turma'));const ol=el('div','pont-top');for(const x of t.top5){const eu=x.usuario===d.usuario;const l=el('div','pont-lin'+(eu?' eu':''));l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome','@'+x.usuario+(eu?' (você)':'')),el('span','pont-pts',x.total+' pts'));ol.append(l)}c.append(ol)}
+      s.append(c)}
     BL.pontos=s;organizar();
   }).catch(()=>{});
   if(d.usuario)fetch('/api/presenca?acao=minhasatividades').then(r=>r.ok?r.json():null).then(m=>{

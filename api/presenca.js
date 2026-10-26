@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
           if (!t.alunos.includes(usuario)) continue;
           const rk = P.ranking(cfg, id, sess, ativs); const eu = rk.find((x) => x.usuario === usuario);
           out.push({ turma: id, nome: t.nome, status: t.status, pesos: P.pesosDa(cfg, id), total: eu.total, partes: eu.partes, posicao: eu.posicao, de: rk.length,
-            top5: conf.top5Visivel ? (t.status === 'arquivada' && t.rankingFinal ? t.rankingFinal.map((x, i) => ({ posicao: i + 1, usuario: x.usuario, total: x.total })) : rk.slice(0, 5).map((x) => ({ posicao: x.posicao, usuario: x.usuario, total: x.total }))) : [] });
+            top5: conf.top5Visivel ? (t.status === 'arquivada' && t.rankingFinal ? t.rankingFinal.filter((x) => x.total > 0).map((x, i) => ({ posicao: i + 1, usuario: x.usuario, total: x.total })) : rk.filter((x) => x.total > 0).slice(0, 5).map((x) => ({ posicao: x.posicao, usuario: x.usuario, total: x.total }))) : [] });
         }
         return u.json(res, 200, { usuario, turmas: out });
       }
