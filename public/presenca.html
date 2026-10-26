@@ -33,7 +33,7 @@ function seletores(){
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
   const data=h('input',{type:'date',value:DATA||CTX.hoje});data.addEventListener('change',()=>{DATA=data.value});
   return h('div',{class:'linha'},h('label',{},'Turma ',turma),h('label',{style:'flex:1;min-width:220px'},'Aula ',sel),h('label',{},'Data ',data))}
-function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ent','Entregas'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)))}
+function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ent','Entregas'],['ativ','Atividades'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)))}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
   if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
@@ -80,6 +80,58 @@ async function telaRank(alvo){
   alvo.append(h('p',{class:'sub'},`Pontuação máxima ${max}: presença ${R.pesos.presenca} + participação ${R.pesos.participacao} (meta ${R.config.meta} pontos) + exercícios ${R.pesos.exercicios}, menos penalidades. Empate: presença e depois exercícios.`));
   const tb=h('tbody',{});for(const x of R.ranking)tb.append(h('tr',{style:x.posicao<=5?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},x.usuario),h('td',{},h('b',{},String(x.total))),h('td',{},String(x.partes.presenca)),h('td',{},String(x.partes.participacao)),h('td',{},String(x.partes.exercicios)),h('td',{style:x.partes.penalidades?'color:var(--err)':''},x.partes.penalidades?'−'+x.partes.penalidades:'0')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['#','Aluno','Total','Presença','Particip.','Exercícios','Penal.'].map(t=>h('th',{},t)))),tb)),h('p',{class:'sub'},'As linhas em destaque são o Top 5 da turma.'))}
+
+let ATV=null,ATV_SEL='',CONF={},DRAFT={};
+const aivToLocal=iso=>{if(!iso)return'';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
+const fmtD=iso=>iso?new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'sem prazo';
+async function postA(c){return api({...c,turma:TURMA})}
+async function telaAtiv(alvo){
+  alvo.textContent='';alvo.append(h('p',{},'Carregando…'));
+  const r=await fetch('/api/presenca?acao=atividades&turma='+encodeURIComponent(TURMA));
+  if(!r.ok){alvo.textContent='Não consegui carregar as atividades desta turma.';return}
+  ATV=await r.json();alvo.textContent='';
+  alvo.append(h('p',{class:'sub'},'Cada atividade é um exercício com peso, prazo e entrega próprios. Você decide quando liberar (para todos ou só alguns) e as respostas chegam separadas, cada uma na sua Issue.'));
+  const lista=h('div',{});
+  if(!ATV.atividades.length)lista.append(h('p',{},'Nenhuma atividade ainda. Crie a primeira abaixo.'));
+  for(const a of ATV.atividades){
+    const n=Object.values(a.disparos||{}).filter(x=>x.numero).length;
+    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo),h('div',{class:'sub'},`peso ${a.peso} · prazo ${fmtD(a.prazo)} · ${a.liberada?'LIBERADA ('+n+' Issue'+(n===1?'':'s')+')':'não liberada'}`)),
+      h('button',{class:'btn sec',type:'button',onclick:()=>{ATV_SEL=ATV_SEL===a.id?'':a.id;telaAtiv(alvo)}},ATV_SEL===a.id?'Fechar':'Abrir'));
+    lista.append(el);
+    if(ATV_SEL===a.id)lista.append(painelAtiv(a,alvo));
+  }
+  alvo.append(lista,formAtiv(null,alvo));
+}
+function formAtiv(a,alvo){
+  const novo=!a;const f=h('details',{class:'box',open:!!a},h('summary',{},novo?'+ Nova atividade':'Editar dados da atividade'));
+  const cod=h('input',{placeholder:'Código (ex.: N0.1-2·E1)',value:a?a.codigo:'',style:'width:200px'}),tit=h('input',{placeholder:'Título',value:a?a.titulo:'',style:'width:min(360px,100%)'}),peso=h('input',{type:'number',min:1,max:100,step:1,value:a?a.peso:10,style:'width:80px'}),prazo=h('input',{type:'datetime-local',value:a?aivToLocal(a.prazo):''}),
+    desc=h('textarea',{rows:8,placeholder:'Texto que vai na Issue do aluno (Markdown): objetivo, passo a passo, o que entregar.',style:'width:100%'},a?a.descricao:'');
+  desc.value=a?a.descricao:'';
+  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{try{await postA({acao:'ativ_salvar',id:a?a.id:'',codigo:cod.value,titulo:tit.value,peso:peso.value,prazo:prazo.value?new Date(prazo.value).toISOString():'',descricao:desc.value});aviso('Atividade salva');telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar atividade');
+  f.append(h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},cod,tit,h('label',{},'Peso ',peso),h('label',{},'Prazo ',prazo)),desc,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar));return f}
+function painelAtiv(a,alvo){
+  const box=h('div',{class:'box'});const roster=ATV.roster.filter(k=>!a.alvo||!a.alvo.length||a.alvo.includes(k));
+  const sel=new Set();const escolha=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0'});
+  for(const k of ATV.roster){const dsp=(a.disparos||{})[k]||{};const c=h('input',{type:'checkbox',onchange:e=>{e.target.checked?sel.add(k):sel.delete(k)}});escolha.append(h('label',{style:'display:inline-flex;gap:4px;align-items:center'},c,k,dsp.numero?' ✓':dsp.erro?' ⚠':''))}
+  const liberar=async(todos)=>{const q=todos?'Liberar para TODOS os alunos da turma? Será criada uma Issue no repositório de cada um que ainda não tiver.':`Liberar para ${sel.size} aluno(s) selecionado(s)?`;if(!todos&&!sel.size){aviso('Marque ao menos um aluno.',1);return}if(!confirm(q))return;try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:todos?[]:[...sel]});aviso(`Issues criadas: ${r.criadas}${r.jaTinham?' · já tinham: '+r.jaTinham:''}${r.falhas.length?' · FALHAS: '+r.falhas.map(x=>x.usuario+' ('+x.erro+')').join(', '):''}`,r.falhas.length);telaAtiv(alvo)}catch(e){aviso(e.message,1)}};
+  box.append(h('h4',{},'1. Liberar (disparar)'),h('p',{class:'sub'},a.liberada?'Já liberada. Você pode liberar de novo para quem faltou receber (quem já tem Issue não duplica).':'Ainda não liberada: os alunos não veem nada.'),escolha,
+    h('div',{class:'barra'},h('button',{class:'btn',type:'button',onclick:()=>liberar(true)},'Liberar para todos'),h('button',{class:'btn sec',type:'button',onclick:()=>liberar(false)},'Liberar para os marcados'),h('button',{class:'btn sec',type:'button',onclick:async()=>{const t=`${a.codigo?a.codigo+' · ':''}${a.titulo}\n\n${a.descricao||''}`;try{await navigator.clipboard.writeText(t);aviso('Texto da Issue copiado (plano B: crie a Issue à mão)')}catch{aviso('Não consegui copiar',1)}}},'Copiar texto da Issue'),
+      a.liberada?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Recolher? Os alunos deixam de ver a atividade na plataforma. As Issues continuam no GitHub.'))return;try{await postA({acao:'ativ_recolher',id:a.id});telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Recolher'):h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Remover esta atividade?'))return;try{await postA({acao:'ativ_remover',id:a.id});ATV_SEL='';telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Remover')));
+  box.append(h('h4',{style:'margin-top:16px'},'2. Respostas e notas'));
+  if(!DRAFT[a.id]){const D={};for(const k of roster){const e=(a.entregas||{})[k]||{};D[k]={estado:e.estado||'nao',nota:e.nota===undefined?'':e.nota}}DRAFT[a.id]=D}
+  const E=DRAFT[a.id];for(const k of roster)if(!E[k])E[k]={estado:'nao',nota:''};
+  const conf=CONF[a.id]||{};const lista=h('div',{});
+  const estados=[['prazo','No prazo','p'],['atraso','Atrasada','j'],['nao','Não entregou','a'],['dispensado','Dispensado','']];
+  for(const k of roster){const seg=h('div',{class:'seg tri'});const nota=h('input',{type:'number',min:0,max:10,step:0.5,placeholder:'nota',value:E[k].nota,style:'width:80px',oninput:e=>{E[k].nota=e.target.value}});
+    const pinta=()=>seg.querySelectorAll('button').forEach((x,i)=>x.className=E[k].estado===estados[i][0]?'on '+estados[i][2]:'');
+    for(const [v,t] of estados){const b=h('button',{type:'button'},t);b.addEventListener('click',()=>{E[k].estado=v;pinta()});seg.append(b)}pinta();
+    const c=conf[k];const dsp=(a.disparos||{})[k]||{};
+    const info=h('div',{class:'sub',style:'flex-basis:100%'},dsp.url?h('a',{href:dsp.url,target:'_blank',rel:'noopener'},'Abrir Issue'):(dsp.erro?'⚠ Issue não criada: '+dsp.erro:'Issue ainda não criada'),c?(c.respondeu?` · respondeu em ${fmtD(c.quando)} (${c.comentarios} comentário${c.comentarios>1?'s':''}): “${c.previa}”`:c.issue?' · ainda sem resposta':''):'');
+    lista.append(h('div',{class:'linha',style:'flex-wrap:wrap'},h('div',{class:'t'},h('b',{},k)),seg,nota,info))}
+  const conferir=h('button',{class:'btn sec',type:'button',onclick:async()=>{conferir.disabled=true;try{const r=await postA({acao:'ativ_conferir',id:a.id});CONF[a.id]=r.conferencia;for(const [k,c] of Object.entries(r.conferencia))if(c.respondeu&&E[k].estado==='nao')E[k].estado=c.sugestao;aviso('Conferido no GitHub. Os estados foram sugeridos: revise e clique em Salvar.');telaAtiv(alvo)}catch(e){aviso(e.message,1)}conferir.disabled=false}},'Conferir respostas no GitHub');
+  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{if(!confirm('Salvar as entregas desta atividade? Quem está como "Não entregou" fica com 0; "Dispensado" não entra na conta.'))return;try{const r=await postA({acao:'ativ_entregas',id:a.id,estados:E});aviso(`Entregas salvas: ${r.entregues} de ${roster.length}`);delete DRAFT[a.id];telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar entregas');
+  box.append(h('p',{class:'sub'},'No prazo vale 100% do peso, atrasada 50%, não entregou 0. A nota 0–10 multiplica. Dispensado: o aluno não faz esta atividade e ela não conta para ele.'),h('div',{class:'barra'},conferir),lista,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar),h('div',{style:'margin-top:12px'},formAtiv(a,alvo)));
+  return box}
 let HIST=null;
 async function telaHist(alvo){
   alvo.append(h('p',{},'Carregando…'));
@@ -102,7 +154,7 @@ async function telaHist(alvo){
     const txt=linhas.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type:'text/csv'}));a.download='presenca.csv';a.click()};
   alvo.append(h('div',{class:'linha'},h('label',{},'Turma ',filtro),h('span',{style:'flex:1'}),h('button',{class:'btn sec',type:'button',onclick:csv},'Baixar CSV (Excel / Power BI)')),corpo,h('p',{class:'sub'},'P = presente, F = falta, J = justificado, – = sem registro. Presença = % das aulas com chamada em que o aluno foi considerado presente.'))}
 function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba());
-  if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='ent')c.append(telaEntregas());else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
+  if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='ent')c.append(telaEntregas());else if(ABA==='ativ'){const d=h('div');c.append(d);telaAtiv(d)}else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
 (async()=>{
   const r=await fetch('/api/presenca?acao=contexto');
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}

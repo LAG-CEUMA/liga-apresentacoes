@@ -1,6 +1,6 @@
 'use strict';
 // Chamada de aula (até 3 por aula, salvas pelo instrutor), participações e histórico. Cada aluno só vê a própria presença.
-const u = require('../lib/util'); const d = require('../lib/dados'); const P = require('../lib/pontos');
+const u = require('../lib/util'); const d = require('../lib/dados'); const P = require('../lib/pontos'); const A = require('../lib/atividades');
 const hoje = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
 const txt = (v, n) => String(v === undefined || v === null ? '' : v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
 module.exports = async (req, res) => {
@@ -33,19 +33,30 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { usuario, sessoes: lista });
       }
       if (q.acao === 'minhapontuacao') {
-        const sess = await d.listarSessoes(); const conf = P.configPontos(cfg); const out = [];
+        const sess = await d.listarSessoes(); const ativs = await A.listar(); const conf = P.configPontos(cfg); const out = [];
         for (const [id, t] of Object.entries(cfg.turmas)) {
           if (!t.alunos.includes(usuario)) continue;
-          const rk = P.ranking(cfg, id, sess); const eu = rk.find((x) => x.usuario === usuario);
+          const rk = P.ranking(cfg, id, sess, ativs); const eu = rk.find((x) => x.usuario === usuario);
           out.push({ turma: id, nome: t.nome, status: t.status, pesos: P.pesosDa(cfg, id), total: eu.total, partes: eu.partes, posicao: eu.posicao, de: rk.length,
             top5: conf.top5Visivel ? (t.status === 'arquivada' && t.rankingFinal ? t.rankingFinal.map((x, i) => ({ posicao: i + 1, usuario: x.usuario, total: x.total })) : rk.slice(0, 5).map((x) => ({ posicao: x.posicao, usuario: x.usuario, total: x.total }))) : [] });
         }
         return u.json(res, 200, { usuario, turmas: out });
       }
+      if (q.acao === 'minhasatividades') {
+        const todas = await A.listar(); const out = [];
+        for (const a of todas) { const t = cfg.turmas[a.turma]; if (!a.liberada || !t || !t.alunos.includes(usuario) || !A.aplica(a, usuario)) continue;
+          const e = (a.entregas || {})[usuario] || {}; const dsp = (a.disparos || {})[usuario] || {};
+          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, issue: dsp.url || '' }); }
+        return u.json(res, 200, { usuario, atividades: out });
+      }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
+      if (q.acao === 'atividades') {
+        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+        return u.json(res, 200, { turma: q.turma, roster: alunosDe(q.turma), atividades: await A.listar(q.turma) });
+      }
       if (q.acao === 'ranking') {
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
-        return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes()) });
+        return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes(), await A.listar(q.turma)) });
       }
       if (q.acao === 'contexto') {
         return u.json(res, 200, { usuario, geral, aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, turmas: turmasVisiveis, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
@@ -69,6 +80,10 @@ module.exports = async (req, res) => {
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     if (b.turma) b.turma = String(b.turma).toUpperCase();
     if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
+    if (String(b.acao || '').startsWith('ativ_')) {
+      if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+      const r = await A.tratar(b, { usuario, alunosDe }); return u.json(res, r.status, r.corpo);
+    }
     if (!validaSessao(b.turma, b.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida (ou sem permissão para esta aula).' });
     const alunos = new Set(alunosDe(b.turma));
     if (b.acao === 'chamada') {

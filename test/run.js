@@ -20,8 +20,12 @@ const arquivos = {
 };
 const resp = (status, corpo) => ({ status, ok: status < 300, json: async () => corpo, text: async () => (typeof corpo === 'string' ? corpo : JSON.stringify(corpo)) });
 const reservados = {}; let nRes = 0;
+const issues = {}, issuesCriadas = [], comentarios = {};
 global.fetch = async (url, op = {}) => {
   const p = new URL(url).pathname;
+  { const mi = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues(?:\/(\d+)\/comments)?$/.exec(p);
+    if (mi) { if (op.method === 'POST') { if (mi[1] === 'semrepo') return resp(404, {}); const n = (issues[mi[1]] = (issues[mi[1]] || 0) + 1); issuesCriadas.push({ aluno: mi[1], n, ...JSON.parse(op.body) }); return resp(201, { number: n, html_url: `https://github.com/LAG-CEUMA/aluno-${mi[1]}/issues/${n}` }); }
+      return resp(200, comentarios[mi[1] + '#' + mi[2]] || []); } }
   if (p.endsWith('/git/trees/main')) return resp(200, { tree: [...Object.keys(arquivos).map((path) => ({ path })), ...Object.keys(dadosArq).map((path) => ({ path })), { path: 'niveis/../segredo/slides/aula-09.html' }, { path: 'docs/x.html' }] });
   if (p.endsWith('/contents/acesso/acesso.json')) {
     if (op.method === 'PUT') { const b = JSON.parse(op.body); if (b.sha !== sha) return resp(409, {}); cfg = JSON.parse(Buffer.from(b.content, 'base64').toString()); sha = 'sha' + (commits.push(b.message) + 1); return resp(200, {}); }
@@ -30,6 +34,7 @@ global.fetch = async (url, op = {}) => {
   { const md = /\/contents\/(dados\/.+)$/.exec(p);
     if (md) { const k = decodeURIComponent(md[1]);
       if (op.method === 'PUT') { const b = JSON.parse(op.body); if (dadosArq[k] && dadosArq[k].sha !== b.sha) return resp(409, {}); if (!dadosArq[k] && b.sha) return resp(422, {}); dadosArq[k] = { sha: 'd' + (++dSeq), texto: Buffer.from(b.content, 'base64').toString(), msg: b.message }; return resp(200, {}); }
+      if (op.method === 'DELETE') { delete dadosArq[k]; return resp(200, {}); }
       if (!dadosArq[k]) return resp(404, {});
       if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, dadosArq[k].texto);
       return resp(200, { sha: dadosArq[k].sha, content: Buffer.from(dadosArq[k].texto).toString('base64') }); } }
@@ -380,6 +385,43 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await pres({ acao: 'participacao', turma: T, chave: CH(1), usuario: 'alu3', tipo: 'penalidade', nota: 'conversa', pontos: 2 }, 'pres')).status, 200);
   r = JSON.parse((await getp({ acao: 'ranking', turma: T }, 'dono')).body); assert(r.ranking.length >= 3 && r.ranking[0].posicao === 1);
   assert.equal((await getp({ acao: 'ranking', turma: T }, 'alu1')).status, 403);
+  // ---------- atividades individuais ----------
+  {
+    const P = require('../lib/pontos'), d = require('../lib/dados'), A = require('../lib/atividades');
+    const ap = (c, user = 'dono') => pres({ turma: T, ...c }, user);
+    r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·E1', titulo: 'Primeira cena', peso: 10, prazo: '2026-11-09T23:59:00-03:00', descricao: 'Faça a cena.' }); assert.equal(r.status, 200); const id1 = JSON.parse(r.body).id; assert.equal(id1, 'n0-1-2-e1');
+    r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·E2', titulo: 'Plataforma', peso: 30, descricao: 'Entre.' }); const id2 = JSON.parse(r.body).id;
+    assert.equal((await ap({ acao: 'ativ_salvar', titulo: 'x' }, 'alu1')).status, 403); // aluno não cria
+    assert.equal((await ap({ acao: 'ativ_salvar', titulo: '' })).status, 400);
+    assert.equal(JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu1')).body).atividades.length, 0); // não liberada: aluno não vê
+    // liberar só para alu1 e alu2
+    r = JSON.parse((await ap({ acao: 'ativ_liberar', id: id1, alunos: ['alu1', 'alu2', 'intruso'] })).body); assert.equal(r.criadas, 2); assert.equal(issuesCriadas.length, 2); assert(/N0.1-2·E1 · Primeira cena/.test(issuesCriadas[0].title) && /Prazo:/.test(issuesCriadas[0].body));
+    r = JSON.parse((await ap({ acao: 'ativ_liberar', id: id1, alunos: ['alu1', 'alu2'] })).body); assert.equal(r.criadas, 0); assert.equal(r.jaTinham, 2); assert.equal(issuesCriadas.length, 2); // não duplica
+    assert.equal(JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu1')).body).atividades.length, 1);
+    assert.equal(JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu3')).body).atividades.length, 0); // alu3 não recebeu
+    // depois, libera para todos: só cria para quem falta
+    r = JSON.parse((await ap({ acao: 'ativ_liberar', id: id1 })).body); const rosterT = JSON.parse((await getp({ acao: 'atividades', turma: T })).body).roster; assert.equal(r.criadas, rosterT.length - 2); assert.equal(issuesCriadas.length, rosterT.length);
+    assert.equal(JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu3')).body).atividades.length, 1);
+    // conferência no GitHub
+    comentarios['alu1#1'] = [{ user: { login: 'Alu1' }, created_at: '2026-11-08T12:00:00Z', body: 'feito! print', html_url: 'u1' }, { user: { login: 'monitor' }, created_at: '2026-11-08T13:00:00Z', body: 'ok' }];
+    comentarios['alu2#1'] = [{ user: { login: 'alu2' }, created_at: '2026-11-11T12:00:00Z', body: 'tarde', html_url: 'u2' }];
+    r = JSON.parse((await ap({ acao: 'ativ_conferir', id: id1 })).body).conferencia; assert.equal(r.alu1.sugestao, 'prazo'); assert.equal(r.alu2.sugestao, 'atraso'); assert.equal(r.alu3.respondeu, false); assert.equal(r.alu1.comentarios, 1);
+    // entregas: um dispensado, um atrasado com nota, um que não entregou
+    assert.equal((await ap({ acao: 'ativ_entregas', id: id1, estados: { alu1: { estado: 'prazo', nota: 10 }, alu2: { estado: 'atraso', nota: 8 }, alu3: { estado: 'dispensado' } } })).status, 200);
+    const sess = await d.listarSessoes(); const ativs = await A.listar(T);
+    const rk = P.ranking(cfg, T, sess, ativs); const ex = (k) => rk.find((x) => x.usuario === k).partes.exercicios;
+    assert(ex('alu1') > ex('alu2')); assert.equal(ex('alu2') > 0, true);
+    const antes = ex('alu3'); assert.equal(rk.find((x) => x.usuario === 'alu3').fEx, 0); // dispensado não entra: sem denominador, nada de penalidade
+    // segunda atividade (peso 30) só para alu1: alu1 não entregou, pesa mais
+    await ap({ acao: 'ativ_liberar', id: id2, alunos: ['alu1'] }); const rk2 = P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T));
+    assert(rk2.find((x) => x.usuario === 'alu1').fEx < rk.find((x) => x.usuario === 'alu1').fEx); assert.equal(rk2.find((x) => x.usuario === 'alu2').fEx, rk.find((x) => x.usuario === 'alu2').fEx);
+    await ap({ acao: 'ativ_recolher', id: id2 }); assert.equal((await ap({ acao: 'ativ_remover', id: id2 })).status, 400); // já foi liberada
+    r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·E3', titulo: 'Rascunho', peso: 5 }); const id3 = JSON.parse(r.body).id; assert.equal((await ap({ acao: 'ativ_remover', id: id3 })).status, 200);
+    assert.equal((await ap({ acao: 'ativ_salvar', id: id1, codigo: 'N0.1-2·E1', titulo: 'Primeira cena', peso: 10, prazo: '2026-11-10T23:59:00-03:00', descricao: 'Faça a cena.' })).status, 200); // prazo pode ser mudado depois
+    assert.equal(JSON.parse((await getp({ acao: 'atividades', turma: T })).body).atividades.find((a) => a.id === id1).prazo.slice(0, 10), '2026-11-11'); // 23:59 -03 = 02:59Z do dia seguinte
+    assert(!Object.values(dadosArq).some((x) => /alu[123]/.test(x.msg || ''))); // commits sem nomes de alunos
+    assert.equal((await ap({ acao: 'ativ_liberar', id: 'nao-existe' })).status, 400);
+  }
   r = JSON.parse((await getp({ acao: 'minhapontuacao' }, 'alu1')).body); assert(r.turmas[0].top5.length > 0 && r.turmas[0].posicao >= 1 && r.turmas[0].total > 0);
   // ---------- eventos, inscrição, check-in e certificado ----------
   const evp = (corpo, user = 'dono') => chamar(h('eventos'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: corpo });

@@ -15,7 +15,7 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
-const BL={},PAD=['boasVindas','anuncios','agenda','vitrine','aulas','pontos','presenca'];let ORD={};
+const BL={},PAD=['boasVindas','anuncios','agenda','vitrine','aulas','ativ','pontos','presenca'];let ORD={};
 function porPeso(arr,fn,cls){const f=document.createDocumentFragment(),a=arr.slice().sort((x,y)=>(x.peso||0)-(y.peso||0));let i=0;while(i<a.length){let j=i;while(j<a.length&&a[j].peso===a[i].peso)j++;const r=el('div','cols c'+Math.min(j-i,3)+(cls?' '+cls:''));for(let k=i;k<j;k++)r.append(fn(a[k]));f.append(r);i=j}return f}
 function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||99,ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
   while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
@@ -73,6 +73,16 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
       if(t.top5.length){i.append(el('br'),el('small','','Top 5 da turma:'));for(const x of t.top5){i.append(el('br'),el('small','',`${x.posicao}º @${x.usuario} · ${x.total} pts`+(x.usuario===d.usuario?' (você)':'')))}}
       s.append(i)}
     BL.pontos=s;organizar();
+  }).catch(()=>{});
+  if(d.usuario)fetch('/api/presenca?acao=minhasatividades').then(r=>r.ok?r.json():null).then(m=>{
+    if(!m||!m.atividades.length)return;
+    const pend=m.atividades.filter(x=>!x.estado||x.estado==='nao').length;
+    const s=secao('Minhas atividades',`${m.atividades.length} liberada(s) · ${pend} sem entrega registrada`);s.id='sec-ativ';lembrar(s,'ativ',true);
+    const ST={prazo:'Entregue no prazo',atraso:'Entregue com atraso',nao:'Sem entrega registrada',dispensado:'Dispensado'};
+    for(const x of m.atividades){const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo),el('br'),
+      el('small','',`${x.prazo?'prazo '+new Date(x.prazo).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+' · ':''}peso ${x.peso} · ${ST[x.estado]||ST.nao}${x.nota!==null?' · nota '+x.nota:''}`));
+      if(x.issue){i.append(el('br'));const a=el('a','','Abrir a atividade e responder (Issue no GitHub)');a.href=x.issue;a.target='_blank';a.rel='noopener';i.append(a)}s.append(i)}
+    BL.ativ=s;organizar();
   }).catch(()=>{});
   // atalhos fixos no topo: Aulas sempre em primeiro e em destaque
   const at=document.getElementById('atalhos');at.hidden=false;

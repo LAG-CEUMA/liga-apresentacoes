@@ -175,7 +175,7 @@ module.exports = async (req, res) => {
         nivel: b.nivel === undefined ? (atual.nivel || '') : (dirs.has(b.nivel) ? b.nivel : ''),
         acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, acessoAte, alunos: atual.alunos,
         ...(atual.pesos ? { pesos: atual.pesos } : {}), ...(atual.rankingFinal ? { rankingFinal: atual.rankingFinal } : {}) };
-      if (status === 'arquivada' && atual.status !== 'arquivada') novo.turmas[id].rankingFinal = P.ranking(novo, id, await d.listarSessoes()).slice(0, 5).map((x) => ({ usuario: x.usuario, total: x.total })); // congela o Top 5
+      if (status === 'arquivada' && atual.status !== 'arquivada') novo.turmas[id].rankingFinal = P.ranking(novo, id, await d.listarSessoes(), await require('../lib/atividades').listar(id)).slice(0, 5).map((x) => ({ usuario: x.usuario, total: x.total })); // congela o Top 5
       if (status !== 'arquivada') delete novo.turmas[id].rankingFinal;
       msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
     } else if (b.acao === 'renomear_turma') {
