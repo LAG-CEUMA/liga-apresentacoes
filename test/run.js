@@ -20,9 +20,17 @@ const arquivos = {
 };
 const resp = (status, corpo) => ({ status, ok: status < 300, json: async () => corpo, text: async () => (typeof corpo === 'string' ? corpo : JSON.stringify(corpo)) });
 const reservados = {}; let nRes = 0;
+const reposAl = { 'aluno-pronto': { colab: true } };
 const issues = {}, issuesCriadas = [], comentarios = {};
 global.fetch = async (url, op = {}) => {
   const p = new URL(url).pathname;
+  { const gen = /\/repos\/LAG-CEUMA\/aluno-modelo\/generate$/.exec(p);
+    if (gen) { const n = JSON.parse(op.body).name; reposAl[n] = { colab: false }; return resp(201, {}); }
+    const rp = /\/repos\/LAG-CEUMA\/(aluno-[a-z0-9-]+)(?:\/(collaborators)\/([a-z0-9-]+)|\/(invitations))?$/.exec(p);
+    if (rp && rp[1] !== 'aluno-modelo' && !/\/issues/.test(p)) { const r = reposAl[rp[1]];
+      if (rp[4]) return resp(200, []);
+      if (rp[2]) { if (!r) return resp(404, {}); if (op.method === 'PUT') { if (rp[3] === 'fantasma') return resp(404, {}); r.colab = true; return resp(201, {}); } return resp(r.colab ? 204 : 404, {}); }
+      if (!op.method || op.method === 'GET') return r ? resp(200, {}) : resp(404, {}); } }
   { const mi = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues(?:\/(\d+)\/comments)?$/.exec(p);
     if (mi) { if (op.method === 'POST') { if (mi[1] === 'semrepo') return resp(404, {}); const n = (issues[mi[1]] = (issues[mi[1]] || 0) + 1); issuesCriadas.push({ aluno: mi[1], n, ...JSON.parse(op.body) }); return resp(201, { number: n, html_url: `https://github.com/LAG-CEUMA/aluno-${mi[1]}/issues/${n}` }); }
       return resp(200, comentarios[mi[1] + '#' + mi[2]] || []); } }
@@ -94,6 +102,17 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal(u.usuarioDaSessao(comCookie('dono', 'POST')), null); // escrita bloqueada
     assert.equal(u.usuarioDaSessao(comCookie('outro', 'GET')), 'outro'); // cookie de outro owner não vale
   }
+  // Repositórios dos alunos: verificar e criar/convidar (só owner)
+  { const ad = (b, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: b, headers: { origin: 'https://site.test', 'content-type': 'application/json' } });
+    const tid = 'TREPO'; const turmasAntes = cfg.turmas, alunosAntes = cfg.alunos; cfg.alunos = [...cfg.alunos, 'pronto', 'novato', 'fantasma']; cfg.turmas = { ...(cfg.turmas || {}), [tid]: { nome: 'Repos', status: 'andamento', nivel: 'nivel-00-tutorial', alunos: ['pronto', 'novato', 'fantasma'] } }; u.limparCache();
+    {
+      assert.equal((await ad({ acao: 'repos_alunos', turma: tid }, 'alu1')).status, 403);
+      assert.equal((await ad({ acao: 'repos_alunos', turma: 'nao-existe' })).status, 400);
+      const rr0 = await ad({ acao: 'repos_alunos', turma: tid }); let q = JSON.parse(rr0.body).resultados; const est = (k) => q.find((x) => x.usuario === k).estado;
+      assert.equal(est('pronto'), 'ok'); assert.equal(est('novato'), 'sem-repo'); assert(!reposAl['aluno-novato']); // só verifica, não cria
+      q = JSON.parse((await ad({ acao: 'repos_alunos', turma: tid, criar: true })).body).resultados;
+      assert.equal(est('novato'), 'criado-e-convidado'); assert(reposAl['aluno-novato'].colab); assert.equal(est('fantasma'), 'erro');
+      cfg.turmas = turmasAntes; cfg.alunos = alunosAntes; u.limparCache(); } }
   // Banco de imagens: só owner lista/exclui; em uso pede confirmação
   { const ad = (b, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: b, headers: { origin: 'https://site.test', 'content-type': 'application/json' } });
     imagens['teste-a.png'] = Buffer.from('x'); imagens['teste-b.png'] = Buffer.from('x');

@@ -203,6 +203,14 @@ function desenharCargos(){
 // ---------- aba Turmas ----------
 function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;return Object.entries(m).sort((x,y)=>x[0].localeCompare(y[0]))}
 const nomeNivel=d=>d?((niveisLista().find(x=>x[0]===d)||[])[1]||d):'Todos os níveis';
+const ESTADO_REPO={ok:['Pronto','ok'],'criado-com-acesso':['Criado, com acesso','ok'],convidado:['Convite enviado','m'],'criado-e-convidado':['Criado e convite enviado','m'],'convite-pendente':['Convite enviado, aguardando o aluno aceitar','m'],'sem-convite':['Repositório existe, falta convidar','t'],'sem-repo':['Repositório ainda não existe','t'],erro:['Erro','t']};
+async function reposDaTurma(id,nome){
+  const corpo=h('div',{},h('p',{class:'sub'},'Verificando…'));const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Repositórios dos alunos · '+nome),h('p',{class:'sub'},'Cada aluno precisa de um repositório privado aluno-<usuario> (criado do modelo aluno-modelo) e de um convite aceito. Aqui você confere e resolve de uma vez.'),corpo,h('div',{style:'display:flex;justify-content:flex-end;margin-top:12px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'))],'modal');
+  const mostrarR=(R,criou)=>{corpo.textContent='';const falta=R.some(x=>['sem-repo','sem-convite'].includes(x.estado));
+    corpo.append(h('div',{style:'max-height:46vh;overflow:auto'},...R.map(x=>h('div',{class:'linha',style:'display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid #fff2'},h('b',{},'@'+x.usuario),h('span',{class:'pill '+(ESTADO_REPO[x.estado]||['','t'])[1]},(ESTADO_REPO[x.estado]||[x.estado])[0]+(x.msg?': '+x.msg:''))))));
+    if(falta)corpo.append(h('button',{class:'btn',type:'button',style:'margin-top:12px',onclick:async()=>{if(!await confirmar({titulo:'Criar os repositórios que faltam?',corpo:[h('p',{class:'sub'},'Cria os repositórios privados a partir do modelo e envia o convite do GitHub a cada aluno. Nada é apagado.')],botao:'Criar e convidar'}))return;corpo.textContent='Trabalhando…';try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:true})).resultados,true)}catch(e){corpo.textContent=e.message}}},'Criar o que falta e convidar'));
+    else if(R.every(x=>x.estado==='ok'||x.estado==='criado-com-acesso'))corpo.append(h('p',{class:'sub',style:'margin-top:10px'},'Tudo certo: todos os alunos têm repositório e acesso.'))};
+  try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:false})).resultados)}catch(e){corpo.textContent=e.message}}
 function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Uma turma é um grupo de alunos que percorre os níveis junto. A chamada, a presença e os certificados sempre pertencem a uma turma. O conteúdo das aulas é o mesmo para todas.'));
@@ -213,7 +221,7 @@ function desenharTurmas(){
       h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
-      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',

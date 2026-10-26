@@ -51,6 +51,36 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { ok: true });
       } catch (e) { if (e && e.status) return u.json(res, e.status, { erro: e.message, usos: e.usos }); throw e; }
     }
+    if (b.acao === 'repos_alunos') {
+      if (!dono) return nao();
+      const t = (cfg.turmas || {})[String(b.turma || '')]; if (!t) return u.json(res, 400, { erro: 'Turma inválida.' });
+      const ORG = process.env.GH_ORG || 'LAG-CEUMA'; const criar = b.criar === true;
+      const um = async (k) => {
+        try {
+          let r = await u.gh(`/repos/${ORG}/aluno-${k}`); let existe = r.ok, criado = false;
+          if (!existe && r.status !== 404) return { usuario: k, estado: 'erro', msg: `GitHub ${r.status} ao consultar o repositório` };
+          if (!existe && criar) {
+            const g = await u.gh(`/repos/${ORG}/aluno-modelo/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owner: ORG, name: `aluno-${k}`, private: true, description: `Repositório do aluno @${k} na Liga de Games Ceuma` }) });
+            if (!g.ok) return { usuario: k, estado: 'erro', msg: g.status === 404 ? 'o repositório-modelo "aluno-modelo" não existe ou não está marcado como modelo (Template repository)' : `GitHub ${g.status} ao criar o repositório` };
+            existe = true; criado = true;
+          }
+          if (!existe) return { usuario: k, estado: 'sem-repo' };
+          const c = await u.gh(`/repos/${ORG}/aluno-${k}/collaborators/${k}`);
+          if (c.status === 204) return { usuario: k, estado: criado ? 'criado-com-acesso' : 'ok' };
+          if (!criar) {
+            const inv = await u.gh(`/repos/${ORG}/aluno-${k}/invitations`); let pend = false;
+            if (inv.ok) pend = (await inv.json()).some((x) => x.invitee && String(x.invitee.login).toLowerCase() === k);
+            return { usuario: k, estado: pend ? 'convite-pendente' : 'sem-convite' };
+          }
+          const pu = await u.gh(`/repos/${ORG}/aluno-${k}/collaborators/${k}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permission: 'push' }) });
+          if (!pu.ok) return { usuario: k, estado: 'erro', msg: pu.status === 404 ? 'usuário do GitHub não encontrado (confira a grafia)' : `GitHub ${pu.status} ao convidar` };
+          return { usuario: k, estado: pu.status === 204 ? 'ok' : (criado ? 'criado-e-convidado' : 'convidado') };
+        } catch (e) { return { usuario: k, estado: 'erro', msg: 'falha de rede' }; }
+      };
+      const alunos = (t.alunos || []).slice(0, 60); const out = [];
+      for (let i = 0; i < alunos.length; i += 5) out.push(...await Promise.all(alunos.slice(i, i + 5).map(um)));
+      return u.json(res, 200, { ok: true, criar, resultados: out });
+    }
     if (b.acao === 'pendente_salvar' || b.acao === 'pendente_remover') {
       if (!dono) return nao();
       const PD = require('../lib/pendentes');
