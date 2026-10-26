@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
-      if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
+      if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.pendentes = (await require('../lib/pendentes').ler()).lista; v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
     }
@@ -33,6 +33,14 @@ module.exports = async (req, res) => {
         if (b.acao === 'reservado_remover') { await RS.remover(String(b.token || ''), usuario); return u.json(res, 200, { ok: true }); }
         const item = await RS.salvar({ token: b.token ? String(b.token) : '', titulo: b.titulo, html: b.html }, usuario);
         return u.json(res, 200, { ok: true, item });
+      } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+    }
+    if (b.acao === 'pendente_salvar' || b.acao === 'pendente_remover') {
+      if (!dono) return nao();
+      const PD = require('../lib/pendentes');
+      try {
+        if (b.acao === 'pendente_remover') { await PD.remover(b.email, usuario); return u.json(res, 200, { ok: true }); }
+        return u.json(res, 200, { ok: true, item: await PD.salvar(b, usuario) });
       } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
     if (b.acao === 'wiki_salvar' || b.acao === 'wiki_remover') {

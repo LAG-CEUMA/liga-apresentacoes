@@ -356,13 +356,30 @@ function desenharWiki(){
     d.append(h('summary',null,h('b',null,p.titulo),' · '+p.categoria+' · '+(W.vis[p.visibilidade]||p.visibilidade)),mk(p));raiz.append(d)}
 }
 
+
+// ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
+function desenharPendentes(){
+  const raiz=$('p-pendentes');raiz.textContent='';const L=D.pendentes||[];
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Membros da equipe administrativa cadastrados só pelo ',h('b',null,'e-mail institucional'),' e cargo. A plataforma entra somente com GitHub, então o e-mail aqui é ',h('b',null,'contato'),' (não dá acesso). Quando a pessoa informar o usuário do GitHub, preencha o campo e cadastre-a em Pessoas.'));
+  const mk=(p)=>{p=p||{};const c=h('div',{class:'card',style:'margin:8px 0;max-width:760px'});
+    const em=h('input',{type:'text',placeholder:'E-mail institucional',value:p.email||'',style:'width:100%;margin:4px 0'}),cg=h('input',{type:'text',placeholder:'Cargo (ex.: Vice presidente)',value:p.cargo||'',style:'width:100%;margin:4px 0'}),no=h('input',{type:'text',placeholder:'Nome (opcional)',value:p.nome||'',style:'width:100%;margin:4px 0'}),us=h('input',{type:'text',placeholder:'Usuário do GitHub (quando souber)',value:p.usuario||'',style:'width:100%;margin:4px 0'});
+    const bt=h('button',{type:'button',class:'btn'},p.email?'Salvar':'Adicionar');
+    bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',anterior:p.email||'',email:em.value,cargo:cg.value,nome:no.value,usuario:us.value});aviso('Salvo.');await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
+    c.append(em,cg,no,us,h('div',{style:'margin-top:6px;display:flex;gap:8px'},bt));
+    if(p.email){const rem=h('button',{type:'button',class:'btn sec'},'Remover');rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
+      try{await enviar({acao:'pendente_remover',email:p.email});aviso('Removido.');await carregar()}catch(e){aviso(e.message,true)}};c.lastChild.append(rem)}return c};
+  if(L.length){const cp=h('button',{type:'button',class:'btn sec'},'Copiar todos os e-mails ('+L.length+')');cp.onclick=async()=>{try{await navigator.clipboard.writeText(L.map(x=>x.email).join('; '));aviso('E-mails copiados.')}catch{aviso('Não consegui copiar.',true)}};raiz.append(cp)}
+  for(const p of L){const d=h('details',{style:'max-width:760px;margin:6px 0'});d.append(h('summary',null,h('b',null,p.cargo||'(sem cargo)'),' · '+p.email+(p.usuario?' · @'+p.usuario:'')),mk(p));raiz.append(d)}
+  const n=h('details',{open:!L.length});n.append(h('summary',null,'+ Adicionar contato'),mk());raiz.append(n);
+}
+
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.dono)a.push(['pendentes','Contatos da equipe']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['wiki'],['pendentes'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='wiki')desenharWiki();else if(k==='pendentes')desenharPendentes();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}

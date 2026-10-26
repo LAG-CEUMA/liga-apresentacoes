@@ -611,6 +611,15 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal(ct(['0:00 a 0:10', '', '0:10 a 0:20']).erros.length, 1); assert.equal(ct(['0:00 a 0:10', 'x']).erros.length, 1);
     assert.deepEqual(ct(['0:00 a 0:10', '0:00 a 0:10', '0:10 a 1:00']).avisos, []); assert(/passa de 1 hora/.test(ct(['0:00 a 0:30', '0:30 a 1:10']).avisos[0]));
     assert(ct(['0:00 a 0:10', '0:20 a 1:00']).avisos.some((x) => /buraco/.test(x))); }
+  // Contatos da equipe (e-mail institucional sem GitHub)
+  { const w = (b, user = 'dono') => post(b, {}, user);
+    assert.equal((await w({ acao: 'pendente_salvar', email: 'a1@ceuma.com.br', cargo: 'Secretário' }, 'alu1')).status, 403);
+    assert.equal((await w({ acao: 'pendente_salvar', email: 'invalido' })).status, 400);
+    assert.equal((await w({ acao: 'pendente_salvar', email: 'A101526@ceuma.com.br', cargo: 'Vice presidente' })).status, 200);
+    assert.equal((await w({ acao: 'pendente_salvar', email: 'a194678@ceuma.com.br', cargo: 'Secretário' })).status, 200);
+    assert.equal((await w({ acao: 'pendente_salvar', anterior: 'a101526@ceuma.com.br', email: 'a101526@ceuma.com.br', cargo: 'Vice presidente', usuario: '@Fulano' })).status, 200);
+    const L = (await require('../lib/pendentes').ler()).lista; assert.equal(L.length, 2); assert.equal(L[0].email, 'a101526@ceuma.com.br'); assert.equal(L[0].usuario, 'fulano');
+    assert.equal((await w({ acao: 'pendente_remover', email: 'a194678@ceuma.com.br' })).status, 200); assert.equal((await require('../lib/pendentes').ler()).lista.length, 1); }
   // Guias e dúvidas (wiki): visibilidade por função
   { const W = require('../lib/wiki'); const w = (b, user = 'dono') => post(b, {}, user);
     assert.equal((await w({ acao: 'wiki_salvar', titulo: 'X', visibilidade: 'equipe', html: '<h1>a</h1>' }, 'alu1')).status, 403);
