@@ -120,22 +120,22 @@ function desenhar(){
   // 10 ordem dos blocos
   // 11 destaques de ranking (foto do momento)
   S.rankings=S.rankings||[];
-  const lR=h('div',{});S.rankings.forEach((r,i)=>{
-    const dt=r.foto?r.foto.split('-').reverse().join('/'):'sem foto';
-    const tab=h('div',{class:'sub',style:'margin:6px 0'},...(r.itens||[]).map(x=>h('div',{},x.posicao+'º @'+x.usuario+' · '+x.total+' pts')));
-    const at=h('button',{class:'btn sec',type:'button',onclick:async()=>{try{const q=await api({acao:'ranking_gerar',turma:r.turma,quantos:Math.max(3,(r.itens||[]).length>5?10:(r.itens||[]).length>3?5:3)});r.itens=q.itens;r.foto=q.foto;r.turmaNome=q.turmaNome;mudou(true);aviso('Foto atualizada. Clique em Salvar para publicar.')}catch(e){aviso(e.message,1)}}},'Atualizar foto agora');
-    lR.append(h('div',{class:'linha',style:'display:block'},h('div',{class:'form'},campo('Título (ex.: Top 5 de outubro)',texto(r,'titulo')),campo('Chamada (opcional)',texto(r,'texto',{max:400,area:true}),true),
+  const lRk=h('div',{});S.rankings.forEach((r,i)=>{
+    const dtRk=r.foto?r.foto.split('-').reverse().join('/'):'sem foto';
+    const tabRk=h('div',{class:'sub',style:'margin:6px 0'},...(r.itens||[]).map(x=>h('div',{},x.posicao+'º @'+x.usuario+' · '+x.total+' pts')));
+    const atRk=h('button',{class:'btn sec',type:'button',onclick:async()=>{try{const q=await api({acao:'ranking_gerar',turma:r.turma,quantos:Math.max(3,(r.itens||[]).length>5?10:(r.itens||[]).length>3?5:3)});r.itens=q.itens;r.foto=q.foto;r.turmaNome=q.turmaNome;mudou(true);aviso('Foto atualizada. Clique em Salvar para publicar.')}catch(e){aviso(e.message,1)}}},'Atualizar foto agora');
+    lRk.append(h('div',{class:'linha',style:'display:block'},h('div',{class:'form'},campo('Título (ex.: Top 5 de outubro)',texto(r,'titulo')),campo('Chamada (opcional)',texto(r,'texto',{max:400,area:true}),true),
       campo('Quem vê',vis(r)),pesoCampo(r),campo('Mostrar a partir de',texto(r,'de',{tipo:'date'})),campo('Mostrar até',texto(r,'ate',{tipo:'date'}))),
-      h('div',{class:'sub'},'Turma: '+(r.turmaNome||r.turma)+' · foto de '+dt+' (não muda sozinha)'),tab,
-      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},at,h('button',{class:'btn sec',type:'button',onclick:()=>{if(confirm('Apagar este destaque?')){S.rankings.splice(i,1);mudou(true)}}},'Apagar destaque'))))});
-  const selT=h('select',{},...(TURMAS||[]).map(t=>h('option',{value:t.id},t.nome+(t.status==='arquivada'?' (arquivada)':'')))),selN=h('select',{},h('option',{value:3},'Top 3'),h('option',{value:5,selected:true},'Top 5'),h('option',{value:10},'Top 10'));
-  const novo=h('button',{class:'btn',type:'button',onclick:async()=>{if(!selT.value)return aviso('Não há turmas cadastradas.',1);try{const q=await api({acao:'ranking_gerar',turma:selT.value,quantos:+selN.value});
-    S.rankings.unshift({id:'',peso:proxPeso(S.rankings),titulo:'Top '+selN.value+' · '+q.turmaNome,texto:'',turma:selT.value,turmaNome:q.turmaNome,foto:q.foto,itens:q.itens,visivel:'membros',de:'',ate:''});mudou(true)}catch(e){aviso(e.message,1)}}},'+ Publicar foto do ranking');
-  c.append(secao('11. Destaques de ranking',S.rankings.length+' publicado(s)',false,h('p',{class:'sub',style:'max-width:760px'},'Publica na tela inicial uma FOTO do ranking de uma turma, com a data de hoje: ela não muda sozinha. Use no fim do mês, depois de um desafio ou no fim do semestre. Só entra quem já tem pontos. Para atualizar, use "Atualizar foto agora". Depois de montar, clique em Salvar no topo.'),
-    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px'},selT,selN,novo),lR));
-  S.ordem=S.ordem||{};const BLO=[['boasVindas','Boas-vindas (item 5)'],['anuncios','Anúncios (item 6)'],['agenda','Agenda (item 7)'],['vitrine','Vitrine (item 9)'],['rankings','Destaques de ranking (item 11)']];
+      h('div',{class:'sub'},'Turma: '+(r.turmaNome||r.turma)+' · foto de '+dtRk+' (não muda sozinha)'),tabRk,
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},atRk,h('button',{class:'btn sec',type:'button',onclick:()=>{if(confirm('Apagar este destaque?')){S.rankings.splice(i,1);mudou(true)}}},'Apagar destaque'))))});
+  const selTRk=h('select',{},...(TURMAS||[]).map(t=>h('option',{value:t.id},t.nome+(t.status==='arquivada'?' (arquivada)':'')))),selNRk=h('select',{},h('option',{value:3},'Top 3'),h('option',{value:5,selected:true},'Top 5'),h('option',{value:10},'Top 10'));
+  const novoRk=h('button',{class:'btn',type:'button',onclick:async()=>{if(!selTRk.value)return aviso('Não há turmas cadastradas.',1);try{const q=await api({acao:'ranking_gerar',turma:selTRk.value,quantos:+selNRk.value});
+    S.rankings.unshift({id:'',peso:proxPeso(S.rankings),titulo:'Top '+selNRk.value+' · '+q.turmaNome,texto:'',turma:selTRk.value,turmaNome:q.turmaNome,foto:q.foto,itens:q.itens,visivel:'membros',de:'',ate:''});mudou(true)}catch(e){aviso(e.message,1)}}},'+ Publicar foto do ranking');
+  c.append(secao('10. Destaques de ranking',S.rankings.length+' publicado(s)',false,h('p',{class:'sub',style:'max-width:760px'},'Publica na tela inicial uma FOTO do ranking de uma turma, com a data de hoje: ela não muda sozinha. Use no fim do mês, depois de um desafio ou no fim do semestre. Só entra quem já tem pontos. Para atualizar, use "Atualizar foto agora". Depois de montar, clique em Salvar no topo.'),
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px'},selTRk,selNRk,novoRk),lRk));
+  S.ordem=S.ordem||{};const BLO=[['boasVindas','Boas-vindas (item 5)'],['anuncios','Anúncios (item 6)'],['agenda','Agenda (item 7)'],['vitrine','Vitrine (item 9)'],['rankings','Destaques de ranking (item 10)']];
   const fo=h('div',{class:'form'});for(const [k,t] of BLO){const e=h('input',{type:'number',min:1,max:99,step:1,required:true,value:S.ordem[k]??''});e.addEventListener('input',()=>{S.ordem[k]=e.value===''?'':Math.round(+e.value);mudou()});fo.append(campo(t,e))}
-  c.append(secao('10. Ordem dos blocos da tela inicial','menor número aparece primeiro',false,h('p',{class:'sub',style:'max-width:760px'},'Dê um número de 1 a 99 para cada bloco; o menor aparece primeiro. Blocos com o mesmo número ficam lado a lado (2 ou 3 colunas). O mesmo vale dentro de Anúncios, Agenda e Vitrine: cada item tem sua própria ordem. Dica: use 10, 20, 30… para sempre caber um item no meio depois.'),fo));
+  c.append(secao('11. Ordem dos blocos da tela inicial','menor número aparece primeiro',false,h('p',{class:'sub',style:'max-width:760px'},'Dê um número de 1 a 99 para cada bloco; o menor aparece primeiro. Blocos com o mesmo número ficam lado a lado (2 ou 3 colunas). O mesmo vale dentro de Anúncios, Agenda e Vitrine: cada item tem sua própria ordem. Dica: use 10, 20, 30… para sempre caber um item no meio depois.'),fo));
 }
 function resumo(){const o=JSON.parse(ORIG),n=S,r=[];
   const d=(a,b)=>JSON.stringify(a)!==JSON.stringify(b);
@@ -145,7 +145,7 @@ $('salvar').onclick=async()=>{const b=$('salvar');const ok=x=>Number.isInteger(+
 $('descartar').onclick=()=>{if(confirm('Descartar as alterações não salvas?'))location.reload()};
 fetch('/api/personalizar').then(async r=>{
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Entre com a sua conta ou peça a permissão a um owner.</p><a class="btn" href="/api/login?next=/personalizar">Entrar com GitHub</a>';return}
-  const d=await r.json();S=d.site;ORIG=JSON.stringify(S);IMGS=d.imagens;REDES=d.redes;desenhar();previa()
+  const d=await r.json();S=d.site;ORIG=JSON.stringify(S);IMGS=d.imagens;TURMAS=d.turmas||[];REDES=d.redes;desenhar();previa()
 }).catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 </body></html>
