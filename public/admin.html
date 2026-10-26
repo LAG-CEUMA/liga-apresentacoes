@@ -9,6 +9,7 @@
 <section id="p-turmas" hidden></section>
 <section id="p-pontos" hidden></section>
 <section id="p-reservadas" hidden></section>
+<section id="p-imagens" hidden></section>
 <section id="p-wiki" hidden></section>
 <section id="p-pendentes" hidden></section>
 <section id="p-aulas" hidden><p class="sub" style="max-width:760px">Para <b>tornar uma aula pública</b>, clique em <b>Público</b> na linha dela. <b>Só owners</b> (padrão): só vocês veem. <b>Membros</b>: alunos e monitores logados. <b>Público</b>: qualquer pessoa com o link. O roteiro nunca depende desse nível.</p><div id="aulas"><p>Carregando…</p></div></section>
@@ -20,6 +21,10 @@
 <li><b>Quem é quem:</b> o site identifica a pessoa pelo <b>login do GitHub</b> (só o nome de usuário; nenhuma permissão sobre a conta dela é pedida).</li>
 <li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
 </ol></details>
+<details><summary>Ver como uma pessoa e Banco de imagens</summary>
+<p><b>Ver como:</b> na ficha de qualquer pessoa (aba Pessoas), o botão "Ver como @usuário" faz você navegar pela plataforma exatamente como ela, para testar o que ela vê e pode fazer. É somente leitura, vale por 1 hora e uma faixa roxa embaixo permite sair. Só owners usam, e não é possível entrar como outro owner.</p>
+<p><b>Banco de imagens:</b> aba só para owners com todas as imagens enviadas (site e slides). Excluir apaga o arquivo do GitHub; se a imagem estiver em uso no site ou em slides, o sistema mostra onde e pede confirmação extra.</p>
+</details>
 <details><summary>Editor de slides: criar e editar aulas sem código</summary>
 <ol>
 <li>Abra <b>/editor</b> (botão "Editor de slides" no Painel e na tela inicial). Cada nível lista suas aulas; <b>Editar slides</b> abre a aula, <b>+ Nova aula</b> cria outra (do zero ou copiando uma existente).</li>
@@ -186,4 +191,5 @@
 <li>Para trocar quem é "owner fixo", é preciso editar <code>ADMIN_USERS</code> na Vercel (Settings → Environment Variables) e fazer redeploy.</li></ul></details>
 </div></section>
 </main><div id="msg" class="msg" hidden></div>
-<script src="/site.js"></script><script src="/admin.js"></script></body></html>
+<script src="/site.js"></script><script src="/admin.js"></script><script src="/como.js"></script>
+</body></html>

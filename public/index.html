@@ -84,4 +84,5 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   for(const [id,t,pri] of [['sec-aulas','Aulas',true],['sec-anuncios','Anúncios'],['sec-agenda','Agenda']]){const alvo=document.getElementById(id);if(!alvo)continue;
     const b=el('button','btn'+(pri?'':' sec'),t);b.type='button';b.onclick=()=>{if(id==='sec-aulas'){location.href='/aulas';return}alvo.open=true;alvo.scrollIntoView({behavior:'smooth',block:'start'})};at.append(b)}
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
-</script></body></html>
+</script><script src="/como.js"></script>
+</body></html>

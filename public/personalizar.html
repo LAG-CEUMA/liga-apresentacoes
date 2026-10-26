@@ -132,4 +132,5 @@ fetch('/api/personalizar').then(async r=>{
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Entre com a sua conta ou peça a permissão a um owner.</p><a class="btn" href="/api/login?next=/personalizar">Entrar com GitHub</a>';return}
   const d=await r.json();S=d.site;ORIG=JSON.stringify(S);IMGS=d.imagens;REDES=d.redes;desenhar();previa()
 }).catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
-</script></body></html>
+</script><script src="/como.js"></script>
+</body></html>

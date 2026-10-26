@@ -18,4 +18,5 @@ fetch('/api/aulas',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{const
     C.append(g)}
   if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));C.append(p)}
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
-</script></body></html>
+</script><script src="/como.js"></script>
+</body></html>

@@ -175,14 +175,11 @@ function abrirGaveta(nome,contato){
     box.scrollTop=y}
   desenhar()}
 
-function verComo(i){
-  const p=i.perms,botoes=[['Aulas',1,'btn']];
-  if(p.includes('aulas')||p.includes('pessoas'))botoes.push(['Painel',1]);if(p.includes('site'))botoes.push(['Personalizar',1]);if(p.includes('tarefas'))botoes.push(['Tarefas de casa',1]);if(p.includes('presenca')||(i.mon&&i.mon.aulas.length))botoes.push(['Presença',1]);botoes.push(['Sair',1]);
-  const sem=[];if(!(p.includes('aulas')||p.includes('pessoas')))sem.push('Painel');if(!p.includes('site'))sem.push('Personalizar');if(!p.includes('tarefas'))sem.push('Tarefas de casa');if(!(p.includes('presenca')||(i.mon&&i.mon.aulas.length)))sem.push('Presença');if(!i.owner)sem.push('roteiros que não foram liberados','aulas marcadas como Só owners');
-  const {fechar}=camada([h('div',{class:'banner-ver'},h('span',{},h('b',{},'Você está vendo como '+(i.n?'@'+i.n:'esta pessoa')+'.'),' Somente leitura: nada aqui altera dados.'),h('button',{class:'btn',type:'button',style:'background:#1a1230;color:#fff',onclick:()=>fechar()},'Sair desta visualização')),
-    h('div',{class:'hero'},h('p',{class:'tag'},'LIGA ACADÊMICA DE GAMES · CEUMA'),h('h2',{},'Início'),h('div',{},...pillsPapel(i)),h('p',{class:'sub',style:'margin-top:10px'},'Aqui você encontra as aulas, os avisos e a agenda da liga.')),
-    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'},...botoes.map(([t],k)=>h('button',{type:'button',class:'btn'+(k?' sec':'')},t))),
-    h('div',{class:'dica'},h('b',{},'O que não aparece para esta pessoa'),h('br'),sem.join(' · ')||'Nada: ela vê tudo.')],'modal');
+async function verComo(i){
+  if(i.owner){aviso('Owners já veem tudo; escolha outra pessoa para testar.',1);return}
+  if(!i.n){aviso('Informe o usuário do GitHub para testar o acesso.',1);return}
+  if(!await confirmar({titulo:'Entrar como @'+i.n+'?',corpo:[h('p',{class:'sub'},'Você navegará pela plataforma exatamente como essa pessoa (somente leitura: nenhuma ação altera dados). Vale por 1 hora; uma faixa roxa na parte de baixo permite sair a qualquer momento. Salve a ficha antes se alterou permissões.')],botao:'Entrar como esta pessoa'}))return;
+  try{const r=await fetch('/api/como',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:i.n})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');location.href='/'}catch(e){aviso(e.message,1)}
 }
 
 
@@ -318,6 +315,22 @@ function desenharAulas(d){
 
 // ---------- páginas reservadas (só owners) ----------
 function lerHtml(arq){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result));r.onerror=()=>no(new Error('Não consegui ler o arquivo.'));r.readAsText(arq)})}
+async function desenharImagens(){
+  const p=$('p-imagens');p.textContent='Carregando…';
+  let L;try{L=(await enviar({acao:'imagens_listar'})).imagens}catch(e){p.textContent=e.message;return}
+  p.textContent='';
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Todas as imagens enviadas para o site e para os slides ficam aqui. Excluir apaga o arquivo do GitHub (fica no histórico de commits). Se a imagem estiver em uso, o sistema avisa onde antes de excluir.'));
+  if(!L.length){p.append(h('p',{class:'sub'},'Nenhuma imagem enviada ainda.'));return}
+  const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px'});
+  for(const x of L){
+    const ex=h('button',{class:'btn sec',type:'button',style:'width:100%;margin-top:8px',onclick:async()=>{
+      if(!await confirmar({titulo:'Excluir esta imagem?',corpo:[h('img',{src:'/api/imagem?n='+encodeURIComponent(x.nome),style:'max-width:100%;max-height:160px;border-radius:8px'}),h('p',{class:'sub'},'O arquivo será apagado do GitHub. '+(x.noSite?'Ela está em uso no site.':'O sistema ainda verifica se algum slide a usa.'))],botao:'Excluir imagem'}))return;
+      try{await enviar({acao:'imagem_excluir',nome:x.nome});aviso('Imagem excluída');desenharImagens()}
+      catch(e){if(/em uso/.test(e.message)){if(await confirmar({titulo:'Imagem em uso',corpo:[h('p',{class:'sub'},e.message)],digitar:'excluir',botao:'Excluir mesmo assim'})){try{await enviar({acao:'imagem_excluir',nome:x.nome,forcar:true});aviso('Imagem excluída');desenharImagens()}catch(e2){aviso(e2.message,1)}}}else aviso(e.message,1)}}},'Excluir');
+    g.append(h('div',{class:'cartao2'},h('img',{src:'/api/imagem?n='+encodeURIComponent(x.nome),loading:'lazy',style:'width:100%;height:110px;object-fit:cover;border-radius:8px;background:#0003'}),
+      h('div',{class:'sub',style:'word-break:break-all;margin-top:6px'},x.nome),h('div',{},...x.modulos.map(m=>h('span',{class:'pill e'},m==='slides'?'Slides':'Site')),x.noSite?h('span',{class:'pill'},'em uso'):''),ex))}
+  p.append(g)}
+
 function desenharReservadas(){
   const raiz=$('p-reservadas');raiz.textContent='';
   raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Páginas com link secreto: ',h('b',null,'não aparecem em nenhuma lista do site'),', não são indexadas e abrem sem login para quem receber o link. Só owners veem esta lista e podem trocar o conteúdo. O endereço não muda quando você substitui o arquivo.'));
@@ -378,12 +391,12 @@ function desenharWiki(){
 
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}

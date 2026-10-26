@@ -17,4 +17,5 @@ function desenhar(){const L=$('lista');L.textContent='';const termos=norm($('q')
     for(const p of g){const a=el('a','item');a.href='/wiki/'+p.slug;const b=el('b',null,p.titulo);a.append(b);if(p.resumo)a.append(el('div','sub',p.resumo));L.append(a)}}}
 fetch('/api/wiki?espaco=adm',{credentials:'same-origin'}).then(async r=>{if(r.status===401){location.href='/api/login';return}if(!r.ok)throw 0;D=await r.json();desenhar()}).catch(()=>{$('lista').textContent='Não consegui carregar os guias agora.'});
 $('q').addEventListener('input',()=>D&&desenhar());
-</script></main></body></html>
+</script></main><script src="/como.js"></script>
+</body></html>

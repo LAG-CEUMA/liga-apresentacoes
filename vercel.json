@@ -44,6 +44,10 @@
       "destination": "/api/auth?rota=logout"
     },
     {
+      "source": "/api/como",
+      "destination": "/api/auth?rota=como"
+    },
+    {
       "source": "/api/site",
       "destination": "/api/publico?rota=site"
     },

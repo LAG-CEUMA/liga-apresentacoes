@@ -36,6 +36,18 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { ok: true, item });
       } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
+    if (b.acao === 'imagens_listar' || b.acao === 'imagem_excluir') {
+      if (!dono) return nao();
+      const Site = require('../lib/site');
+      try {
+        if (b.acao === 'imagens_listar') {
+          const lista = await Site.imagensComModulos(); const { site } = await Site.lerSite(); const js = JSON.stringify(site);
+          return u.json(res, 200, { ok: true, imagens: lista.map((x) => ({ ...x, noSite: js.includes(x.nome) })) });
+        }
+        await Site.excluirImagem(String(b.nome || ''), usuario, b.forcar === true);
+        return u.json(res, 200, { ok: true });
+      } catch (e) { if (e && e.status) return u.json(res, e.status, { erro: e.message, usos: e.usos }); throw e; }
+    }
     if (b.acao === 'pendente_salvar' || b.acao === 'pendente_remover') {
       if (!dono) return nao();
       const PD = require('../lib/pendentes');

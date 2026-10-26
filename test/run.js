@@ -56,7 +56,8 @@ global.fetch = async (url, op = {}) => {
   }
   { const mi = /\/contents\/site\/imagens\/(.+)$/.exec(p);
     if (mi) { if (op.method === 'PUT') { imagens[mi[1]] = Buffer.from(JSON.parse(op.body).content, 'base64'); return resp(201, {}); }
-      return imagens[mi[1]] ? { status: 200, ok: true, arrayBuffer: async () => imagens[mi[1]] } : resp(404, {}); } }
+      if (op.method === 'DELETE') { delete imagens[mi[1]]; return resp(200, {}); }
+      return imagens[mi[1]] ? { status: 200, ok: true, arrayBuffer: async () => imagens[mi[1]], json: async () => ({ sha: 'i1' }) } : resp(404, {}); } }
   const m = /\/contents\/(.+)$/.exec(p);
   if (m && op.method === 'PUT' && /^niveis\//.test(decodeURIComponent(m[1]))) { const k = decodeURIComponent(m[1]), b = JSON.parse(op.body);
     if (arquivos[k] !== undefined && b.sha !== 'sa' + (shaArq[k] || 0)) return resp(409, {}); if (arquivos[k] === undefined && b.sha) return resp(422, {});
@@ -83,6 +84,26 @@ function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {
 const ver = (user, id, roteiro) => chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id, ...(roteiro ? { roteiro: '1' } : {}) }, user });
 const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
 (async () => {
+  // Ver como: owner navega como outra pessoa (somente leitura)
+  { const cc = (user, body, extra = {}) => chamar((rq, rs) => require('../lib/rotas/como')(rq, rs), { user, method: 'POST', body, headers: { origin: 'https://site.test', 'content-type': 'application/json', ...extra } });
+    assert.equal((await cc('alu1', { usuario: 'alu1' })).status, 403);
+    assert.equal((await cc('dono', { usuario: 'chefe' })).status, 400);
+    const r0 = await cc("dono", { usuario: "alu1" }); assert.equal(r0.status, 200); const ck = String(r0.h["Set-Cookie"]).split(';')[0];
+    const comCookie = (user, metodo) => { const rq = { method: metodo, headers: { host: 'site.test', cookie: 'liga_s=' + encodeURIComponent(u.assinar({ u: user, exp: Date.now() + 1e6 })) + '; ' + ck } }; return rq; };
+    assert.equal(u.usuarioDaSessao(comCookie('dono', 'GET')), 'alu1');
+    assert.equal(u.usuarioDaSessao(comCookie('dono', 'POST')), null); // escrita bloqueada
+    assert.equal(u.usuarioDaSessao(comCookie('outro', 'GET')), 'outro'); // cookie de outro owner não vale
+  }
+  // Banco de imagens: só owner lista/exclui; em uso pede confirmação
+  { const ad = (b, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: b, headers: { origin: 'https://site.test', 'content-type': 'application/json' } });
+    imagens['teste-a.png'] = Buffer.from('x'); imagens['teste-b.png'] = Buffer.from('x');
+    assert.equal((await ad({ acao: 'imagens_listar' }, 'alu1')).status, 403);
+    assert.equal((await ad({ acao: 'imagem_excluir', nome: 'teste-a.png' }, 'alu1')).status, 403);
+    const ls = JSON.parse((await ad({ acao: 'imagens_listar' })).body); assert(ls.imagens.some((x) => x.nome === 'teste-a.png'));
+    assert.equal((await ad({ acao: 'imagem_excluir', nome: '../x.png' })).status, 400);
+    assert.equal((await ad({ acao: 'imagem_excluir', nome: 'teste-a.png' })).status, 200); assert(!imagens['teste-a.png']);
+    assert.equal((await ad({ acao: 'imagem_excluir', nome: 'teste-a.png' })).status, 404);
+    imagens['teste-b.png'] && delete imagens['teste-b.png']; }
   // público sem login; membros exige login; padrão é só owners
   let r = await ver(null, 'aula-01'); assert.equal(r.status, 200); assert(r.body.includes('SLIDES1')); assert(r.h['Cache-Control'].startsWith('public'));
   r = await ver(null, 'aula-02'); assert.equal(r.status, 302); assert(r.h.Location.startsWith('/api/login?next='));
