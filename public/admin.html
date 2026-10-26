@@ -13,7 +13,7 @@
 <section id="p-imagens" hidden></section>
 <section id="p-wiki" hidden></section>
 <section id="p-pendentes" hidden></section>
-<section id="p-aulas" hidden><p class="sub" style="max-width:760px">Para <b>tornar uma aula pública</b>, clique em <b>Público</b> na linha dela. <b>Só owners</b> (padrão): só vocês veem. <b>Membros</b>: alunos e monitores logados. <b>Público</b>: qualquer pessoa com o link. O roteiro nunca depende desse nível.</p><div id="aulas"><p>Carregando…</p></div></section>
+<section id="p-aulas" hidden><p class="sub" style="max-width:760px">Para <b>liberar uma aula</b> às turmas, clique em <b>Membros</b> na linha dela. <b>Só owners</b> (padrão): só vocês veem. <b>Membros</b>: monitores, equipe e os alunos das turmas ligadas ao nível da aula. Nenhuma aula é pública. O roteiro nunca depende desse nível.</p><div id="aulas"><p>Carregando…</p></div></section>
 <section id="p-guia" hidden><p class="sub">Leia uma vez; serve também para novos owners. Clique em cada item para abrir.</p><div class="guia">
 <details><summary>Como tudo se encaixa (visão geral)</summary>
 <ol>
@@ -73,7 +73,7 @@
 <li><b>Regra de ouro:</b> não existe permissão avulsa por pessoa. Para dar algo a mais, crie um <b>perfil</b> na aba <b>Perfis</b> (nome + permissões) e marque esse perfil na ficha da pessoa.</li>
 <li><b>Vários perfis:</b> a pessoa pode ter quantos precisar. Vale a <b>soma</b>: em caso de conflito, prevalece quem dá mais acesso.</li>
 <li><b>Personalizar o site:</b> abre <code>/personalizar</code> (cores, logo, fundos, avisos, agenda, redes). Publica para todos, então dê com cuidado.</li>
-<li><b>Mudar o nível das aulas:</b> define quem vê cada aula (só owners, membros ou público).</li>
+<li><b>Mudar o nível das aulas:</b> define quem vê cada aula (só owners ou membros da turma).</li>
 <li><b>Cadastrar pessoas:</b> abre a aba Pessoas para cadastrar alunos e monitores. <b>Não</b> mexe em owners nem na equipe.</li>
 <li><b>Ver tarefas de casa:</b> permissão antiga, sem função hoje (as atividades ficam em Presença). Não precisa marcar.</li>
 <li><b>Fazer chamada e presença:</b> abre <code>/presenca</code>: chamada, participações, atividades e histórico. Monitores já fazem a chamada das aulas liberadas para eles.</li>
@@ -134,14 +134,14 @@
 <ul>
 <li><b>Owner:</b> vê tudo (slides, roteiros, atividades), muda níveis e permissões. Dê só a quem coordena a liga.</li>
 <li><b>Monitor:</b> começa igual a um aluno. Só vê a mais o que um owner marcar para ele (slides de uma aula, roteiro de uma aula).</li>
-<li><b>Aluno:</b> usuário na lista de alunos. Vê aulas de nível <i>Membros</i> e <i>Público</i>. Nunca vê roteiros.</li>
-<li><b>Visitante:</b> qualquer pessoa sem login ou fora das listas. Vê só aulas de nível <i>Público</i>.</li></ul></details>
+<li><b>Aluno:</b> usuário na lista de alunos. Vê só as aulas de nível <i>Membros</i> do nível da sua turma. Nunca vê roteiros.</li>
+<li><b>Visitante:</b> qualquer pessoa sem login ou fora das listas. Não vê nenhuma aula: toda aula é exclusiva de membros.</li></ul></details>
 
 <details><summary>1. Nível de cada aula: o que cada botão faz</summary>
 <ul>
 <li><b>Só owners</b> (padrão para toda aula nova): só owners abrem. Use enquanto a aula está em preparo.</li>
 <li><b>Membros:</b> owners, monitores e alunos da lista, depois de entrar com o GitHub.</li>
-<li><b>Público:</b> qualquer pessoa com o link, sem login. Use para as aulas que a liga quer divulgar.</li></ul>
+<li><b>Nenhuma aula é pública.</b> O nível <i>Membros</i> vale para monitores, equipe e para os alunos das turmas ligadas àquele nível (perfil de aluno = turma). Quem está fora não abre nada.</li></ul>
 <p><b>O que acontece no repositório:</b> o clique grava um commit em <code>acesso/acesso.json</code> com seu nome (ex.: "Portal: afonsofarias definiu nivel-00-tutorial/aula-02 como publico"). O arquivo da aula em si não muda.</p>
 <p><b>Para desfazer:</b> clique no nível anterior. Quem já abriu uma aula pública pode ter uma cópia em cache por alguns minutos; para retirar algo realmente sensível, deixe em "Só owners" e avise.</p>
 <p><b>O roteiro</b> (guia do apresentador) nunca é público nem de membros, não importa o nível dos slides.</p></details>
@@ -150,7 +150,7 @@
 <ul>
 <li><b>Adicionar monitor:</b> digite o usuário do GitHub (sem @) e clique em adicionar. Ele entra sem nenhuma permissão extra, ou seja, vê o mesmo que um aluno.</li>
 <li><b>Caixas de seleção:</b> cada caixa libera <i>uma</i> aula (slides) ou <i>um</i> roteiro para <i>aquele</i> monitor. Salva ao marcar; não existe botão "salvar".</li>
-<li><b>Remover:</b> tira o monitor da lista e apaga as permissões dele. Ele continua podendo ver o que é público.</li></ul>
+<li><b>Remover:</b> tira o monitor da lista e apaga as permissões dele. Ele deixa de ver as aulas.</li></ul>
 <p><b>Repositório:</b> cada alteração é um commit em <code>acesso/acesso.json</code>.</p></details>
 
 <details><summary>3. Listas de owners e alunos</summary>

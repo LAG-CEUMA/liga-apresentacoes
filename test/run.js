@@ -105,7 +105,9 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await ad({ acao: 'imagem_excluir', nome: 'teste-a.png' })).status, 404);
     imagens['teste-b.png'] && delete imagens['teste-b.png']; }
   // público sem login; membros exige login; padrão é só owners
-  let r = await ver(null, 'aula-01'); assert.equal(r.status, 200); assert(r.body.includes('SLIDES1')); assert(r.h['Cache-Control'].startsWith('public'));
+  let r = await ver(null, 'aula-01'); assert.equal(r.status, 302); assert(r.h.Location.startsWith('/api/login?next=')); // nenhuma aula é pública: 'publico' legado vira membros
+  r = await ver('alu1', 'aula-01'); assert.equal(r.status, 200); assert(r.body.includes('SLIDES1')); assert.equal(r.h['Cache-Control'], 'private, no-store');
+  r = await ver('estranho', 'aula-01'); assert.equal(r.status, 403);
   r = await ver(null, 'aula-02'); assert.equal(r.status, 302); assert(r.h.Location.startsWith('/api/login?next='));
   r = await ver('alu1', 'aula-02'); assert.equal(r.status, 200); assert.equal(r.h['Cache-Control'], 'private, no-store');
   r = await ver('estranho', 'aula-02'); assert.equal(r.status, 403);
@@ -142,7 +144,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   r = await chamar(h('ver'), { query: { dir: 'nivel-00-tutorial', id: 'aula-03' }, headers: { cookie: 'liga_s=forjado.abc' } }); assert.equal(r.status, 302);
   // lista de aulas por papel
   const lista = async (user) => JSON.parse((await chamar(h('aulas'), { user })).body);
-  let d = await lista(null); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01']); assert.equal(d.exigeLogin, 1); assert.equal(d.aulas[0].roteiro, null);
+  let d = await lista(null); assert.deepEqual(d.aulas.map((a) => a.id), []); assert.equal(d.exigeLogin, 2);
   d = await lista('alu1'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02']);
   d = await lista('mon1'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02']); assert.equal(d.aulas[0].roteiro, null); assert.equal(d.aulas[0].acesso, undefined);
   d = await lista('mon2'); assert.deepEqual(d.aulas.map((a) => a.id), ['aula-01', 'aula-02', 'aula-03']); assert(d.aulas[0].roteiro); assert.equal(d.aulas[1].roteiro, null);
@@ -162,9 +164,10 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal(cfg.aulas[CH(3)], 'membros'); assert(commits[0].includes('dono'));
   assert.equal((await ver('alu1', 'aula-03')).status, 200); // vale na hora
   assert.equal((await post({ ...AC, nivel: 'owners' })).status, 200); assert.equal(cfg.aulas[CH(3)], undefined);
-  assert.equal((await post({ acao: 'acesso', chave: 'nao/existe', nivel: 'publico' })).status, 400);
-  r = await post({ acao: 'acesso', chaves: [CH(2), CH(3)], nivel: 'publico', nivel_nome: 'nivel-00-tutorial' }); assert.equal(r.status, 200); assert.equal(cfg.aulas[CH(2)], 'publico'); assert.equal(cfg.aulas[CH(3)], 'publico'); assert(commits[commits.length - 1].includes('2 aulas'));
-  assert.equal((await post({ acao: 'acesso', chaves: [CH(2), 'x/y'], nivel: 'publico' })).status, 400);
+  assert.equal((await post({ acao: 'acesso', chave: 'nao/existe', nivel: 'membros' })).status, 400);
+  assert.equal((await post({ acao: 'acesso', chaves: [CH(2)], nivel: 'publico' })).status, 400); // público não existe mais
+  r = await post({ acao: 'acesso', chaves: [CH(2), CH(3)], nivel: 'membros', nivel_nome: 'nivel-00-tutorial' }); assert.equal(r.status, 200); assert.equal(cfg.aulas[CH(2)], 'membros'); assert.equal(cfg.aulas[CH(3)], 'membros'); assert(commits[commits.length - 1].includes('2 aulas'));
+  assert.equal((await post({ acao: 'acesso', chaves: [CH(2), 'x/y'], nivel: 'membros' })).status, 400);
   await post({ acao: 'acesso', chaves: [CH(2)], nivel: 'membros' }); await post({ acao: 'acesso', chaves: [CH(3)], nivel: 'owners' });
   assert.equal((await post({ ...AC, nivel: 'monitores' })).status, 400);
   // permissões de monitor
@@ -351,7 +354,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert(u.pode(c, 'a', 'nivel-00/aula-01', false) && u.pode(c, 'a', 'nivel-01/aula-01', false)); // duas turmas: vê os dois níveis
     assert(u.pode(c, 'b', 'nivel-00/aula-01', false) && !u.pode(c, 'b', 'nivel-01/aula-01', false)); // arquivada com acesso: só o nível dela
     assert(!u.pode(c, 'c', 'nivel-00/aula-01', false)); // arquivada sem acesso
-    assert(u.pode(c, 'c', 'nivel-01/aula-02', false)); // público é de todos
+    assert(!u.pode(c, 'c', 'nivel-01/aula-02', false)); assert(!u.pode(c, null, 'nivel-01/aula-02', false)); // nenhuma aula é pública: 'publico' legado vira membros
     assert(!u.pode(c, 'a', 'nivel-00/aula-01', true)); // roteiro nunca
     assert.equal(u.niveisDoAluno(u.normalizar({ alunos: ['z'] }), 'z'), null); // turma sem nível = todos
   }

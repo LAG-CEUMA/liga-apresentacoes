@@ -7,7 +7,7 @@ function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
 function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
-const PERM_INFO={site:['Personalizar o site','cores, logo, fundos, avisos, agenda e redes'],aulas:['Mudar o nível das aulas','define quem vê cada aula (público, membros…)'],pessoas:['Cadastrar pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Ver tarefas de casa (antigo)','sem função hoje: as atividades ficam em Presença'],presenca:['Fazer chamada e presença','chamada, participações e histórico'],slides:['Editar slides','usar o editor (/editor) nos níveis a que a pessoa está vinculada']};
+const PERM_INFO={site:['Personalizar o site','cores, logo, fundos, avisos, agenda e redes'],aulas:['Mudar o nível das aulas','define quem vê cada aula (só owners ou membros da turma)'],pessoas:['Cadastrar pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Ver tarefas de casa (antigo)','sem função hoje: as atividades ficam em Presença'],presenca:['Fazer chamada e presença','chamada, participações e histórico'],slides:['Editar slides','usar o editor (/editor) nos níveis a que a pessoa está vinculada']};
 const PODE={site:'personalizar o site e publicar avisos, agenda e redes',aulas:'mudar o nível de cada aula',pessoas:'cadastrar alunos e monitores',tarefas:'ver as tarefas de casa',presenca:'fazer a chamada de todas as aulas e ver o histórico',slides:'editar os slides dos níveis a que está vinculada pela turma'};
 const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'cadastrar pessoas',tarefas:'ver as tarefas de casa',presenca:'fazer chamada (fora das aulas de monitor)',slides:'editar slides'};
 let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='';
@@ -234,7 +234,7 @@ function modalTurma(id){
   const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome',nome),h('label',{},'Nível da turma',nv),h('label',{},'Situação',st),h('label',{},'Início',ini),h('label',{},'Fim previsto',fim)),
     id?h('p',{class:'sub'},'Código, nome, nível e datas podem ser corrigidos depois. O código só muda enquanto a turma não tem chamadas salvas.'):'',
     h('label',{class:'ck'},ap,'Mantém acesso ao material (slides) por 1 ano depois de arquivada'),ateL,
-    h('p',{class:'sub'},'Os alunos da turma só veem as aulas do nível dela (e que estejam como Membros ou Público). Roteiros nunca aparecem para alunos. Passado o prazo, o acesso ao material dessa turma se encerra; para estender, edite a data acima.'),
+    h('p',{class:'sub'},'Os alunos da turma só veem as aulas do nível dela (e que estejam como Membros). Roteiros nunca aparecem para alunos. Passado o prazo, o acesso ao material dessa turma se encerra; para estender, edite a data acima.'),
     h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{
       let alvo=cod.value.trim().toUpperCase();if(id&&alvo&&alvo!==id){await enviar({acao:'renomear_turma',de:id,para:alvo})}if(!id||!alvo)alvo=alvo||id;
       await enviar({acao:'turma',id:alvo,nome:nome.value,inicio:ini.value,fim:fim.value,nivel:nv.value,status:st.value,acessoApos:ap.checked,acessoAte:st.value==='arquivada'?ate.value:''});aviso('Turma salva');fechar();await carregar()}catch(e){aviso(e.message,1);if(id)await carregar()}}},'Salvar')))],'modal');mostraAte();}
@@ -283,7 +283,7 @@ async function desenharPontos(){
 function desenharAulas(d){
   const box=$('aulas');box.textContent='';
   const INFO={owners:'Quem vê: só owners.',membros:'Quem vê: owners, monitores e alunos da lista (precisa entrar com o GitHub).',publico:'Quem vê: qualquer pessoa com o link, sem login.'};
-  const NOMES={owners:'Só owners',membros:'Membros',publico:'Público'};
+  const NOMES={owners:'Só owners',membros:'Membros'};
   const grupos={};for(const a of d.aulas)(grupos[a.nivel]=grupos[a.nivel]||[]).push(a);
   const aberto=lerAbertos();const nomesNiveis=Object.keys(grupos).sort();
   const barra=el('div','linha');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px';
@@ -294,17 +294,17 @@ function desenharAulas(d){
     const det=el('details','nivel');det.dataset.nv=nv;det.open=aberto===null?i===0:aberto.includes(nv);todos.push(det);
     det.addEventListener('toggle',()=>salvarAbertos(todos));
     const sm=el('summary');const tt=el('span','nvt',nv);const cont=el('span','nvc');sm.append(tt,cont);
-    const atualizaCont=()=>{const c={owners:0,membros:0,publico:0};lista.forEach(a=>c[a.acesso]++);cont.textContent=`${lista.length} aula(s) · ${c.publico} público · ${c.membros} membros · ${c.owners} só owners`};atualizaCont();
+    const atualizaCont=()=>{const c={owners:0,membros:0};lista.forEach(a=>c[a.acesso]=(c[a.acesso]||0)+1);cont.textContent=`${lista.length} aula(s) · ${c.membros} membros · ${c.owners} só owners`};atualizaCont();
     const massa=el('div','massa');massa.append(el('small','','Todas deste nível:'));
     const corpo=el('div','nvcorpo');
     const pintar=(l)=>{l.seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===l.a.acesso));l.info.textContent=INFO[l.a.acesso]};
     const linhas=[];
-    for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const m=el('button','btn sec',n);m.type='button';
+    for(const [v,n] of [['owners','Só owners'],['membros','Membros']]){const m=el('button','btn sec',n);m.type='button';
       m.onclick=async()=>{if(!confirm(`Definir as ${lista.length} aulas de "${nv}" como "${n}"?`))return;try{await enviar({acao:'acesso',chaves:lista.map(a=>a.chave),nivel:v,nivel_nome:nv});lista.forEach(a=>a.acesso=v);linhas.forEach(pintar);atualizaCont();aviso(`${nv}: todas em "${n}"`)}catch(e){aviso(e.message,1);carregar()}};massa.append(m)}
     corpo.append(massa);
     for(const a of lista){const l=el('div','linha');const t=el('div','t');t.append(el('b','',a.titulo),el('br'),el('small','',a.chave));
       const info=el('div','nivelinfo',INFO[a.acesso]);const seg=el('div','seg');const reg={a,seg,info};linhas.push(reg);
-      for(const [v,n] of [['owners','Só owners'],['membros','Membros'],['publico','Público']]){const bt=el('button',(v===a.acesso?'on ':'')+v,n);bt.type='button';bt.dataset.v=v;
+      for(const [v,n] of [['owners','Só owners'],['membros','Membros']]){const bt=el('button',(v===a.acesso?'on ':'')+v,n);bt.type='button';bt.dataset.v=v;
         bt.onclick=async()=>{if(a.acesso===v)return;try{await enviar({acao:'acesso',chave:a.chave,nivel:v});a.acesso=v;pintar(reg);atualizaCont();aviso(`${a.titulo}: ${n}`)}catch(e){aviso(e.message,1);carregar()}};seg.append(bt)}
       const vv=el('a','btn sec','Slides');vv.href=a.url;vv.target='_blank';l.append(t,seg,vv);
       if(a.roteiro){const r=el('a','btn sec','Roteiro');r.href=a.roteiro;r.target='_blank';l.append(r)}l.append(info);corpo.append(l)}
