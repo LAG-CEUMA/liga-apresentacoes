@@ -147,25 +147,29 @@ function verComo(i){
 function modalVarios(){
   const turmasAtivas=Object.keys(D.turmas).filter(t=>D.turmas[t].status!=='arquivada');
   let papel='aluno',turma=turmasAtivas.find(t=>D.turmas[t].status==='andamento')||turmasAtivas[0];
-  const ta=h('textarea',{style:'height:170px;font-family:monospace;width:100%',placeholder:'davi-novato\n@luiza-dev\nhttps://github.com/pedro-h',oninput:prev});
+  const ta=h('textarea',{style:'height:170px;font-family:monospace;width:100%',placeholder:'davi-novato, Davi Novato Silva, a123456@ceuma.com.br\nluiza-dev, Luiza Dev Souza, a654321@ceuma.com.br',oninput:prev});
   const lado=h('div'),res=h('div',{style:'background:#0006;border-radius:12px;padding:12px 16px;margin-top:14px'}),btn=h('button',{class:'btn',type:'button'},'Adicionar');
   const conhecidos=new Set(todasPessoas());
+  const emUso=new Set((D.pendentes||[]).map(x=>x.email).filter(Boolean));
   function analisa(){const out=[];const vistos=new Set();
-    for(const bruto of ta.value.split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean)){
-      const n=bruto.replace(/^https?:\/\/github\.com\//i,'').replace(/[/?#].*$/,'').replace(/^@/,'').toLowerCase();
-      let erro='';if(/\s/.test(n))erro='espaço no nome';else if(n.includes('_'))erro='o GitHub não aceita _';else if(!/^[a-z0-9][a-z0-9-]{0,38}$/.test(n))erro='caractere inválido';
-      if(!erro&&vistos.has(n))continue;vistos.add(n);out.push({n,erro,ja:!erro&&conhecidos.has(n),link:/github\.com/i.test(bruto)})}
+    for(const linha of ta.value.split(/\n+/).map(s=>s.trim()).filter(Boolean)){
+      const [bruto='',nome='',mail='']=linha.split(/[,;\t|]/).map(s=>s.trim());
+      const n=bruto.replace(/^https?:\/\/github\.com\//i,'').replace(/[/?#].*$/,'').replace(/^@/,'').toLowerCase();const em=mail.toLowerCase();
+      let erro='';if(/\s/.test(n))erro='espaço no usuário';else if(n.includes('_'))erro='o GitHub não aceita _';else if(!/^[a-z0-9][a-z0-9-]{0,38}$/.test(n))erro='usuário inválido';
+      else if(!nome)erro='falta o nome (formato: usuário, Nome, e-mail)';else if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))erro='e-mail inválido';
+      else if(vistos.has(n))erro='usuário repetido na lista';else if(em&&emUso.has(em)&&!conhecidos.has(n))erro='e-mail já cadastrado para outra pessoa';
+      vistos.add(n);out.push({n,nome,email:em,erro,ja:!erro&&conhecidos.has(n),link:/github\.com/i.test(bruto)})}
     return out}
   function prev(){const l=analisa(),ok=l.filter(x=>!x.erro),ruim=l.filter(x=>x.erro);res.textContent='';
     res.append(h('div',{style:'font-weight:700;margin-bottom:6px'},h('span',{class:'pode-s'},ok.length+' válido(s)'),' · ',h('span',{class:'nao-s'},ruim.length+' inválido(s)'),' · '+l.filter(x=>x.ja).length+' já cadastrado(s)'));
-    for(const x of l)res.append(h('div',{class:'permlinha',style:'grid-template-columns:1fr auto'},h('span',{},'@'+x.n),h('span',{class:x.erro?'nao-s':'pode-s'},x.erro?'inválido: '+x.erro:(x.ja?'já existe (será atualizado)':'ok'+(x.link?' (do link)':'')))));
+    for(const x of l)res.append(h('div',{class:'permlinha',style:'grid-template-columns:1fr auto'},h('span',{},'@'+x.n+(x.nome?' · '+x.nome:'')+(x.email?' · '+x.email:'')),h('span',{class:x.erro?'nao-s':'pode-s'},x.erro?'inválido: '+x.erro:(x.ja?'já existe (será atualizado)':'ok'+(x.link?' (do link)':'')))));
     btn.textContent='Adicionar '+ok.length;btn.disabled=!ok.length}
   function lados(){lado.textContent='';lado.append(h('div',{style:'font-weight:700;margin-bottom:6px'},'Entram como'),
     ...[['aluno','Aluno'],['monitor','Monitor'],...(D.dono?[['equipe','Equipe']]:[])].map(([k,t])=>h('button',{type:'button',class:'chipx'+(papel===k?' on':''),onclick:()=>{papel=k;lados()}},t)),
     h('div',{style:'font-weight:700;margin:10px 0 6px'},'Na turma'),...turmasAtivas.map(t=>h('button',{type:'button',class:'chipx'+(turma===t?' on':''),onclick:()=>{turma=t;lados()}},D.turmas[t].nome)),h('p',{class:'sub'},'Depois dá para mudar cada pessoa na ficha.'))}
-  btn.onclick=async()=>{const ok=analisa().filter(x=>!x.erro).map(x=>x.n);try{await enviar({acao:'adicionar',usuarios:ok,papel,turma});aviso(`${ok.length} pessoa(s) adicionada(s)`);fechar();await carregar()}catch(e){aviso(e.message,1)}};
+  btn.onclick=async()=>{const lst=analisa().filter(x=>!x.erro),ok=lst.map(x=>x.n);try{await enviar({acao:'adicionar',usuarios:ok,pessoas:lst.map(x=>({usuario:x.n,nome:x.nome,email:x.email})),papel,turma});aviso(`${ok.length} pessoa(s) adicionada(s)`);fechar();await carregar()}catch(e){aviso(e.message,1)}};
   const {fechar}=camada([h('div',{style:'display:flex;justify-content:space-between'},h('h2',{style:'margin:0'},'Adicionar várias pessoas'),h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar')),
-    h('p',{class:'sub'},'Cole os usuários do GitHub, um por linha ou separados por vírgula. Aceita @ e links do GitHub.'),h('div',{class:'grid'},h('div',{},ta),lado),res,h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),btn)],'modal');
+    h('p',{class:'sub'},'Uma pessoa por linha, neste formato: usuário do GitHub, Nome completo, e-mail institucional (o e-mail é opcional; o nome é obrigatório). Aceita @ e links do GitHub.'),h('div',{class:'grid'},h('div',{},ta),lado),res,h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),btn)],'modal');
   lados();prev()}
 
 // ---------- aba Cargos ----------

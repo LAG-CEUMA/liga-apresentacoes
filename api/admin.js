@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
       if (!dono) return nao();
       const PD = require('../lib/pendentes');
       try {
-        if (b.acao === 'pendente_remover') { await PD.remover(b.chave || b.email, usuario); return u.json(res, 200, { ok: true }); }
+        if (b.acao === 'pendente_remover') { await PD.remover(b.chave || b.email, usuario, (x) => (x.usuario && u.papel(cfg, x.usuario) !== 'visitante') ? `@${x.usuario} ainda tem acesso à plataforma (${u.papel(cfg, x.usuario)}). Remova primeiro o acesso em Pessoas e depois exclua o contato.` : ''); return u.json(res, 200, { ok: true }); }
         return u.json(res, 200, { ok: true, item: await PD.salvar(b, usuario) });
       } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
@@ -147,6 +147,12 @@ module.exports = async (req, res) => {
       const bruto = (Array.isArray(b.usuarios) ? b.usuarios : []).slice(0, 300).map(nomeGh);
       const validos = [...new Set(bruto.filter((x) => u.USER_RE.test(x)))];
       if (!validos.length) return u.json(res, 400, { erro: 'Nenhum usuário válido.' });
+      const PD = require('../lib/pendentes'); const dados = Array.isArray(b.pessoas) ? b.pessoas : [];
+      for (const nome of validos) {
+        const d0 = dados.find((x) => nomeGh(x && x.usuario || '') === nome) || {};
+        if (!String(d0.nome || '').trim()) return u.json(res, 400, { erro: `Falta o nome de @${nome}.` });
+        try { await PD.salvar({ usuario: nome, nome: d0.nome, email: d0.email, cargo: papelNovo === 'aluno' ? 'Aluno' : papelNovo === 'monitor' ? 'Monitor' : 'Equipe' }, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+      }
       for (const nome of validos) {
         if (papelNovo === 'aluno') { if (!novo.alunos.includes(nome)) novo.alunos.push(nome); if (!novo.turmas[turma].alunos.includes(nome)) novo.turmas[turma].alunos.push(nome); }
         else if (papelNovo === 'monitor') { if (!novo.monitores[nome]) novo.monitores[nome] = { aulas: [], roteiros: [], turmas: [turma] }; }
@@ -157,6 +163,7 @@ module.exports = async (req, res) => {
       if (!perm.includes('pessoas')) return nao();
       const nome = nomeGh(b.usuario || '');
       if (!nome || novo.owners.includes(nome) || u.admins().includes(nome)) return u.json(res, 400, { erro: 'Esta pessoa não pode ser removida por aqui (owner).' });
+      if (!dono && novo.equipe[nome]) return u.json(res, 400, { erro: 'Esta pessoa é da equipe; só owners podem remover o acesso dela.' });
       novo.alunos = novo.alunos.filter((a) => a !== nome);
       for (const t of Object.values(novo.turmas)) t.alunos = t.alunos.filter((a) => a !== nome);
       delete novo.monitores[nome]; delete novo.acessos[nome]; delete novo.editores[nome];
