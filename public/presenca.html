@@ -112,6 +112,10 @@ async function telaAtiv(alvo){
     h('div',{class:'tg E',style:'border:1px solid #fff2'},h('span',{class:'letra'},'E'),h('span',{},h('b',{},'Exercício (Exercise)'),h('br'),h('span',{class:'expl'},'Feito em sala, durante a aula, com o instrutor.'))),
     h('div',{class:'tg T',style:'border:1px solid #fff2'},h('span',{class:'letra'},'T'),h('span',{},h('b',{},'Tarefa (Task)'),h('br'),h('span',{class:'expl'},'Dever de casa, depois da aula: T1, T2, T3 e T4 (T4 é opcional, pontos extras).'))),
     h('div',{style:'border:1px solid #fff2'},h('span',{},h('b',{},'N0.1-2'),h('br'),h('span',{class:'expl'},'Nível 0, aula 1 de 2.')))));
+  alvo.append(h('div',{style:'margin:10px 0'},h('button',{class:'btn sec',type:'button',title:'Imprevisto, atraso ou antecipação: muda todos os prazos desta turma de uma vez',onclick:async()=>{
+    const v=prompt('Quantos dias adiar todos os prazos desta turma?\nUse número positivo para ADIAR (ex.: 7) ou negativo para ANTECIPAR (ex.: -7).\nDica: use múltiplos de 7 para manter os dias da semana.');if(v===null)return;const n=Math.round(Number(v));
+    if(!n)return aviso('Informe um número de dias (ex.: 7 ou -7).',1);if(!confirm((n>0?'Adiar ':'Antecipar ')+Math.abs(n)+' dia(s) os prazos de TODAS as atividades da turma '+TURMA+'? As datas escritas nas descrições também mudam.'))return;
+    try{const r=await postA({acao:'ativ_deslocar',dias:n});aviso(r.atividades+' atividade(s) atualizada(s).');telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Adiar ou antecipar todos os prazos')));
   const lista=h('div',{});
   if(!ATV.atividades.length)lista.append(h('p',{},'Nenhuma atividade ainda. Crie a primeira abaixo.'));
   window.ATV_OPEN=window.ATV_OPEN||new Set();const grupos={};

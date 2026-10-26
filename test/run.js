@@ -424,6 +424,12 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     const ap = (c, user = 'dono') => pres({ turma: T, ...c }, user);
     r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·E1', titulo: 'Primeira cena', peso: 10, prazo: '2026-11-09T23:59:00-03:00', descricao: 'Faça a cena.' }); assert.equal(r.status, 200); const id1 = JSON.parse(r.body).id; assert.equal(id1, 'n0-1-2-e1');
     r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·E2', titulo: 'Plataforma', peso: 30, descricao: 'Entre.' }); const id2 = JSON.parse(r.body).id;
+    // adiar/antecipar prazos de toda a turma
+    assert.equal((await ap({ acao: 'ativ_deslocar', dias: 0 })).status, 400); assert.equal((await ap({ acao: 'ativ_deslocar', dias: 500 })).status, 400);
+    assert.equal((await ap({ acao: 'ativ_deslocar', dias: 3 }, 'alu1')).status, 403);
+    r = await ap({ acao: 'ativ_deslocar', dias: -7 }); assert.equal(r.status, 200); assert.equal(JSON.parse(r.body).atividades >= 2, true);
+    { const lst = JSON.parse((await chamar(h('presenca'), { query: { acao: 'atividades', turma: T }, user: 'pres' })).body).atividades; const a1 = lst.find((x) => x.id === id1); assert.equal(a1.prazo, new Date('2026-11-02T23:59:00-03:00').toISOString()); assert(!a1.descricao.includes('/')); }
+    assert.equal((await ap({ acao: 'ativ_deslocar', dias: 7 })).status, 200); // volta ao original
     assert.equal((await ap({ acao: 'ativ_salvar', titulo: 'x' }, 'alu1')).status, 403); // aluno não cria
     assert.equal((await ap({ acao: 'ativ_salvar', titulo: '' })).status, 400);
     assert.equal(JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu1')).body).atividades.length, 0); // não liberada: aluno não vê
