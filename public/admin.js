@@ -7,7 +7,7 @@ function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
 function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
-const PERM_INFO={site:['Personalizar o site','cores, logo, fundos, avisos, agenda e redes'],aulas:['Mudar o nível das aulas','define quem vê cada aula (público, membros…)'],pessoas:['Cadastrar pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Ver tarefas de casa','acompanhar as tarefas dos alunos'],presenca:['Fazer chamada e presença','chamada, participações e histórico'],slides:['Editar slides','usar o editor (/editor) nos níveis a que a pessoa está vinculada']};
+const PERM_INFO={site:['Personalizar o site','cores, logo, fundos, avisos, agenda e redes'],aulas:['Mudar o nível das aulas','define quem vê cada aula (público, membros…)'],pessoas:['Cadastrar pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Ver tarefas de casa (antigo)','sem função hoje: as atividades ficam em Presença'],presenca:['Fazer chamada e presença','chamada, participações e histórico'],slides:['Editar slides','usar o editor (/editor) nos níveis a que a pessoa está vinculada']};
 const PODE={site:'personalizar o site e publicar avisos, agenda e redes',aulas:'mudar o nível de cada aula',pessoas:'cadastrar alunos e monitores',tarefas:'ver as tarefas de casa',presenca:'fazer a chamada de todas as aulas e ver o histórico',slides:'editar os slides dos níveis a que está vinculada pela turma'};
 const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'cadastrar pessoas',tarefas:'ver as tarefas de casa',presenca:'fazer chamada (fora das aulas de monitor)',slides:'editar slides'};
 let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='';
@@ -190,7 +190,7 @@ function verComo(i){
 // ---------- aba Cargos ----------
 function desenharCargos(){
   const p=$('p-cargos');p.textContent='';
-  p.append(h('p',{class:'sub',style:'max-width:760px'},'Um cargo é um modelo: você define as permissões uma vez e depois só escolhe quem ocupa (na ficha da pessoa). Uma pessoa pode ter vários cargos. Só owners criam cargos.'));
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Um perfil (cargo) é um conjunto de permissões: você cria uma vez e depois só marca quem o recebe, na ficha da pessoa. Não existe permissão avulsa. Uma pessoa pode ter vários perfis; vale a soma e prevalece o que dá mais acesso. Só owners criam perfis.'));
   const g=h('div',{class:'grade'});
   for(const id of Object.keys(D.cargos)){const c=D.cargos[id];const ocup=Object.keys(D.equipe||{}).filter(n=>(D.equipe[n].cargos||[]).includes(id));
     const nome=h('input',{type:'text',value:c.nome,maxLength:40,style:'width:100%;font-weight:700'}),desc=h('input',{type:'text',value:c.descricao||'',maxLength:100,placeholder:'descrição curta',style:'width:100%;margin:6px 0'});

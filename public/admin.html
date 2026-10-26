@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
 <style>.sub{color:var(--mut);font-size:13px}input[type=text],input[type=date]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}main{max-width:980px}</style></head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Painel</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/semanas">Tarefas de casa</a><a class="btn sec" href="/presenca">Presença</a><a class="btn sec" href="/editor">Editor de slides</a></div></div>
+<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Painel</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/presenca">Atividades</a><a class="btn sec" href="/presenca">Presença</a><a class="btn sec" href="/editor">Editor de slides</a></div></div>
 <div class="tabs" id="abas"></div>
 <section id="p-pessoas" hidden></section>
 <section id="p-cargos" hidden></section>
@@ -15,7 +15,7 @@
 <section id="p-guia" hidden><p class="sub">Leia uma vez; serve também para novos owners. Clique em cada item para abrir.</p><div class="guia">
 <details><summary>Como tudo se encaixa (visão geral)</summary>
 <ol>
-<li><b>Onde ficam os arquivos:</b> as aulas (slides e roteiros), as tarefas de casa e a lista de acessos ficam no repositório <b>privado</b> <code>LAG-CEUMA/liga-curriculo</code> no GitHub. Ninguém de fora enxerga esse repositório.</li>
+<li><b>Onde ficam os arquivos:</b> as aulas (slides e roteiros), as atividades e a lista de acessos ficam no repositório <b>privado</b> <code>LAG-CEUMA/liga-curriculo</code> no GitHub. Ninguém de fora enxerga esse repositório.</li>
 <li><b>Onde as pessoas assistem:</b> este site (<code>lag-ceuma.vercel.app</code>) lê o repositório e mostra a aula só para quem tem permissão. O site não guarda cópia: se você mudar um arquivo no GitHub, o site passa a mostrar a versão nova em até 1 minuto.</li>
 <li><b>Quem é quem:</b> o site identifica a pessoa pelo <b>login do GitHub</b> (só o nome de usuário; nenhuma permissão sobre a conta dela é pedida).</li>
 <li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
@@ -24,8 +24,9 @@
 <ol>
 <li>Abra <b>/editor</b> (botão "Editor de slides" no Painel e na tela inicial). Cada nível lista suas aulas; <b>Editar slides</b> abre a aula, <b>+ Nova aula</b> cria outra (do zero ou copiando uma existente).</li>
 <li><b>No slide:</b> clique para selecionar, arraste para mover, <b>duplo clique</b> para digitar. O painel da direita muda cor, tamanho, fundo, animação e posição. <b>Ctrl+Z</b> desfaz, <b>Ctrl+S</b> salva.</li>
+<li><b>Duração de cada slide (obrigatória):</b> no painel da direita, digite só o número de <b>minutos</b> (ex.: <code>5</code>). O início é sempre o fim do slide anterior, e o horário aparece ao lado (ex.: 0:15 → 0:20). Slides que dividem o mesmo tempo ficam num <b>bloco</b>: marque "Mesmo bloco do slide anterior". Ao lado do campo aparece <b>Aula: X de 60 min</b> (fica vermelho acima de 60). Mudar a duração de um bloco desloca os seguintes. O botão <b>⏱</b> da barra lista os avisos de tempo; a aula só salva se todos os slides tiverem duração.</li>
 <li><b>Roteiro do apresentador</b> é o campo "Roteiro" de cada slide. Ele vai só para o arquivo de roteiro e nunca aparece no slide projetado.</li>
-<li><b>Quem pode editar:</b> owners; quem tem o escopo dado na ficha da pessoa (<i>Editor de slides (escopo)</i>: um nível inteiro ou uma aula); e quem tem a permissão <b>Slides</b> num cargo, nos níveis a que está vinculado pela turma.</li>
+<li><b>Quem pode editar:</b> owners; monitores e equipe a quem um owner deu a <i>Permissão para editar slides</i> na ficha da pessoa (um nível inteiro ou uma aula); e quem tem a permissão <b>Editar slides</b> num perfil, nos níveis a que está vinculado pela turma.</li>
 <li>Aula nova começa como <b>Só owners</b>. Para liberar aos alunos: Painel → Níveis das aulas.</li>
 <li>Se duas pessoas editarem a mesma aula, a segunda a salvar recebe um aviso para recarregar (ninguém sobrescreve ninguém sem querer). Versões antigas ficam no histórico do GitHub.</li>
 <li><b>Imagens:</b> botão "Imagem" envia e insere (reduzidas para no máximo 1920 px; ficam públicas). O quadro tem abas: <b>Desta aula</b> (as que a aula já usa), <b>Disponíveis</b> (liberadas para o editor) e, só para owners, <b>Gerenciar</b>, onde cada imagem tem as caixas <i>Slides</i> e <i>Site</i> para dizer onde ela aparece. Imagem enviada pelo editor nasce só em Slides; a enviada em Personalizar nasce só no Site. Desmarcar uma caixa só esconde a imagem da lista, nada quebra onde ela já está em uso.</li>
@@ -52,17 +53,18 @@
 </ol></details>
 
 
-<details><summary>Equipe: cargos e as 5 permissões</summary>
+<details><summary>Perfis (cargos) e permissões: como dar acesso a mais coisas</summary>
 <ul>
-<li><b>Para que serve:</b> quem ajuda a coordenar a liga (marketing, artes, secretaria, tesouraria...) recebe <i>só</i> o que precisa, sem virar owner. Um cargo sem tarefa no portal pode ficar só com o título e nenhuma caixa marcada.</li>
-<li><b>Site:</b> abre o <code>/personalizar</code> (cores, logo, fundos, avisos, agenda, redes). Quem tem isso publica textos e imagens para todo mundo, então dê com cuidado. Tudo fica no histórico do GitHub.</li>
-<li><b>Aulas:</b> muda o nível de cada aula (só owners / membros / público).</li>
-<li><b>Pessoas:</b> edita a lista de alunos e os monitores. <b>Não</b> mexe na lista de owners nem na equipe.</li>
-<li><b>Tarefas:</b> vê e revisa as tarefas de casa em <code>/semanas</code>.</li>
-<li><b>Presença:</b> abre <code>/presenca</code>: chamada das aulas, participações e histórico de todas as aulas. <i>Monitores</i> (instrutores) não precisam dessa permissão: eles já fazem a chamada das aulas que um owner liberou para eles no item 2.</li>
-<li><b>Owners</b> sempre têm tudo e são os únicos que mexem na lista de owners e na equipe.</li>
-<li>A pessoa da equipe também vê as aulas de nível <i>Membros</i>, como um aluno. Ela entra pelo mesmo login do GitHub.</li>
-<li><b>Onde fica:</b> em <code>acesso/acesso.json</code> (campo <code>equipe</code>) no <code>liga-curriculo</code>; cada mudança é um commit com o seu nome.</li></ul></details>
+<li><b>Regra de ouro:</b> não existe permissão avulsa por pessoa. Para dar algo a mais, crie um <b>perfil</b> na aba <b>Perfis</b> (nome + permissões) e marque esse perfil na ficha da pessoa.</li>
+<li><b>Vários perfis:</b> a pessoa pode ter quantos precisar. Vale a <b>soma</b>: em caso de conflito, prevalece quem dá mais acesso.</li>
+<li><b>Personalizar o site:</b> abre <code>/personalizar</code> (cores, logo, fundos, avisos, agenda, redes). Publica para todos, então dê com cuidado.</li>
+<li><b>Mudar o nível das aulas:</b> define quem vê cada aula (só owners, membros ou público).</li>
+<li><b>Cadastrar pessoas:</b> abre a aba Pessoas para cadastrar alunos e monitores. <b>Não</b> mexe em owners nem na equipe.</li>
+<li><b>Ver tarefas de casa:</b> permissão antiga, sem função hoje (as atividades ficam em Presença). Não precisa marcar.</li>
+<li><b>Fazer chamada e presença:</b> abre <code>/presenca</code>: chamada, participações, atividades e histórico. Monitores já fazem a chamada das aulas liberadas para eles.</li>
+<li><b>Editar slides:</b> usa o editor nos níveis a que a pessoa está vinculada pela turma.</li>
+<li><b>Owners</b> sempre têm tudo e são os únicos que mexem em owners, equipe e perfis.</li>
+<li><b>Onde fica:</b> <code>acesso/acesso.json</code> (campo <code>equipe</code>) no <code>liga-curriculo</code>; cada mudança é um commit com o seu nome.</li></ul></details>
 
 <details><summary>Chamada, participações e presença (/presenca)</summary>
 <ul>
@@ -74,16 +76,28 @@
 <li><b>Onde ficam os dados:</b> no GitHub, pasta <code>dados/aulas/&lt;turma&gt;/…</code> do <code>liga-curriculo</code> (um arquivo por aula e turma). Guardamos só o usuário do GitHub e o estado, sem nomes nem e-mails; os commits também não citam alunos. Se um dia a liga crescer demais, a base pode migrar para um banco de dados.</li>
 <li><b>Turma:</b> um texto livre (ex.: <code>2026</code>, <code>2027.1</code>) que separa as chamadas de grupos diferentes na mesma aula.</li></ul></details>
 
-<details><summary>Pessoas, cargos e turmas: como se encaixam</summary>
+<details><summary>Cadastrar alguém e dar acesso: passo a passo (Pessoas)</summary>
+<ol>
+<li>Peça à pessoa o <b>usuário do GitHub</b> (o nome que aparece no perfil dela). Sem ele, ela não entra.</li>
+<li>Painel → <b>Pessoas</b> → <b>+ Nova pessoa</b>. Tudo fica numa ficha só.</li>
+<li><b>Dados da pessoa:</b> nome completo* e usuário do GitHub* são obrigatórios. E-mail institucional e curso são opcionais. O e-mail é só contato (convocações) e só owners o veem; <b>não dá acesso</b>.</li>
+<li><b>Papel na Liga:</b> Aluno, Monitor, Equipe e/ou Owner. <b>Nenhum marcado = cadastro inativo</b>: a pessoa fica registrada (filtro <i>Sem acesso</i>) mas não entra.</li>
+<li><b>Aluno:</b> escolha a <b>turma</b> (ela define o nível). <b>Monitor:</b> escolha as turmas em que ensina e as aulas que abre. <b>Equipe:</b> marque os <b>perfis</b>.</li>
+<li>Confira o quadro <b>Em palavras</b> (o que a pessoa poderá fazer), use <b>Ver como</b> se quiser testar, e clique em <b>Salvar</b>.</li>
+<li><b>Regras que o sistema impõe:</b> o mesmo usuário ou e-mail não pode estar em duas pessoas, e não se apaga cadastro de quem ainda tem acesso.</li>
+<li><b>Tirar alguém:</b> <b>Remover acesso</b> (pede para você digitar o usuário e mostra o que sai). A plataforma <b>não mexe no GitHub</b>: se for o caso, remova você mesmo o repositório <code>aluno-&lt;usuário&gt;</code> e a pessoa da organização. Depois dá para <b>Excluir cadastro</b>.</li>
+<li><b>Lista:</b> filtros Todos/Owners/Equipe/Monitores/Alunos/Sem acesso, busca por nome, curso, e-mail ou usuário, e <b>Copiar e-mails</b> da lista filtrada (para a convocação).</li>
+<li><b>Onde fica:</b> acessos em <code>acesso/acesso.json</code> e contatos em <code>dados/equipe-pendente.json</code> (privado); cada mudança é um commit com o seu nome.</li></ol></details>
+<details><summary>Turmas: aluno atual e ex-aluno (o perfil do aluno)</summary>
 <ul>
-<li><b>Pessoas:</b> uma linha por pessoa, com selos do que ela é (Owner, Equipe, Monitor, Aluno) e uma frase em palavras do que ela pode fazer. Clique em <b>Editar</b> para abrir a ficha lateral. <b>Ver como</b> mostra a tela inicial como aquela pessoa a veria, sem alterar nada.</li>
-<li><b>Cargos:</b> são <i>modelos</i> de permissão (ex.: Marketing e artes = Site). Você define uma vez e depois só escolhe quem ocupa. Uma pessoa pode ter <b>vários cargos</b>; as permissões somam. Mudar o cargo muda para todos que o ocupam. Só owners criam cargos.</li>
-<li><b>Turmas:</b> grupo de alunos que percorre os níveis junto (ex.: <code>2026</code>, <code>2027.1</code>). A chamada, a presença e os certificados pertencem à turma. Turma <i>Arquivada</i> sai das listas do dia a dia, mas os dados continuam guardados. Alunos novos entram na turma em andamento ou na que você escolher.</li>
-<li><b>Nível da turma e Promover:</b> cada turma tem um nível; os alunos dela só veem as aulas desse nível (se estiverem como Membros ou Público). Para avançar, crie a turma nova (ex.: <code>2026.2-N1</code>) e use <b>Promover alunos…</b> na turma antiga: marque quem avança e desmarque quem não passou. Os promovidos continuam também na turma de origem. Turma <i>arquivada</i> continua mostrando os slides daquele nível aos alunos dela por <b>1 ano</b> (a data aparece no card e pode ser editada para estender); depois o acesso se encerra. <b>Código</b> sempre em maiúsculas (ex.: <code>2026.2-N0</code>); nome, nível e datas podem ser corrigidos quando quiser, e o código só muda enquanto a turma não tem chamadas. <b>Excluir</b> só vale para turma vazia e sem chamadas; senão, use Arquivar. Tudo é commit no GitHub, então dá para desfazer pelo histórico.</li>
-<li><b>Acesso extra ao material:</b> na ficha da pessoa, libera os slides de um nível por um prazo (padrão 1 ano, editável), com motivo. Serve para ex-aluno que pediu para rever. Não inclui roteiro nem chamada e vence sozinho. Fica em <code>acessos</code> no <code>acesso.json</code>.</li>
-<li><b>Monitor por turma:</b> na ficha do monitor você escolhe em quais turmas ele ensina e quais aulas (slides e roteiro) ele abre. A chamada dele só mostra os alunos dessas turmas.</li>
-<li><b>Adicionar várias:</b> cole vários usuários (um por linha, com @ ou link do GitHub); o painel mostra quais são válidos antes de adicionar.</li>
-<li><b>Onde fica:</b> tudo em <code>acesso/acesso.json</code> (campos <code>cargos</code>, <code>turmas</code>, <code>equipe</code>, <code>monitores</code>, <code>alunos</code>); cada mudança é um commit com o seu nome.</li></ul></details>
+<li><b>Turma = perfil de aluno.</b> Ela define o <b>nível</b> que o aluno vê, a chamada, a presença, as atividades e os certificados. Ex.: <code>2026.2-N0</code> (Nível 0).</li>
+<li><b>Aluno atual:</b> turma <i>Em andamento</i>. Aparece na chamada e nas atividades.</li>
+<li><b>Ex-aluno:</b> a mesma turma <i>Arquivada</i>, com <b>prazo de acesso</b> (padrão 1 ano, editável). Continua vendo os slides até o prazo, mas <b>sai das listas da aula atual</b>. Ao arquivar, o Top 5 final fica congelado.</li>
+<li><b>Promover:</b> crie a turma do nível seguinte (ex.: <code>2026.2-N1</code>) e use <b>Promover alunos…</b> na turma antiga: marque quem avança.</li>
+<li><b>Vários perfis:</b> a pessoa pode estar em mais de uma turma; vale a soma.</li>
+<li><b>Sem acesso avulso por prazo:</b> para um ex-aluno que pediu para rever, coloque-o numa turma de ex-alunos do nível.</li></ul></details>
+<details><summary>Monitor por turma</summary>
+<ul><li>Na ficha do monitor você escolhe em quais turmas ele ensina e quais aulas (slides e roteiro) ele abre. A chamada dele só mostra os alunos dessas turmas. Para ele editar slides, dê a <i>Permissão para editar slides</i> na mesma ficha.</li></ul></details>
 
 <details><summary>Pontuação e Top 5 de cada turma</summary>
 <ul>
@@ -103,7 +117,7 @@
 
 <details><summary>Os 4 tipos de pessoa</summary>
 <ul>
-<li><b>Owner:</b> vê tudo (slides, roteiros, tarefas de casa), muda níveis e permissões. Dê só a quem coordena a liga.</li>
+<li><b>Owner:</b> vê tudo (slides, roteiros, atividades), muda níveis e permissões. Dê só a quem coordena a liga.</li>
 <li><b>Monitor:</b> começa igual a um aluno. Só vê a mais o que um owner marcar para ele (slides de uma aula, roteiro de uma aula).</li>
 <li><b>Aluno:</b> usuário na lista de alunos. Vê aulas de nível <i>Membros</i> e <i>Público</i>. Nunca vê roteiros.</li>
 <li><b>Visitante:</b> qualquer pessoa sem login ou fora das listas. Vê só aulas de nível <i>Público</i>.</li></ul></details>
@@ -142,16 +156,21 @@
 <li><b>Imagens:</b> PNG, JPG, WEBP ou GIF até 3 MB. Ficam públicas (qualquer pessoa pode abrir o endereço da imagem), então <b>não envie nada privado</b>. Fundos são reduzidos automaticamente.</li>
 <li><b>Voltar ao visual original:</b> aplique o tema "Padrão da Liga" e remova logo e fundos (botão "Nenhuma").</li></ul></details>
 
-<details><summary>Tarefas de casa e "liberação" (/semanas): explicado do zero</summary>
-<p><b>O que é "liberação"?</b> É o ato de <i>entregar aos alunos o material de uma semana</i>: o resumo da aula e a tarefa de casa. Não tem relação com "liberar acesso" do item 1 (aquilo é sobre quem pode <i>ver os slides</i>).</p>
-<p><b>Como funciona, em 4 passos:</b></p>
-<ol>
-<li><b>Preparar (já feito):</b> para cada semana existe uma pasta <code>liberacao/nivel-00/semana-01/</code> (depois <code>semana-02</code>, etc.) no <code>liga-curriculo</code>, com 2 textos: <code>aula.md</code> (o resumo/material da aula) e <code>tarefa.md</code> (a tarefa de casa).</li>
-<li><b>Revisar (você, aqui):</b> a página <a href="/semanas">/semanas</a> só <i>mostra</i> esses textos bonitinhos para vocês lerem. Se quiser mudar algo, clique em <b>Sugerir alteração</b>, edite e salve no GitHub.</li>
-<li><b>Enviar (depois, no dia certo):</b> um owner roda o script <code>ferramentas/liberar-semana.py</code>. Primeiro em <b>simulação</b> (não envia nada, só mostra o que faria). Só com <code>--executar</code> ele envia de verdade.</li>
-<li><b>Resultado para o aluno:</b> o <code>aula.md</code> é publicado no repositório compartilhado <code>liga-aulas</code>, e o <code>tarefa.md</code> vira uma <b>Issue</b> (um "cartão de tarefa" do GitHub) no repositório pessoal de cada aluno, que ele resolve e fecha.</li>
-</ol>
-<p><b>Resumindo:</b> <code>/semanas</code> = vitrine para revisar. Nada chega aos alunos enquanto o script não for executado com <code>--executar</code>.</p></details>
+<details><summary>Atividades: exercícios (E) e tarefas (T), liberar e notas</summary>
+<ul>
+<li><b>E = Exercício</b> (feito em sala, na aula). <b>T = Tarefa</b> (dever de casa). <b>T4</b> é <b>opcional</b>: vale pontos extras e não pesa na nota.</li>
+<li><b>Onde:</b> <b>Presença → Atividades</b>. As atividades ficam agrupadas por aula e por tipo, e <b>nenhuma chega ao aluno antes de você clicar em Liberar</b> (cada linha tem o seu botão; há também "Liberar a quem falta" e "Abrir / só alguns").</li>
+<li><b>O que o aluno recebe:</b> uma <b>Issue</b> no repositório pessoal dele (<code>aluno-&lt;usuário&gt;</code>). Atividade opcional vem marcada como tal. Ele responde comentando na Issue.</li>
+<li><b>Nota:</b> use <b>Conferir respostas</b> e dê nota de 0 a 10. Estados: no prazo (100%), em atraso (50%), não entregue (0), dispensado (fora da conta).</li>
+<li><b>Pontuação:</b> presença 40 + participação 30 + exercícios 30 (ajustável em Pontuação). As opcionais só somam extra, com teto de 100%.</li>
+<li><b>Quando disparar (sugestão):</b> terça E1/E2 em aula e T1 no fim; quarta T2; quinta T3 e T4; o prazo de cada uma é 2 dias depois.</li>
+<li><b>Onde ficam os dados:</b> <code>dados/atividades/&lt;turma&gt;/</code> no <code>liga-curriculo</code>.</li></ul></details>
+<details><summary>Guias e dúvidas (equipe) e Central de ajuda (alunos)</summary>
+<ul>
+<li><b>/wiki (Guias e dúvidas):</b> páginas para o corpo administrativo. Cada página tem uma <b>visibilidade por função</b> (owner, monitor, equipe, e opcionalmente só alguns cargos); quem não tem a função não a vê nem na busca.</li>
+<li><b>/ajuda (Central de ajuda):</b> as páginas com visibilidade "Central de ajuda" formam a wiki separada dos alunos (todos os membros logados).</li>
+<li><b>Quem edita:</b> só owners, no Painel → <b>Guias e dúvidas</b>.</li>
+<li>Há um tutorial de entrada para o aluno (criar GitHub, enviar o usuário, entrar) na Central de ajuda.</li></ul></details>
 
 <details><summary>Quanto tempo leva para valer? E se algo der errado?</summary>
 <ul>
