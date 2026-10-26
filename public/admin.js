@@ -358,6 +358,7 @@ function desenharWiki(){
 
 
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
+const PEND_OPEN=new Set();
 function desenharPendentes(){
   const raiz=$('p-pendentes');raiz.textContent='';const L=D.pendentes||[];
   raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Equipe administrativa cadastrada pelo ',h('b',null,'e-mail institucional'),' e cargo. A plataforma entra só com GitHub, então o e-mail é ',h('b',null,'só contato'),' (não dá acesso). Ao preencher o usuário do GitHub e salvar, a pessoa já é adicionada à equipe com esse cargo (sem permissões extras; ajuste em ',h('b',null,'Pessoas'),' se precisar).'));
@@ -368,12 +369,19 @@ function desenharPendentes(){
     const em=inp(p.email,'a000000@ceuma.com.br'),cg=inp(p.cargo,'Ex.: Vice presidente'),no=inp(p.nome,'Opcional'),us=inp(p.usuario,'Ex.: afonsofarias');
     const bt=h('button',{type:'button',class:'btn'},novo?'Adicionar contato':'Salvar alterações');
     bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',anterior:p.email||'',email:em.value,cargo:cg.value,nome:no.value,usuario:us.value});const gu=us.value.trim().replace(/^@/,'').toLowerCase();let extra='';if(gu&&!(D.equipe||{})[gu]){await enviar({acao:'equipe',usuario:gu,titulo:cg.value,permissoes:[]});extra=' @'+gu+' também foi adicionado à equipe (sem permissões extras; ajuste em Pessoas).'}aviso('Salvo.'+extra);await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
-    const topo=novo?h('div',{style:'font-weight:700;font-size:16px'},'+ Novo contato'):h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center'},h('b',{style:'font-size:16px'},p.cargo||'(sem cargo)'),h('span',{style:'font-size:12px;padding:2px 10px;border-radius:99px;background:'+(p.usuario?'#1d4d3a':'#5a4416')},p.usuario?'GitHub: @'+p.usuario:'Falta o usuário do GitHub'));
+    const chave=novo?'__novo':p.email;const corpo=h('div',{style:'margin-top:10px'});corpo.hidden=!PEND_OPEN.has(chave);
+    const seta=h('span',{style:'display:inline-block;transition:transform .15s;font-size:11px'},'▶');
+    const rot=h('span',{style:'font-size:13px;opacity:.8'},'');
+    const topo=h('button',{type:'button',style:'all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap'});
+    const pill=novo?null:h('span',{style:'font-size:12px;padding:2px 10px;border-radius:99px;background:'+(p.usuario?'#1d4d3a':'#5a4416')},p.usuario?'GitHub: @'+p.usuario:'Falta o usuário do GitHub');
+    topo.append(seta,h('b',{style:'font-size:16px'},novo?'Novo contato':(p.cargo||'(sem cargo)')),novo?h('span',{style:'opacity:.6;font-size:13px'},'clique para abrir'):h('span',{style:'opacity:.65;font-size:13px'},p.email),h('span',{style:'flex:1'}),...(pill?[pill]:[]),rot);
+    const atual=()=>{const ab=!corpo.hidden;seta.style.transform=ab?'rotate(90deg)':'';rot.textContent=ab?'Fechar':'Editar';if(ab)PEND_OPEN.add(chave);else PEND_OPEN.delete(chave)};
+    topo.onclick=()=>{corpo.hidden=!corpo.hidden;atual()};atual();
     const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 12px'});g.append(campo('E-mail institucional',em),campo('Cargo',cg),campo('Nome',no),campo('Usuário do GitHub',us));
     const ac=h('div',{style:'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'},bt);
     if(!novo){const rem=h('button',{type:'button',class:'btn sec'},'Remover');rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
       try{await enviar({acao:'pendente_remover',email:p.email});aviso('Removido.');await carregar()}catch(e){aviso(e.message,true)}};ac.append(rem)}
-    c.append(topo,g,ac);return c};
+    corpo.append(g,ac);c.append(topo,corpo);return c};
   if(L.length){const cp=h('button',{type:'button',class:'btn'},'Copiar todos os e-mails ('+L.length+')');cp.onclick=async()=>{try{await navigator.clipboard.writeText(L.map(x=>x.email).join('; '));aviso('E-mails copiados. Cole no campo Para/CCO do e-mail.')}catch{aviso('Não consegui copiar.',true)}};raiz.append(cp)}
   for(const p of L)raiz.append(mk(p));
   raiz.append(mk());
