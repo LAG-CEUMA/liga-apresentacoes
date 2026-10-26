@@ -85,12 +85,15 @@ ${rodape(RODAPE)}` },
   const fmt = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
   function durDe(s) { const t = lerTempo(s && s.tempo); return t && t.f > t.i ? t.f - t.i : null; }
   function lerDur(txt) { const t = String(txt == null ? '' : txt).trim(); if (!t) return null; const r = lerTempo(t); if (r && /:/.test(t)) return r.f > r.i ? r.f - r.i : null; const m = /^(\d{1,3})(?:[.,]\d+)?\s*(?:min\w*|m)?$/i.exec(t); return m && +m[1] > 0 ? +m[1] : null; }
+  // Slides com o mesmo tempo, em sequência, formam um "bloco" (ex.: 3 slides durante os mesmos 10 min). Mudar a duração de um muda o bloco todo.
+  function blocos(slides) { const bl = []; slides.forEach((x, j) => { const t = String((x && x.tempo) || '').trim(); const ult = bl[bl.length - 1]; if (t && ult && ult.t === t) ult.ix.push(j); else bl.push({ t, ix: [j] }); }); return bl; }
   function refazerTempos(slides, k, dur) {
-    const d = slides.map(durDe); d[k] = dur; let c = 0;
-    slides.forEach((x, j) => { if (d[j] == null || d[j] <= 0) { if (j === k) x.tempo = ''; return; } x.tempo = `${fmt(c)} a ${fmt(c + d[j])}`; c += d[j]; });
+    const bl = blocos(slides); let c = 0;
+    bl.forEach((b) => { let d = b.ix.includes(k) ? dur : durDe(slides[b.ix[0]]); if (d == null || d <= 0) { if (b.ix.includes(k)) b.ix.forEach((j) => { if (j === k) slides[j].tempo = ''; }); return; } const t = `${fmt(c)} a ${fmt(c + d)}`; b.ix.forEach((j) => { slides[j].tempo = t; }); c += d; });
     return { total: c };
   }
-  function totalMin(slides) { return slides.reduce((a, x) => a + (durDe(x) || 0), 0); }
-  const api = { SLIDES, ELEMENTOS, ICONES, checarTempos, lerTempo, fmt, durDe, lerDur, refazerTempos, totalMin };
+  function totalMin(slides) { return slides.reduce((a, x) => { const t = lerTempo(x && x.tempo); return t ? Math.max(a, t.f) : a; }, 0); }
+  function noBloco(slides, k) { const bl = blocos(slides).find((b) => b.ix.includes(k)); return bl ? bl.ix.length : 1; }
+  const api = { SLIDES, ELEMENTOS, ICONES, checarTempos, lerTempo, fmt, durDe, lerDur, refazerTempos, totalMin, noBloco };
   if (typeof module !== 'undefined') module.exports = api; else g.EditorModelos = api;
 })(typeof window !== 'undefined' ? window : globalThis);

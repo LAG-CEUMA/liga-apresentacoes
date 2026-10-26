@@ -249,10 +249,13 @@ function painel() {
     campoCor('Cor padrão do texto', /^#/.test(s.cor) ? s.cor : '#f3efe6', (v) => { s.cor = v; slideEl().style.color = v; commit(); }),
     (() => {
       const info = h('span', { class: 'sub' }), tot = h('b', {});
-      const mostra = () => { const d = M0.durDe(s), t = M0.totalMin(M.slides); info.textContent = d ? `Este slide: ${s.tempo.replace(' a ', ' → ')}` : 'Digite só o número de minutos (ex.: 5).'; tot.textContent = `Aula: ${t} de 60 min`; tot.style.color = t > 60 ? '#ff6b6b' : ''; };
+      const mostra = () => { const d = M0.durDe(s), t = M0.totalMin(M.slides), nb = M0.noBloco(M.slides, cur); info.textContent = d ? `${s.tempo.replace(' a ', ' → ')}${nb > 1 ? ` (bloco de ${nb} slides)` : ''}` : 'Digite só o número de minutos (ex.: 5).'; tot.textContent = `Aula: ${t} de 60 min`; tot.style.color = t > 60 ? '#ff6b6b' : ''; };
       const inp = h('input', { type: 'text', inputmode: 'numeric', maxlength: 12, style: 'width:90px', value: M0.durDe(s) || '', placeholder: 'min', oninput: (e) => { const d = M0.lerDur(e.target.value); M0.refazerTempos(M.slides, cur, d); mostra(); marcarSujo(true); agendarSnap(); } });
+      const ant = cur > 0 ? M.slides[cur - 1] : null; const junto = h('input', { type: 'checkbox' }); junto.checked = !!(ant && s.tempo && s.tempo === ant.tempo);
+      junto.onchange = () => { if (junto.checked) { s.tempo = ant.tempo; inp.value = M0.durDe(s) || ''; } else { s.tempo = ''; inp.value = ''; } mostra(); marcarSujo(true); agendarSnap(); };
       mostra();
-      return h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Duração em minutos, obrigatória (ex.: 5). O início é o fim do slide anterior.'), h('div', { style: 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px' }, inp, info, tot));
+      return h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Duração em minutos, obrigatória (ex.: 5). O início é o fim do bloco anterior.'), h('div', { style: 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px' }, inp, info, tot),
+        ...(ant ? [h('label', { class: 'sub', style: 'display:flex;gap:6px;align-items:center;margin-top:6px' }, junto, 'Mesmo bloco do slide anterior (dividem o mesmo tempo)')] : []));
     })(),
     h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Roteiro do apresentador (uma ideia por linha)'), h('textarea', { rows: 7, maxlength: 4000, placeholder: 'Fica só no arquivo de roteiro. Nunca aparece no slide projetado.', oninput: (e) => { s.notas = e.target.value; marcarSujo(true); agendarSnap(); } }, s.notas))));
 }
