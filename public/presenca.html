@@ -1,5 +1,22 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Chamada e presença</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"></head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"><style>
+.ag{background:#171a26;border:1px solid #fff3;border-left:6px solid var(--ouro);border-radius:14px;margin:14px 0;padding:0 14px 6px}
+.ag>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;padding:16px 4px;font-size:20px;font-weight:800}
+.ag>summary::-webkit-details-marker{display:none}.ag>summary::before{content:"▸";color:var(--ouro);font-size:22px}.ag[open]>summary::before{content:"▾"}
+.ag>summary .cnt{margin-left:auto;font-size:13px;font-weight:600;background:#fff1;border-radius:99px;padding:4px 12px;color:var(--mut)}
+.tg{border-radius:12px;margin:8px 0 12px;padding:0 10px 4px;border:1px solid #fff2;background:#12141c}
+.tg.E{border-left:5px solid var(--ver)}.tg.T{border-left:5px solid #6aa7ff}.tg.O{border-left:5px solid var(--mut)}
+.tg>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:12px 2px;font-weight:700}
+.tg>summary::-webkit-details-marker{display:none}.tg>summary::before{content:"▸";color:var(--mut)}.tg[open]>summary::before{content:"▾"}
+.tg .letra{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-weight:900;color:#12141c}
+.tg.E .letra{background:var(--ver)}.tg.T .letra{background:#6aa7ff}.tg.O .letra{background:var(--mut)}
+.tg .expl{font-weight:500;color:var(--mut);font-size:13px}
+.tg .linha{border-left:3px solid #fff2;margin-left:6px}
+.leg{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.leg div{flex:1 1 260px;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+.pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle}
+.pill.lib{background:#3ec9b033;color:var(--ver)}.pill.nao{background:#fff1;color:var(--mut)}.pill.opc{background:#f5b83d33;color:var(--ouro)}
+</style>
+</head>
 <body data-pg="painel"><main>
 <div class="topo"><div><p class="tag" data-site="tag">CHAMADA E PRESENÇA</p><h1>Presença</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a></div></div>
 <p>Faça a chamada em <b>até 3 momentos</b> da aula (início, meio e fim). O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.</p>
@@ -91,18 +108,21 @@ async function telaAtiv(alvo){
   if(!r.ok){alvo.textContent='Não consegui carregar as atividades desta turma.';return}
   ATV=await r.json();alvo.textContent='';
   alvo.append(h('p',{class:'sub'},'Cada atividade é um exercício com peso, prazo e entrega próprios. Você decide quando liberar (para todos ou só alguns) e as respostas chegam separadas, cada uma na sua Issue.'));
-  alvo.append(h('div',{class:'box',style:'margin:8px 0'},h('b',{},'Como ler os códigos'),h('div',{class:'sub'},'N0.1-2 = Nível 0, aula 1 de 2. ',h('b',{},'E'),' = Exercício (Exercise): feito durante a aula, com o instrutor. ',h('b',{},'T'),' = Tarefa (Task): dever de casa, feito depois da aula, em partes T1, T2, T3 e T4 (o T4 é opcional e vale pontos extras).')));
+  alvo.append(h('div',{class:'leg'},
+    h('div',{class:'tg E',style:'border:1px solid #fff2'},h('span',{class:'letra'},'E'),h('span',{},h('b',{},'Exercício (Exercise)'),h('br'),h('span',{class:'expl'},'Feito em sala, durante a aula, com o instrutor.'))),
+    h('div',{class:'tg T',style:'border:1px solid #fff2'},h('span',{class:'letra'},'T'),h('span',{},h('b',{},'Tarefa (Task)'),h('br'),h('span',{class:'expl'},'Dever de casa, depois da aula: T1, T2, T3 e T4 (T4 é opcional, pontos extras).'))),
+    h('div',{style:'border:1px solid #fff2'},h('span',{},h('b',{},'N0.1-2'),h('br'),h('span',{class:'expl'},'Nível 0, aula 1 de 2.')))));
   const lista=h('div',{});
   if(!ATV.atividades.length)lista.append(h('p',{},'Nenhuma atividade ainda. Crie a primeira abaixo.'));
   window.ATV_OPEN=window.ATV_OPEN||new Set();const grupos={};
-  const TIPOS={E:'E · Exercícios (Exercise): feitos durante a aula',T:'T · Tarefas (Task): dever de casa, depois da aula',O:'Outras atividades'};
-  const det=(chave,titulo,aberto)=>{const d=h('details',{class:'box',style:'margin:8px 0'},h('summary',{},titulo));d.open=aberto||ATV_OPEN.has(chave);d.addEventListener('toggle',()=>{d.open?ATV_OPEN.add(chave):ATV_OPEN.delete(chave)});return d};
+  const TIPOS={E:'E · Exercícios (Exercise): feitos em sala, durante a aula',T:'T · Tarefas (Task): dever de casa, feito depois da aula',O:'Outras atividades: '};
+  const det=(chave,titulo,aberto,cls,extra)=>{const d=h('details',{class:cls||'ag'});const sm=h('summary',{});if(extra)sm.append(...extra);else sm.append(titulo);d.append(sm);d.open=aberto||ATV_OPEN.has(chave);d.addEventListener('toggle',()=>{d.open?ATV_OPEN.add(chave):ATV_OPEN.delete(chave)});return d};
   const destino=(a)=>{const m=/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(a.codigo||'');const aula=m?m[1].trim():'Sem aula',tp=m?m[2].toUpperCase():'O';
-    if(!grupos[aula]){const n=ATV.atividades.filter(x=>((/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(x.codigo||'')||[0,'Sem aula'])[1].trim())===aula).length;grupos[aula]={d:det('a:'+aula,aula+' ('+n+' atividades)'),t:{}};lista.append(grupos[aula].d)}
-    const G=grupos[aula];if(!G.t[tp]){G.t[tp]=det('t:'+aula+tp,TIPOS[tp]);G.d.append(G.t[tp])}if(ATV_SEL===a.id){G.d.open=true;G.t[tp].open=true}return G.t[tp]};
+    if(!grupos[aula]){const n=ATV.atividades.filter(x=>((/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(x.codigo||'')||[0,'Sem aula'])[1].trim())===aula).length;grupos[aula]={d:det('a:'+aula,'',false,'ag',[h('span',{},aula),h('span',{class:'cnt'},n+' atividades')]),t:{}};lista.append(grupos[aula].d)}
+    const G=grupos[aula];if(!G.t[tp]){G.t[tp]=det('t:'+aula+tp,'',false,'tg '+tp,[h('span',{class:'letra'},tp==='O'?'·':tp),h('span',{},TIPOS[tp].split(':')[0].replace(/^[ET] · /,''),h('br'),h('span',{class:'expl'},TIPOS[tp].split(':')[1]||''))]);G.d.append(G.t[tp])}if(ATV_SEL===a.id){G.d.open=true;G.t[tp].open=true}return G.t[tp]};
   for(const a of ATV.atividades){
     const n=Object.values(a.disparos||{}).filter(x=>x.numero).length;
-    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo+(a.opcional?'  (OPCIONAL)':'')),h('div',{class:'sub'},`${a.opcional?'pontos extras':'peso '+a.peso} · prazo ${fmtD(a.prazo)} · ${a.liberada?'LIBERADA ('+n+' Issue'+(n===1?'':'s')+')':'não liberada'}`)),
+    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo),h('span',{class:'pill '+(a.liberada?'lib':'nao')},a.liberada?'liberada ('+n+')':'não liberada'),a.opcional?h('span',{class:'pill opc'},'opcional'):'',h('div',{class:'sub'},`${a.opcional?'pontos extras':'peso '+a.peso} · prazo ${fmtD(a.prazo)}`)),
       h('button',{class:'btn',type:'button',title:'Cria a Issue desta atividade no repositório de cada aluno que ainda não a tem',onclick:async()=>{if(!confirm('Liberar "'+(a.codigo||a.titulo)+'" para TODOS os alunos da turma agora? Será criada uma Issue no repositório de cada um que ainda não tiver.'))return;try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:[]});aviso(`Issues criadas: ${r.criadas}${r.jaTinham?' · já tinham: '+r.jaTinham:''}${r.falhas.length?' · FALHAS: '+r.falhas.map(x=>x.usuario+' ('+x.erro+')').join(', '):''}`,r.falhas.length);telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},a.liberada?'Liberar a quem falta':'Liberar'),
       h('button',{class:'btn sec',type:'button',onclick:()=>{ATV_SEL=ATV_SEL===a.id?'':a.id;telaAtiv(alvo)}},ATV_SEL===a.id?'Fechar':'Abrir / só alguns'));
     const D=destino(a);D.append(el);
