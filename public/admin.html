@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
 <style>.sub{color:var(--mut);font-size:13px}input[type=text],input[type=date]{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}main{max-width:980px}</style></head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Painel</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" href="/personalizar">Personalizar site</a><a class="btn sec" href="/presenca">Atividades</a><a class="btn sec" href="/presenca">Presença</a><a class="btn sec" href="/editor">Editor de slides</a></div></div>
+<div class="topo"><div><p class="tag">PAINEL DA LIGA</p><h1>Painel</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><a class="btn sec" id="f-site" href="/personalizar" hidden>Personalizar site</a><a class="btn sec" id="f-pres" href="/presenca" hidden>Presença e atividades</a><a class="btn sec" id="f-ed" href="/editor" hidden>Editor de slides</a><a class="btn sec" id="f-wiki" href="/wiki" hidden>Guias e dúvidas</a></div></div>
 <div class="tabs" id="abas"></div>
 <section id="p-pessoas" hidden></section>
 <section id="p-cargos" hidden></section>
@@ -23,6 +23,7 @@
 </ol></details>
 <details><summary>Área do aluno, novidades e Destaque de ranking</summary>
 <ol>
+<li><b>Atalhos das ferramentas:</b> quem tem acesso ao Painel encontra Personalizar site, Presença e atividades, Editor de slides e Guias no topo do próprio Painel; a Início fica só com o botão Painel. Quem não tem Painel (ex.: marketing só com a permissão Personalizar) vê o atalho direto na Início.</li>
 <li><b>Início</b> mostra só o que é da Liga: boas-vindas, anúncios, agenda, vitrine e destaques de ranking. O aluno logado cai nela.</li>
 <li><b>Área do aluno</b> (botão no topo da Início; para quem não entrou, o botão se chama Aulas) reúne três abas: <b>Aulas</b> (só o conteúdo), <b>Atividades</b> (pendentes e entregues, com link da Issue no GitHub) e <b>Meu progresso</b> (pontuação, posição, Top 5 da turma e presença). O endereço antigo /aulas leva para ela.</li>
 <li><b>Regra de novidade:</b> blocos recolhíveis abrem expandidos, com a etiqueta <b>novo</b>, quando o conteúdo mudou desde que a pessoa o abriu ou recolheu. Depois que ela escolhe recolher, o bloco fica recolhido até chegar algo novo. A escolha fica guardada no navegador de cada pessoa. O botão Área do aluno também ganha "novo" quando há aula ou atividade nova.</li>

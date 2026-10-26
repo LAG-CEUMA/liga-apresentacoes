@@ -401,5 +401,7 @@ async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
   D=await r.json();D.turmas=D.turmas||{};D.cargos=D.cargos||{};D.equipe=D.equipe||(D.dono?{}:undefined);
+  const pm=D.permissoes||[],ver=(id,ok)=>{const e=$(id);if(e)e.hidden=!ok};
+  ver('f-site',D.dono||pm.includes('site'));ver('f-pres',D.dono||pm.includes('presenca'));ver('f-ed',D.dono||pm.includes('slides'));ver('f-wiki',!D.dono);
   mostrar(ABA||location.hash.slice(1)||'pessoas')}
 carregar();
