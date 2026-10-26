@@ -108,7 +108,7 @@ function abrirGaveta(nome){
         cs.length?'':h('p',{class:'sub'},'Ainda não há cargos. Crie na aba Cargos.'),h('div',{class:'sub'},'Os cargos são criados uma vez na aba Cargos e valem para quem os ocupar.'));
       const x=rascunhoInfo();
       for(const p of Object.keys(PERM_INFO)){const on=x.perms.includes(p);bl.append(h('div',{class:'permlinha'},h('span',{class:on?'on':'off'},on?'✓':'–'),h('span',{class:on?'':'off'},h('b',{},PERM_INFO[p][0]),' · '+PERM_INFO[p][1]),h('span',{class:'src'},on&&x.origem[p]?'por '+x.origem[p].join(', '):'')))}
-      const det=h('details',{style:'margin-top:10px'},h('summary',{style:'cursor:pointer;font-size:14px'},'Permissões extras só para esta pessoa (opcional)'));
+      const det=h('details',{class:'nivel pequeno',style:'margin-top:10px'},h('summary',{},h('span',{class:'nvt'},'Permissões extras só para esta pessoa (opcional)')));
       for(const p of Object.keys(PERM_INFO))det.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:E.extras.has(p),onchange:e=>{e.target.checked?E.extras.add(p):E.extras.delete(p);desenhar()}}),h('b',{},PERM_INFO[p][0])));
       det.open=E.extras.size>0;bl.append(det);box.append(bl)}
     if(dono){const bl=h('div',{class:'sec'},h('h3',{},'Editor de slides (escopo)'),h('div',{class:'sub'},'Libera o editor (/editor) em um nível inteiro ou numa aula, mesmo sem cargo. Quem tem a permissão "Slides" por cargo edita os níveis a que está vinculado pela turma.'));
@@ -349,11 +349,11 @@ function desenharWiki(){
         try{await enviar({acao:'wiki_remover',slug:p.slug});aviso('Página removida.');await carregar()}catch(e){aviso(e.message,true)}};
       c.lastChild.append(h('a',{class:'btn sec',href:'/wiki/'+p.slug,target:'_blank',rel:'noopener'},'Abrir'),rem)}
     return c};
-  const novo=h('details',{open:!(W.paginas||[]).length});novo.append(h('summary',null,'Nova página'),mk());raiz.append(novo);
+  const novo=h('details',{class:'nivel',open:!(W.paginas||[]).length},h('summary',null,h('span',{class:'nvt'},'+ Nova página')),h('div',{class:'nvcorpo'},mk()));raiz.append(novo);
   if(!(W.paginas||[]).length){raiz.append(h('p',{class:'sub'},'Nenhuma página ainda.'));return}
   for(const p of W.paginas.slice().sort((a,b)=>(a.categoria||'').localeCompare(b.categoria||'')||a.ordem-b.ordem)){
-    const d=h('details',{style:'max-width:760px;margin:6px 0'});
-    d.append(h('summary',null,h('b',null,p.titulo),' · '+p.categoria+' · '+(W.vis[p.visibilidade]||p.visibilidade)),mk(p));raiz.append(d)}
+    const d=h('details',{class:'nivel pequeno'});
+    d.append(h('summary',null,h('span',{class:'nvt'},p.titulo),h('span',{class:'nvc'},p.categoria+' · '+(W.vis[p.visibilidade]||p.visibilidade))),h('div',{class:'nvcorpo'},mk(p)));raiz.append(d)}
 }
 
 
@@ -367,7 +367,7 @@ function desenharPendentes(){
   const mk=(p)=>{const novo=!p;p=p||{};
     const c=h('div',{class:'card',style:'margin:10px 0;max-width:760px;padding:14px 16px;border-left:4px solid '+(novo?'#7c8cff':p.usuario?'#3ecf8e':'#f5b942')});
     const ligados=new Set(L.map(x=>(x.usuario||'').toLowerCase()).filter(Boolean));
-    const conhecidos=[...new Set([...(D.fixos||[]),...(D.owners||[]),...Object.keys(D.equipe||{}),...(D.monitores||[])].map(x=>String(x).toLowerCase()))].filter(x=>x&&!ligados.has(x));
+    const conhecidos=[...new Set([D.fixos,D.owners,D.equipe,D.monitores].flatMap(x=>Array.isArray(x)?x:Object.keys(x||{})).map(x=>String(x&&x.usuario||x).toLowerCase()))].filter(x=>x&&!ligados.has(x));
     const em=inp(p.email,'a000000@ceuma.com.br'),cg=inp(p.cargo,'Ex.: Vice presidente'),no=inp(p.nome,'Opcional'),us=inp(p.usuario,'Ex.: afonsofarias');
     const bt=h('button',{type:'button',class:'btn'},novo?'Adicionar contato':'Salvar alterações');
     bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',anterior:p.email||'',email:em.value,cargo:cg.value,nome:no.value,usuario:us.value});const gu=us.value.trim().replace(/^@/,'').toLowerCase();let extra='';if(gu&&!(D.equipe||{})[gu]){await enviar({acao:'equipe',usuario:gu,titulo:cg.value,permissoes:[]});extra=' @'+gu+' também foi adicionado à equipe (sem permissões extras; ajuste em Pessoas).'}aviso('Salvo.'+extra);await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};

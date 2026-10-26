@@ -33,6 +33,13 @@ details.nivel{background:var(--card);border:1px solid #fff2;border-radius:14px;m
 details.nivel>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;padding:14px 0;list-style:none}
 details.nivel>summary::-webkit-details-marker{display:none}
 details.nivel>summary::before{content:"▸";color:var(--ouro);margin-right:8px}details.nivel[open]>summary::before{content:"▾"}
+details.nivel>summary::after{content:"Abrir";order:3;font-size:12px;color:var(--mut);border:1px solid #fff2;border-radius:99px;padding:2px 10px}
+details.nivel[open]>summary::after{content:"Fechar"}
+details.nivel>summary:hover{color:var(--ouro)}details.nivel>summary:hover::after{border-color:var(--ouro);color:var(--ouro)}
+.guia summary{display:flex;align-items:center;gap:8px;list-style:none}.guia summary::-webkit-details-marker{display:none}
+.guia summary::before{content:"▸";color:var(--ouro)}.guia details[open]>summary::before{content:"▾"}
+.guia summary::after{content:"Abrir";margin-left:auto;font-size:12px;font-weight:400;color:var(--mut);border:1px solid #fff2;border-radius:99px;padding:2px 10px}
+.guia details[open]>summary::after{content:"Fechar"}
 details.nivel .nvt{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;flex:1}
 details.nivel .nvc{color:var(--mut);font-size:13px}
 details.nivel .massa{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 0 10px}
