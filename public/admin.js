@@ -360,17 +360,23 @@ function desenharWiki(){
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 function desenharPendentes(){
   const raiz=$('p-pendentes');raiz.textContent='';const L=D.pendentes||[];
-  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Membros da equipe administrativa cadastrados só pelo ',h('b',null,'e-mail institucional'),' e cargo. A plataforma entra somente com GitHub, então o e-mail aqui é ',h('b',null,'contato'),' (não dá acesso). Quando a pessoa informar o usuário do GitHub, preencha o campo e cadastre-a em Pessoas.'));
-  const mk=(p)=>{p=p||{};const c=h('div',{class:'card',style:'margin:8px 0;max-width:760px'});
-    const em=h('input',{type:'text',placeholder:'E-mail institucional',value:p.email||'',style:'width:100%;margin:4px 0'}),cg=h('input',{type:'text',placeholder:'Cargo (ex.: Vice presidente)',value:p.cargo||'',style:'width:100%;margin:4px 0'}),no=h('input',{type:'text',placeholder:'Nome (opcional)',value:p.nome||'',style:'width:100%;margin:4px 0'}),us=h('input',{type:'text',placeholder:'Usuário do GitHub (quando souber)',value:p.usuario||'',style:'width:100%;margin:4px 0'});
-    const bt=h('button',{type:'button',class:'btn'},p.email?'Salvar':'Adicionar');
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Equipe administrativa cadastrada pelo ',h('b',null,'e-mail institucional'),' e cargo. A plataforma entra só com GitHub, então o e-mail é ',h('b',null,'só contato'),' (não dá acesso). Preencha o usuário do GitHub quando a pessoa informar e cadastre-a em ',h('b',null,'Pessoas'),'.'));
+  const campo=(rot,el)=>h('label',{style:'display:block;font-size:12px;opacity:.75;margin:6px 0 0'},rot,el);
+  const inp=(v,ph)=>h('input',{type:'text',placeholder:ph||'',value:v||'',style:'width:100%;margin-top:3px'});
+  const mk=(p)=>{const novo=!p;p=p||{};
+    const c=h('div',{class:'card',style:'margin:10px 0;max-width:760px;padding:14px 16px;border-left:4px solid '+(novo?'#7c8cff':p.usuario?'#3ecf8e':'#f5b942')});
+    const em=inp(p.email,'a000000@ceuma.com.br'),cg=inp(p.cargo,'Ex.: Vice presidente'),no=inp(p.nome,'Opcional'),us=inp(p.usuario,'Ex.: afonsofarias');
+    const bt=h('button',{type:'button',class:'btn'},novo?'Adicionar contato':'Salvar alterações');
     bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',anterior:p.email||'',email:em.value,cargo:cg.value,nome:no.value,usuario:us.value});aviso('Salvo.');await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
-    c.append(em,cg,no,us,h('div',{style:'margin-top:6px;display:flex;gap:8px'},bt));
-    if(p.email){const rem=h('button',{type:'button',class:'btn sec'},'Remover');rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
-      try{await enviar({acao:'pendente_remover',email:p.email});aviso('Removido.');await carregar()}catch(e){aviso(e.message,true)}};c.lastChild.append(rem)}return c};
-  if(L.length){const cp=h('button',{type:'button',class:'btn sec'},'Copiar todos os e-mails ('+L.length+')');cp.onclick=async()=>{try{await navigator.clipboard.writeText(L.map(x=>x.email).join('; '));aviso('E-mails copiados.')}catch{aviso('Não consegui copiar.',true)}};raiz.append(cp)}
-  for(const p of L){const d=h('details',{style:'max-width:760px;margin:6px 0'});d.append(h('summary',null,h('b',null,p.cargo||'(sem cargo)'),' · '+p.email+(p.usuario?' · @'+p.usuario:'')),mk(p));raiz.append(d)}
-  const n=h('details',{open:!L.length});n.append(h('summary',null,'+ Adicionar contato'),mk());raiz.append(n);
+    const topo=novo?h('div',{style:'font-weight:700;font-size:16px'},'+ Novo contato'):h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center'},h('b',{style:'font-size:16px'},p.cargo||'(sem cargo)'),h('span',{style:'font-size:12px;padding:2px 10px;border-radius:99px;background:'+(p.usuario?'#1d4d3a':'#5a4416')},p.usuario?'GitHub: @'+p.usuario:'Falta o usuário do GitHub'));
+    const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 12px'});g.append(campo('E-mail institucional',em),campo('Cargo',cg),campo('Nome',no),campo('Usuário do GitHub',us));
+    const ac=h('div',{style:'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'},bt);
+    if(!novo){const rem=h('button',{type:'button',class:'btn sec'},'Remover');rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
+      try{await enviar({acao:'pendente_remover',email:p.email});aviso('Removido.');await carregar()}catch(e){aviso(e.message,true)}};ac.append(rem)}
+    c.append(topo,g,ac);return c};
+  if(L.length){const cp=h('button',{type:'button',class:'btn'},'Copiar todos os e-mails ('+L.length+')');cp.onclick=async()=>{try{await navigator.clipboard.writeText(L.map(x=>x.email).join('; '));aviso('E-mails copiados. Cole no campo Para/CCO do e-mail.')}catch{aviso('Não consegui copiar.',true)}};raiz.append(cp)}
+  for(const p of L)raiz.append(mk(p));
+  raiz.append(mk());
 }
 
 // ---------- abas ----------
