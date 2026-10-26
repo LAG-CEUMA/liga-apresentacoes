@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
       if (!dono) return nao();
       const PD = require('../lib/pendentes');
       try {
-        if (b.acao === 'pendente_remover') { await PD.remover(b.email, usuario); return u.json(res, 200, { ok: true }); }
+        if (b.acao === 'pendente_remover') { await PD.remover(b.chave || b.email, usuario); return u.json(res, 200, { ok: true }); }
         return u.json(res, 200, { ok: true, item: await PD.salvar(b, usuario) });
       } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
