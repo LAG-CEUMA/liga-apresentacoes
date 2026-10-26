@@ -95,20 +95,21 @@ async function telaAtiv(alvo){
   if(!ATV.atividades.length)lista.append(h('p',{},'Nenhuma atividade ainda. Crie a primeira abaixo.'));
   for(const a of ATV.atividades){
     const n=Object.values(a.disparos||{}).filter(x=>x.numero).length;
-    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo),h('div',{class:'sub'},`peso ${a.peso} · prazo ${fmtD(a.prazo)} · ${a.liberada?'LIBERADA ('+n+' Issue'+(n===1?'':'s')+')':'não liberada'}`)),
-      h('button',{class:'btn sec',type:'button',onclick:()=>{ATV_SEL=ATV_SEL===a.id?'':a.id;telaAtiv(alvo)}},ATV_SEL===a.id?'Fechar':'Abrir'));
+    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo+(a.opcional?'  (OPCIONAL)':'')),h('div',{class:'sub'},`${a.opcional?'pontos extras':'peso '+a.peso} · prazo ${fmtD(a.prazo)} · ${a.liberada?'LIBERADA ('+n+' Issue'+(n===1?'':'s')+')':'não liberada'}`)),
+      h('button',{class:'btn',type:'button',title:'Cria a Issue desta atividade no repositório de cada aluno que ainda não a tem',onclick:async()=>{if(!confirm('Liberar "'+(a.codigo||a.titulo)+'" para TODOS os alunos da turma agora? Será criada uma Issue no repositório de cada um que ainda não tiver.'))return;try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:[]});aviso(`Issues criadas: ${r.criadas}${r.jaTinham?' · já tinham: '+r.jaTinham:''}${r.falhas.length?' · FALHAS: '+r.falhas.map(x=>x.usuario+' ('+x.erro+')').join(', '):''}`,r.falhas.length);telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},a.liberada?'Liberar a quem falta':'Liberar'),
+      h('button',{class:'btn sec',type:'button',onclick:()=>{ATV_SEL=ATV_SEL===a.id?'':a.id;telaAtiv(alvo)}},ATV_SEL===a.id?'Fechar':'Abrir / só alguns'));
     lista.append(el);
     if(ATV_SEL===a.id)lista.append(painelAtiv(a,alvo));
   }
   alvo.append(lista,formAtiv(null,alvo));
 }
 function formAtiv(a,alvo){
-  const novo=!a;const f=h('details',{class:'box',open:!!a},h('summary',{},novo?'+ Nova atividade':'Editar dados da atividade'));
+  const novo=!a;const opc=h('input',{type:'checkbox'});opc.checked=!!(a&&a.opcional);const f=h('details',{class:'box',open:!!a},h('summary',{},novo?'+ Nova atividade':'Editar dados da atividade'));
   const cod=h('input',{placeholder:'Código (ex.: N0.1-2·E1)',value:a?a.codigo:'',style:'width:200px'}),tit=h('input',{placeholder:'Título',value:a?a.titulo:'',style:'width:min(360px,100%)'}),peso=h('input',{type:'number',min:1,max:100,step:1,value:a?a.peso:10,style:'width:80px'}),prazo=h('input',{type:'datetime-local',value:a?aivToLocal(a.prazo):''}),
     desc=h('textarea',{rows:8,placeholder:'Texto que vai na Issue do aluno (Markdown): objetivo, passo a passo, o que entregar.',style:'width:100%'},a?a.descricao:'');
   desc.value=a?a.descricao:'';
-  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{try{await postA({acao:'ativ_salvar',id:a?a.id:'',codigo:cod.value,titulo:tit.value,peso:peso.value,prazo:prazo.value?new Date(prazo.value).toISOString():'',descricao:desc.value});aviso('Atividade salva');telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar atividade');
-  f.append(h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},cod,tit,h('label',{},'Peso ',peso),h('label',{},'Prazo ',prazo)),desc,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar));return f}
+  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{try{await postA({acao:'ativ_salvar',id:a?a.id:'',codigo:cod.value,titulo:tit.value,peso:peso.value,prazo:prazo.value?new Date(prazo.value).toISOString():'',opcional:opc.checked,descricao:desc.value});aviso('Atividade salva');telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar atividade');
+  f.append(h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},cod,tit,h('label',{},'Peso ',peso),h('label',{},'Prazo ',prazo),h('label',{title:'Não conta no total: só soma pontos extras a quem entregar'},opc,' Opcional (pontos extras)')),desc,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar));return f}
 function painelAtiv(a,alvo){
   const box=h('div',{class:'box'});const roster=ATV.roster.filter(k=>!a.alvo||!a.alvo.length||a.alvo.includes(k));
   const sel=new Set();const escolha=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0'});

@@ -420,6 +420,14 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await ap({ acao: 'ativ_salvar', id: id1, codigo: 'N0.1-2·E1', titulo: 'Primeira cena', peso: 10, prazo: '2026-11-10T23:59:00-03:00', descricao: 'Faça a cena.' })).status, 200); // prazo pode ser mudado depois
     assert.equal(JSON.parse((await getp({ acao: 'atividades', turma: T })).body).atividades.find((a) => a.id === id1).prazo.slice(0, 10), '2026-11-11'); // 23:59 -03 = 02:59Z do dia seguinte
     assert(!Object.values(dadosArq).some((x) => /alu[123]/.test(x.msg || ''))); // commits sem nomes de alunos
+    // opcional: não entra no total, só soma pontos extras a quem entregar; Issue deixa claro
+    { const f0 = (P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T))); const g = (rk, k) => rk.find((x) => x.usuario === k).fEx; const a2 = g(f0, 'alu2'), a1 = g(f0, 'alu1');
+      r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·T4', titulo: 'Desafio', peso: 3, opcional: true, descricao: 'Extra.' }); const idO = JSON.parse(r.body).id; const nIss = issuesCriadas.length;
+      await ap({ acao: 'ativ_liberar', id: idO }); assert(issuesCriadas.slice(nIss).every((x) => /\(opcional\)/.test(x.title) && /OPCIONAL/.test(x.body)));
+      let rk3 = P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)); assert.equal(g(rk3, 'alu2'), a2); assert.equal(g(rk3, 'alu1'), a1); // não entregar o opcional não pune
+      await ap({ acao: 'ativ_entregas', id: idO, estados: { alu2: { estado: 'prazo', nota: 10 } } }); rk3 = P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T));
+      assert(g(rk3, 'alu2') > a2 && g(rk3, 'alu2') <= 1); assert.equal(g(rk3, 'alu1'), a1);
+      assert(JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu2')).body).atividades.some((x) => x.opcional === true)); }
     assert.equal((await ap({ acao: 'ativ_liberar', id: 'nao-existe' })).status, 400);
   }
   r = JSON.parse((await getp({ acao: 'minhapontuacao' }, 'alu1')).body); assert(r.turmas[0].top5.length > 0 && r.turmas[0].posicao >= 1 && r.turmas[0].total > 0);

@@ -74,8 +74,8 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     const pend=m.atividades.filter(x=>!x.estado||x.estado==='nao').length;
     const s=secao('Minhas atividades',`${m.atividades.length} liberada(s) · ${pend} sem entrega registrada`);s.id='sec-ativ';lembrar(s,'ativ',true);
     const ST={prazo:'Entregue no prazo',atraso:'Entregue com atraso',nao:'Sem entrega registrada',dispensado:'Dispensado'};
-    for(const x of m.atividades){const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo),el('br'),
-      el('small','',`${x.prazo?'prazo '+new Date(x.prazo).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+' · ':''}peso ${x.peso} · ${ST[x.estado]||ST.nao}${x.nota!==null?' · nota '+x.nota:''}`));
+    for(const x of m.atividades){const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo+(x.opcional?' (OPCIONAL, pontos extras)':'')),el('br'),
+      el('small','',`${x.prazo?'prazo '+new Date(x.prazo).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${ST[x.estado]||ST.nao}${x.nota!==null?' · nota '+x.nota:''}`));
       if(x.issue){i.append(el('br'));const a=el('a','','Abrir a atividade e responder (Issue no GitHub)');a.href=x.issue;a.target='_blank';a.rel='noopener';i.append(a)}s.append(i)}
     BL.ativ=s;organizar();
   }).catch(()=>{});
