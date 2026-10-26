@@ -104,14 +104,14 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   }
   // Repositórios dos alunos: verificar e criar/convidar (só owner)
   { const ad = (b, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: b, headers: { origin: 'https://site.test', 'content-type': 'application/json' } });
-    const tid = 'TREPO'; const turmasAntes = cfg.turmas, alunosAntes = cfg.alunos; cfg.alunos = [...cfg.alunos, 'pronto', 'novato', 'fantasma']; cfg.turmas = { ...(cfg.turmas || {}), [tid]: { nome: 'Repos', status: 'andamento', nivel: 'nivel-00-tutorial', alunos: ['pronto', 'novato', 'fantasma'] } }; u.limparCache();
+    const tid = 'TREPO'; const turmasAntes = cfg.turmas, alunosAntes = cfg.alunos; cfg.alunos = [...cfg.alunos, 'pronto', 'novato', 'fantasma', 'ficticio-um']; cfg.turmas = { ...(cfg.turmas || {}), [tid]: { nome: 'Repos', status: 'andamento', nivel: 'nivel-00-tutorial', alunos: ['pronto', 'novato', 'fantasma', 'ficticio-um'] } }; u.limparCache();
     {
       assert.equal((await ad({ acao: 'repos_alunos', turma: tid }, 'alu1')).status, 403);
       assert.equal((await ad({ acao: 'repos_alunos', turma: 'nao-existe' })).status, 400);
       const rr0 = await ad({ acao: 'repos_alunos', turma: tid }); let q = JSON.parse(rr0.body).resultados; const est = (k) => q.find((x) => x.usuario === k).estado;
-      assert.equal(est('pronto'), 'ok'); assert.equal(est('novato'), 'sem-repo'); assert(!reposAl['aluno-novato']); // só verifica, não cria
+      assert.equal(est('pronto'), 'ok'); assert.equal(est('ficticio-um'), 'ficticio'); assert.equal(est('novato'), 'sem-repo'); assert(!reposAl['aluno-novato']); // só verifica, não cria
       q = JSON.parse((await ad({ acao: 'repos_alunos', turma: tid, criar: true })).body).resultados;
-      assert.equal(est('novato'), 'criado-e-convidado'); assert(reposAl['aluno-novato'].colab); assert.equal(est('fantasma'), 'erro');
+      assert.equal(est('novato'), 'criado-e-convidado'); assert(reposAl['aluno-novato'].colab); assert.equal(est('fantasma'), 'erro'); assert(!reposAl['aluno-ficticio-um']);
       cfg.turmas = turmasAntes; cfg.alunos = alunosAntes; u.limparCache(); } }
   // Banco de imagens: só owner lista/exclui; em uso pede confirmação
   { const ad = (b, user = 'dono') => chamar(h('admin'), { user, method: 'POST', body: b, headers: { origin: 'https://site.test', 'content-type': 'application/json' } });

@@ -56,6 +56,7 @@ module.exports = async (req, res) => {
       const t = (cfg.turmas || {})[String(b.turma || '')]; if (!t) return u.json(res, 400, { erro: 'Turma inválida.' });
       const ORG = process.env.GH_ORG || 'LAG-CEUMA'; const criar = b.criar === true;
       const um = async (k) => {
+        if (/^ficticio-/.test(k)) return { usuario: k, estado: 'ficticio' }; // aluno de teste: nunca cria repositório nem convida ninguém no GitHub
         try {
           let r = await u.gh(`/repos/${ORG}/aluno-${k}`); let existe = r.ok, criado = false;
           if (!existe && r.status !== 404) return { usuario: k, estado: 'erro', msg: `GitHub ${r.status} ao consultar o repositório` };
