@@ -330,7 +330,7 @@ function desenharReservadas(){
 // ---------- Guias e dúvidas (wiki interna) ----------
 function desenharWiki(){
   const raiz=$('p-wiki');raiz.textContent='';const W=D.wiki||{paginas:[],vis:{},categorias:[]};
-  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Wiki interna para o corpo administrativo. Cada página tem uma ',h('b',null,'visibilidade por função'),', escolhida aqui: quem não tem a função não vê a página nem na busca. Todos acessam por ',h('a',{href:'/wiki'},'/wiki'),'. Só owners criam e editam.'));
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Wiki interna para o corpo administrativo. Cada página tem uma ',h('b',null,'visibilidade por função'),', escolhida aqui: quem não tem a função não vê a página nem na busca. Páginas para o corpo administrativo ficam em ',h('a',{href:'/wiki'},'/wiki'),'; páginas com visibilidade "Central de ajuda" formam a wiki separada dos alunos, em ',h('a',{href:'/ajuda'},'/ajuda'),'. Só owners criam e editam.'));
   const mk=(p)=>{p=p||{};const c=h('div',{class:'card',style:'margin:12px 0;max-width:760px'});
     const t=h('input',{type:'text',placeholder:'Título (ex.: Erro "Repository not found")',maxlength:'100',style:'width:100%;margin:4px 0',value:p.titulo||''});
     const cat=h('select',{style:'margin:4px 0'});for(const x of W.categorias)cat.append(h('option',{value:x,selected:x===(p.categoria||'Dúvidas frequentes')},x));

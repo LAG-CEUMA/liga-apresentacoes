@@ -15,6 +15,6 @@ function desenhar(){const L=$('lista');L.textContent='';const termos=norm($('q')
   const ps=D.paginas.filter(ok);if(!ps.length){L.append(el('p','sub',D.paginas.length?'Nada encontrado. Tente outra palavra.':'Nenhum guia disponível para a sua função ainda.'));return}
   for(const c of D.categorias){const g=ps.filter(p=>p.categoria===c);if(!g.length)continue;L.append(el('h2',null,c));
     for(const p of g){const a=el('a','item');a.href='/wiki/'+p.slug;const b=el('b',null,p.titulo);a.append(b);if(p.resumo)a.append(el('div','sub',p.resumo));L.append(a)}}}
-fetch('/api/wiki',{credentials:'same-origin'}).then(async r=>{if(r.status===401){location.href='/api/login';return}if(!r.ok)throw 0;D=await r.json();desenhar()}).catch(()=>{$('lista').textContent='Não consegui carregar os guias agora.'});
+fetch('/api/wiki?espaco=adm',{credentials:'same-origin'}).then(async r=>{if(r.status===401){location.href='/api/login';return}if(!r.ok)throw 0;D=await r.json();desenhar()}).catch(()=>{$('lista').textContent='Não consegui carregar os guias agora.'});
 $('q').addEventListener('input',()=>D&&desenhar());
 </script></main></body></html>

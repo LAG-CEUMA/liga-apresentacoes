@@ -60,6 +60,27 @@ ${rodape(RODAPE)}` },
     pilula: () => `<p style="${A}left:128px;top:500px;width:420px;font-size:28px;font-weight:700;color:#12141c;background:#f5b83d;padding:14px 32px;border-radius:999px;text-align:center">Etiqueta</p>`,
     icone: (nome) => `<div style="${A}left:200px;top:400px;width:96px;height:96px">${icone(nome || 'Estrela', '#f5b83d', 96)}</div>`,
   };
-  const api = { SLIDES, ELEMENTOS, ICONES };
+  // Confere o "Tempo previsto" de cada slide: formato, ordem, buracos, sobreposição e o limite de 1 hora.
+  const LIMITE = 60;
+  function lerTempo(t) { const m = /^\s*(\d{1,2}):(\d{2})\s*(?:(?:a|à|-|–|até)\s*(\d{1,2}):(\d{2}))?\s*$/i.exec(String(t || '')); if (!m) return null; const i = +m[1] * 60 + +m[2]; const f = m[3] != null ? +m[3] * 60 + +m[4] : i; return { i, f }; }
+  function checarTempos(slides) {
+    const erros = [], avisos = []; let prev = null, fim = 0;
+    slides.forEach((s, k) => {
+      const n = k + 1, txt = String((s && s.tempo) || '').trim();
+      if (!txt) { erros.push(`Slide ${n}: falta o tempo previsto.`); return; }
+      const t = lerTempo(txt); if (!t) { erros.push(`Slide ${n}: tempo "${txt}" ilegível. Use 0:10 a 0:20.`); return; }
+      if (t.f < t.i) { avisos.push(`Slide ${n}: o fim (${txt}) vem antes do início.`); return; }
+      if (prev) {
+        if (t.i < prev.i) avisos.push(`Slide ${n}: começa antes do slide ${n - 1} (${txt}).`);
+        else if (t.i > prev.f) avisos.push(`Slide ${n}: há um buraco de ${t.i - prev.f} min depois do slide ${n - 1}; o roteiro fica sem tempo ali.`);
+        else if (t.i < prev.f && t.i !== prev.i) avisos.push(`Slide ${n}: sobrepõe o bloco anterior (${txt}).`);
+      }
+      prev = t; fim = Math.max(fim, t.f);
+    });
+    if (fim > LIMITE) avisos.unshift(`A aula passa de 1 hora: termina em ${Math.floor(fim / 60)}:${String(fim % 60).padStart(2, '0')}. Corte conteúdo ou mova parte para o dever.`);
+    else if (fim && fim < LIMITE - 5 && !erros.length) avisos.push(`A aula termina em ${fim} min; sobram ${LIMITE - fim} min. Confira se o roteiro está completo.`);
+    return { erros, avisos, fim };
+  }
+  const api = { SLIDES, ELEMENTOS, ICONES, checarTempos, lerTempo };
   if (typeof module !== 'undefined') module.exports = api; else g.EditorModelos = api;
 })(typeof window !== 'undefined' ? window : globalThis);

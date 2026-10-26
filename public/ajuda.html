@@ -1,0 +1,20 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Central de ajuda</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
+<style>input[type=search]{width:100%;background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:10px;padding:12px;font:inherit;font-size:16px}.sub{color:var(--mut);font-size:13px}.item{display:block;padding:12px 14px;margin:8px 0;border:1px solid #fff2;border-radius:10px;text-decoration:none;color:inherit}.item:hover{border-color:#fff6}.item b{font-size:16px}.vis{font-size:12px;opacity:.7}h2{margin-top:26px}main{max-width:860px}</style></head>
+<body data-pg="ajuda"><main>
+<div class="topo"><div><p class="tag">CENTRAL DE AJUDA</p><h1>Central de ajuda</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a></div></div>
+<p class="sub">Tire dúvidas sobre a plataforma, o GitHub e o Godot sem esperar o monitor. Digite o problema (ex.: "repository not found", "prazo", "entrega").</p>
+<input type="search" id="q" placeholder="Buscar na ajuda..." autofocus>
+<div id="lista"><p class="sub">Carregando...</p></div>
+<script>
+const $=(i)=>document.getElementById(i);let D=null;
+const norm=(s)=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function desenhar(){const L=$('lista');L.textContent='';const termos=norm($('q').value).split(/\s+/).filter(Boolean);
+  const ok=(p)=>{const base=norm([p.titulo,p.resumo,(p.tags||[]).join(' '),p.categoria,p.texto].join(' '));return termos.every(t=>base.includes(t))};
+  const ps=D.paginas.filter(ok);if(!ps.length){L.append(el('p','sub',D.paginas.length?'Nada encontrado. Tente outra palavra.':'Ainda não há conteúdo na central de ajuda.'));return}
+  for(const c of D.categorias){const g=ps.filter(p=>p.categoria===c);if(!g.length)continue;L.append(el('h2',null,c));
+    for(const p of g){const a=el('a','item');a.href='/wiki/'+p.slug;const b=el('b',null,p.titulo);a.append(b);if(p.resumo)a.append(el('div','sub',p.resumo));L.append(a)}}}
+fetch('/api/wiki?espaco=aluno',{credentials:'same-origin'}).then(async r=>{if(r.status===401){location.href='/api/login';return}if(!r.ok)throw 0;D=await r.json();desenhar()}).catch(()=>{$('lista').textContent='Não consegui carregar os guias agora.'});
+$('q').addEventListener('input',()=>D&&desenhar());
+</script></main></body></html>

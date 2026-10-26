@@ -598,6 +598,11 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await post({ acao: 'reservado_remover', token: tk })).status, 200);
     assert.equal((await chamar(h('reservado'), { query: { t: tk } })).status, 404);
     assert.equal(JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).reservadas.length, 0); }
+  // editor: conferência obrigatória dos tempos (máx. 1 hora)
+  { const Mo = require('../public/editor-modelos.js'); const ct = (l) => Mo.checarTempos(l.map((x) => ({ tempo: x })));
+    assert.equal(ct(['0:00 a 0:10', '', '0:10 a 0:20']).erros.length, 1); assert.equal(ct(['0:00 a 0:10', 'x']).erros.length, 1);
+    assert.deepEqual(ct(['0:00 a 0:10', '0:00 a 0:10', '0:10 a 1:00']).avisos, []); assert(/passa de 1 hora/.test(ct(['0:00 a 0:30', '0:30 a 1:10']).avisos[0]));
+    assert(ct(['0:00 a 0:10', '0:20 a 1:00']).avisos.some((x) => /buraco/.test(x))); }
   // Guias e dúvidas (wiki): visibilidade por função
   { const W = require('../lib/wiki'); const w = (b, user = 'dono') => post(b, {}, user);
     assert.equal((await w({ acao: 'wiki_salvar', titulo: 'X', visibilidade: 'equipe', html: '<h1>a</h1>' }, 'alu1')).status, 403);
@@ -608,6 +613,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal(sOwner.slug, 'so-dono');
     const lista = async (user) => (JSON.parse((await chamar(h('wiki'), { user, query: { rota: 'wiki' } })).body).paginas || []).map((x) => x.slug).sort();
     assert.deepEqual(await lista('dono'), ['corpo-adm', 'monitores-aqui', 'para-membros', 'so-dono']);
+    { const esp = async (e) => (JSON.parse((await chamar(h('wiki'), { user: 'dono', query: { rota: 'wiki', espaco: e } })).body).paginas || []).map((x) => x.slug).sort(); assert.deepEqual(await esp('aluno'), ['para-membros']); assert.deepEqual(await esp('adm'), ['corpo-adm', 'monitores-aqui', 'so-dono']); }
     assert.deepEqual(await lista('mon1'), ['corpo-adm', 'monitores-aqui', 'para-membros']);
     assert.deepEqual(await lista('alu1'), ['para-membros']);
     assert.equal((await chamar(h('wiki'), { query: { rota: 'wiki' } })).status, 401);

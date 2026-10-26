@@ -82,7 +82,8 @@ const estilo = (s) => `position:relative;width:1920px;height:1080px;overflow:hid
 const pad2 = (n) => String(n).padStart(2, '0');
 function numerar(html, n, total) { return html.replace(/(<[^>]*data-pag="1"[^>]*>)[^<]*/g, `$1${pad2(n)} / ${pad2(total)}`); }
 const snapshot = () => JSON.stringify({ titulo: M.titulo, slides: M.slides });
-function marcarSujo(v) { sujo = v; const e = $('est'); if (!e) return; e.textContent = v ? '● alterações não salvas' : 'Tudo salvo'; e.className = v ? 'sujo' : 'ok'; }
+function atualizaTempos() { const b = $('tmp'); if (!b || !M) return; const c = M0.checarTempos(M.slides), n = c.erros.length + c.avisos.length; b.textContent = n ? `⏱ ${n} aviso${n > 1 ? 's' : ''} de tempo` : `⏱ ${c.fim} min`; b.style.color = c.erros.length ? '#ff8a8a' : c.avisos.length ? '#f5b83d' : ''; b.title = c.erros.concat(c.avisos).join('\n') || 'Tempos conferem. Clique para detalhes.'; }
+function marcarSujo(v) { sujo = v; atualizaTempos(); const e = $('est'); if (!e) return; e.textContent = v ? '● alterações não salvas' : 'Tudo salvo'; e.className = v ? 'sujo' : 'ok'; }
 function agendarSnap() { clearTimeout(snapT); snapT = setTimeout(snap, 350); }
 function snap() { clearTimeout(snapT); const s = snapshot(); if (hist[hi] === s) return; hist = hist.slice(0, hi + 1); hist.push(s); if (hist.length > 120) hist.shift(); hi = hist.length - 1; atualizaBarra(); }
 function desfazer(delta) {
@@ -246,7 +247,7 @@ function painel() {
   P.append(h('div', { class: 'pg' }, h('h4', {}, 'Este slide ' + (cur + 1)),
     campoCor('Cor de fundo do slide', /^#/.test(s.fundo) ? s.fundo : '#12141c', (v) => { s.fundo = v; slideEl().style.background = v; commit(); }),
     campoCor('Cor padrão do texto', /^#/.test(s.cor) ? s.cor : '#f3efe6', (v) => { s.cor = v; slideEl().style.color = v; commit(); }),
-    h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Tempo previsto (ex.: 0:05 a 0:10)'), h('input', { type: 'text', value: s.tempo, maxlength: 30, oninput: (e) => { s.tempo = e.target.value; marcarSujo(true); agendarSnap(); } })),
+    h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Tempo previsto, obrigatório (ex.: 0:05 a 0:10). A aula não pode passar de 1 hora.'), h('input', { type: 'text', value: s.tempo, maxlength: 30, oninput: (e) => { s.tempo = e.target.value; marcarSujo(true); agendarSnap(); } })),
     h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Roteiro do apresentador (uma ideia por linha)'), h('textarea', { rows: 7, maxlength: 4000, placeholder: 'Fica só no arquivo de roteiro. Nunca aparece no slide projetado.', oninput: (e) => { s.notas = e.target.value; marcarSujo(true); agendarSnap(); } }, s.notas))));
 }
 function campoNumPos(rot, k, fn) { const i = h('input', { type: 'number', 'data-k': k, value: k === 'x' ? sel.offsetLeft : k === 'y' ? sel.offsetTop : k === 'w' ? sel.offsetWidth : sel.offsetHeight }); i.oninput = () => { if (i.value !== '') fn(+i.value); }; return h('div', {}, h('label', {}, rot), i); }
@@ -366,14 +367,15 @@ async function historico() {
 // ---------- barra e ferramentas ----------
 function atualizaBarra() { const d = $('desf'), r = $('ref'); if (d) d.disabled = hi <= 0 && hist[hi] === snapshot(); if (r) r.disabled = hi >= hist.length - 1; }
 async function salvar() {
-  if (editando) fimEdicao(); commit(); snap(); const b = $('salvarb'); b.disabled = true; $('est').textContent = 'Salvando…';
+  if (editando) fimEdicao(); commit(); snap();
+  { const c = M0.checarTempos(M.slides); if (c.erros.length) { aviso('Defina o tempo de todos os slides antes de salvar. ' + c.erros.slice(0, 4).join(' '), 1); atualizaTempos(); return; } if (c.avisos.length) aviso('Salvo com aviso: ' + c.avisos[0], 1); } const b = $('salvarb'); b.disabled = true; $('est').textContent = 'Salvando…';
   try { const r = await api({ acao: 'salvar', dir: DIR, id: ID, modelo: { titulo: M.titulo, slides: M.slides }, base, substituir }); base = r.base; substituir = false; marcarSujo(false); aviso('Salvo e publicado no repositório'); history.replaceState(null, '', `/editor?dir=${DIR}&id=${ID}`); }
   catch (e) { $('est').textContent = e.message; $('est').className = 'err'; aviso(e.message, 1); } finally { b.disabled = false; }
 }
 function barra() {
   const B = $('barra'); B.textContent = '';
   const tit = h('input', { id: 'tit', type: 'text', value: M.titulo, maxlength: 120, 'aria-label': 'Título da aula' }); tit.oninput = () => { M.titulo = tit.value; marcarSujo(true); agendarSnap(); };
-  B.append(h('a', { class: 'b', href: '/editor' }, '← Aulas'), tit, h('span', { class: 'sub' }, DIR + ' / ' + ID), h('span', { style: 'flex:1' }), h('span', { id: 'est' }, ''),
+  B.append(h('a', { class: 'b', href: '/editor' }, '← Aulas'), tit, h('span', { class: 'sub' }, DIR + ' / ' + ID), h('span', { style: 'flex:1' }), h('button', { class: 'b', id: 'tmp', onclick: () => { const c = M0.checarTempos(M.slides), l = c.erros.concat(c.avisos); aviso(l.length ? l.join(' · ') : 'Tempos conferem: a aula fecha em ' + c.fim + ' min.', l.length ? 1 : 0); } }, '⏱'), h('span', { id: 'est' }, ''),
     h('button', { class: 'b', id: 'desf', onclick: () => desfazer(-1), title: 'Ctrl+Z' }, '↶ Desfazer'), h('button', { class: 'b', id: 'ref', onclick: () => desfazer(1), title: 'Ctrl+Y' }, '↷ Refazer'),
     h('button', { class: 'b', onclick: historico, title: 'Versões salvas desta aula' }, '🕘 Histórico'), h('button', { class: 'b perigo', onclick: () => modalExcluir(DIR, ID, M.titulo), title: 'Como excluir esta aula' }, 'Excluir…'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}`, target: '_blank', title: 'Abre a versão salva' }, 'Ver aula'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}/roteiro`, target: '_blank' }, 'Ver roteiro'),
     h('button', { class: 'b pri', id: 'salvarb', onclick: salvar, title: 'Ctrl+S' }, 'Salvar'));
