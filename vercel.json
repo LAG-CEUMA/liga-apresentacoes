@@ -8,6 +8,14 @@
   ],
   "rewrites": [
     {
+      "source": "/api/wiki",
+      "destination": "/api/publico?rota=wiki"
+    },
+    {
+      "source": "/wiki/:s",
+      "destination": "/api/publico?rota=wikipagina&s=:s"
+    },
+    {
       "source": "/r/:t",
       "destination": "/api/publico?rota=reservado&t=:t"
     },

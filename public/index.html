@@ -22,7 +22,7 @@ function organizar(){const c=document.getElementById('corpo');c.textContent='';c
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
   if(d.usuario){conta.append(el('span','badge',`${d.usuario} · ${d.titulo||d.papel}`));const P=d.permissoes||[];
-    const botoes=[[P.includes('aulas')||P.includes('pessoas'),'Painel','/admin'],[P.includes('site'),'Personalizar','/personalizar'],[P.includes('tarefas'),'Tarefas de casa','/semanas'],[P.includes('presenca')||d.papel==='monitor','Presença','/presenca'],[!!d.editor,'Editor de slides','/editor'],[true,'Eventos','/eventos']];
+    const botoes=[[P.includes('aulas')||P.includes('pessoas'),'Painel','/admin'],[P.includes('site'),'Personalizar','/personalizar'],[P.includes('tarefas'),'Tarefas de casa','/semanas'],[P.includes('presenca')||d.papel==='monitor','Presença','/presenca'],[!!d.editor,'Editor de slides','/editor'],[['owner','monitor','equipe'].includes(d.papel),'Guias e dúvidas','/wiki'],[true,'Eventos','/eventos']];
     for(const [ok,t,h] of botoes)if(ok){const a=el('a','btn sec',t);a.href=h;conta.append(a)}
     const s=el('a','btn sec','Sair');s.href='/api/logout';conta.append(s)}
   else{const a=el('a','btn','Entrar com GitHub');a.href='/api/login';conta.append(a)}

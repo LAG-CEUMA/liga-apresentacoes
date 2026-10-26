@@ -326,13 +326,43 @@ function desenharReservadas(){
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},h('a',{class:'btn',href:'/r/'+p.token,target:'_blank',rel:'noopener'},'Abrir'),copiar,h('button',{type:'button',class:'btn sec',onclick:()=>troca.click()},'Substituir HTML'),troca,rem)))}
 }
 
+
+// ---------- Guias e dúvidas (wiki interna) ----------
+function desenharWiki(){
+  const raiz=$('p-wiki');raiz.textContent='';const W=D.wiki||{paginas:[],vis:{},categorias:[]};
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Wiki interna para o corpo administrativo. Cada página tem uma ',h('b',null,'visibilidade por função'),', escolhida aqui: quem não tem a função não vê a página nem na busca. Todos acessam por ',h('a',{href:'/wiki'},'/wiki'),'. Só owners criam e editam.'));
+  const mk=(p)=>{p=p||{};const c=h('div',{class:'card',style:'margin:12px 0;max-width:760px'});
+    const t=h('input',{type:'text',placeholder:'Título (ex.: Erro "Repository not found")',maxlength:'100',style:'width:100%;margin:4px 0',value:p.titulo||''});
+    const cat=h('select',{style:'margin:4px 0'});for(const x of W.categorias)cat.append(h('option',{value:x,selected:x===(p.categoria||'Dúvidas frequentes')},x));
+    const vis=h('select',{style:'margin:4px 0'});for(const [k,v] of Object.entries(W.vis))vis.append(h('option',{value:k,selected:k===(p.visibilidade||'equipe')},v));
+    const cg=h('input',{type:'text',placeholder:'Opcional: só estes cargos da equipe (ids separados por vírgula)',style:'width:100%;margin:4px 0',value:(p.cargos||[]).join(', ')});
+    const rs=h('input',{type:'text',placeholder:'Resumo de uma linha',maxlength:'240',style:'width:100%;margin:4px 0',value:p.resumo||''});
+    const tg=h('input',{type:'text',placeholder:'Palavras-chave para a busca, separadas por vírgula',style:'width:100%;margin:4px 0',value:(p.tags||[]).join(', ')});
+    const od=h('input',{type:'text',placeholder:'Ordem (1 aparece primeiro)',style:'width:150px;margin:4px 0',value:p.ordem!=null?String(p.ordem):'100'});
+    const ar=h('input',{type:'file',accept:'.html,.htm,text/html'});
+    const bt=h('button',{type:'button',class:'btn'},p.slug?'Salvar alterações':'Criar página');
+    bt.onclick=async()=>{try{bt.disabled=true;const b={acao:'wiki_salvar',slug:p.slug,titulo:t.value,categoria:cat.value,visibilidade:vis.value,cargos:cg.value,resumo:rs.value,tags:tg.value,ordem:od.value};
+      if(ar.files[0])b.html=await lerHtml(ar.files[0]);await enviar(b);aviso(p.slug?'Página atualizada.':'Página criada.');await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
+    c.append(t,h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},cat,vis,od),cg,rs,tg,h('div',{class:'sub'},p.slug?'Arquivo HTML (deixe vazio para manter o atual):':'Arquivo HTML da página:'),ar,h('div',{style:'margin-top:8px;display:flex;gap:8px;flex-wrap:wrap'},bt));
+    if(p.slug){const rem=h('button',{type:'button',class:'btn sec'},'Remover');
+      rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
+        try{await enviar({acao:'wiki_remover',slug:p.slug});aviso('Página removida.');await carregar()}catch(e){aviso(e.message,true)}};
+      c.lastChild.append(h('a',{class:'btn sec',href:'/wiki/'+p.slug,target:'_blank',rel:'noopener'},'Abrir'),rem)}
+    return c};
+  const novo=h('details',{open:!(W.paginas||[]).length});novo.append(h('summary',null,'Nova página'),mk());raiz.append(novo);
+  if(!(W.paginas||[]).length){raiz.append(h('p',{class:'sub'},'Nenhuma página ainda.'));return}
+  for(const p of W.paginas.slice().sort((a,b)=>(a.categoria||'').localeCompare(b.categoria||'')||a.ordem-b.ordem)){
+    const d=h('details',{style:'max-width:760px;margin:6px 0'});
+    d.append(h('summary',null,h('b',null,p.titulo),' · '+p.categoria+' · '+(W.vis[p.visibilidade]||p.visibilidade)),mk(p));raiz.append(d)}
+}
+
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}

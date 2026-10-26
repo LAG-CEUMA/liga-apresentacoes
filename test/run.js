@@ -38,7 +38,7 @@ global.fetch = async (url, op = {}) => {
       if (!dadosArq[k]) return resp(404, {});
       if (String((op.headers || {}).Accept || '').includes('raw')) return resp(200, dadosArq[k].texto);
       return resp(200, { sha: dadosArq[k].sha, content: Buffer.from(dadosArq[k].texto).toString('base64') }); } }
-  { const mr0 = /\/contents\/(reservado\/.+)$/.exec(p);
+  { const mr0 = /\/contents\/((?:reservado|wiki)\/.+)$/.exec(p);
     if (mr0) { const k = decodeURIComponent(mr0[1]);
       if (op.method === 'PUT') { const b = JSON.parse(op.body); if (reservados[k] && reservados[k].sha !== b.sha) return resp(409, {}); if (!reservados[k] && b.sha) return resp(422, {}); reservados[k] = { sha: 'r' + (++nRes), texto: Buffer.from(b.content, 'base64').toString() }; return resp(200, {}); }
       if (op.method === 'DELETE') { const b = JSON.parse(op.body); if (!reservados[k] || reservados[k].sha !== b.sha) return resp(409, {}); delete reservados[k]; return resp(200, {}); }
@@ -70,7 +70,7 @@ global.fetch = async (url, op = {}) => {
   return resp(404, {});
 };
 const u = require('../lib/util');
-const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado'];
+const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado', 'wiki'];
 const h = (n) => require((ROTAS.includes(n) ? '../lib/rotas/' : '../api/') + n);
 function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {} } = {}) {
   const req = { query, method, body, headers: { host: 'site.test', ...headers } };
@@ -598,6 +598,33 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await post({ acao: 'reservado_remover', token: tk })).status, 200);
     assert.equal((await chamar(h('reservado'), { query: { t: tk } })).status, 404);
     assert.equal(JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).reservadas.length, 0); }
+  // Guias e dúvidas (wiki): visibilidade por função
+  { const W = require('../lib/wiki'); const w = (b, user = 'dono') => post(b, {}, user);
+    assert.equal((await w({ acao: 'wiki_salvar', titulo: 'X', visibilidade: 'equipe', html: '<h1>a</h1>' }, 'alu1')).status, 403);
+    assert.equal((await w({ acao: 'wiki_salvar', titulo: 'X', visibilidade: 'todos', html: '<h1>a</h1>' })).status, 400);
+    assert.equal((await w({ acao: 'wiki_salvar', titulo: 'X', visibilidade: 'equipe' })).status, 400);
+    const mk = async (titulo, visibilidade, html) => JSON.parse((await w({ acao: 'wiki_salvar', titulo, visibilidade, categoria: 'Problemas comuns', tags: 'git, erro', html })).body).item;
+    const sOwner = await mk('Só dono', 'owner', '<h1>WIKI-OWNER</h1>'), sMon = await mk('Monitores aqui', 'monitor', '<h1>WIKI-MON</h1>'), sAdm = await mk('Corpo adm', 'equipe', '<title>t</title><h1>WIKI-ADM</h1>'), sAll = await mk('Para membros', 'aluno', '<h1>WIKI-ALL</h1>');
+    assert.equal(sOwner.slug, 'so-dono');
+    const lista = async (user) => (JSON.parse((await chamar(h('wiki'), { user, query: { rota: 'wiki' } })).body).paginas || []).map((x) => x.slug).sort();
+    assert.deepEqual(await lista('dono'), ['corpo-adm', 'monitores-aqui', 'para-membros', 'so-dono']);
+    assert.deepEqual(await lista('mon1'), ['corpo-adm', 'monitores-aqui', 'para-membros']);
+    assert.deepEqual(await lista('alu1'), ['para-membros']);
+    assert.equal((await chamar(h('wiki'), { query: { rota: 'wiki' } })).status, 401);
+    const pag = (s, user) => chamar(h('wiki'), { user, query: { rota: 'wikipagina', s } });
+    let r1 = await pag('so-dono', 'dono'); assert.equal(r1.status, 200); assert(r1.body.includes('WIKI-OWNER') && r1.body.includes('Guias e dúvidas') && /noindex/.test(r1.h['X-Robots-Tag']));
+    assert.equal((await pag('so-dono', 'mon1')).status, 404); assert.equal((await pag('monitores-aqui', 'alu1')).status, 404); assert.equal((await pag('para-membros')).status, 404);
+    assert.equal((await pag('corpo-adm', 'mon1')).status, 200); assert.equal((await pag('../x', 'dono')).status, 404);
+    // busca: o índice leva o texto; metadado muda sem reenviar o HTML
+    const adm = JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).wiki; assert.equal(adm.paginas.length, 4); assert(adm.paginas.find((x) => x.slug === 'corpo-adm').texto.includes('WIKI-ADM'));
+    const up = JSON.parse((await w({ acao: 'wiki_salvar', slug: 'corpo-adm', titulo: 'Corpo adm 2', visibilidade: 'aluno' })).body).item; assert.equal(up.visibilidade, 'aluno');
+    assert.equal((await pag('corpo-adm', 'alu1')).status, 200); assert((await pag('corpo-adm', 'alu1')).body.includes('WIKI-ADM'));
+    // cargos: equipe só vê se tiver o cargo
+    const cf = { owners: [], monitores: {}, alunos: [], equipe: { prof: { cargos: ['professor'] }, outro: { cargos: ['midia'] } }, cargos: {} };
+    const pg0 = { visibilidade: 'equipe', cargos: ['professor'] }; assert(W.pode(cf, 'prof', pg0)); assert(!W.pode(cf, 'outro', pg0)); assert(!W.pode(cf, 'visitante', pg0));
+    assert.equal((await w({ acao: 'wiki_remover', slug: 'so-dono' }, 'alu1')).status, 403);
+    for (const s of ['so-dono', 'monitores-aqui', 'corpo-adm', 'para-membros']) assert.equal((await w({ acao: 'wiki_remover', slug: s })).status, 200);
+    assert.equal(JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).wiki.paginas.length, 0); }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)
