@@ -50,7 +50,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);const niveis=Object.keys(por).sort();
   const sa=secao('Aulas',d.aulas.length+(d.aulas.length===1?' aula':' aulas'));sa.id='sec-aulas';lembrar(sa,'aulas',true);
   if(!d.aulas.length)sa.append(el('p','',d.usuario?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
-  niveis.forEach((nv,i)=>{const g=secao(nv,por[nv].length+' aula(s)');g.classList.add('pequeno');lembrar(g,'nv_'+nv,i===0);
+  niveis.forEach((nv,i)=>{const g=secao(nv,por[nv].length+' aula(s)');g.classList.add('pequeno');lembrar(g,'nv_'+nv,false);
     for(const a of por[nv]){const k=el('a','aula');k.href=a.url;const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.chave));k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));g.append(k);
       if(a.roteiro){const r=el('a','aula');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','','Roteiro do apresentador (não projetar)'));g.append(r)}}
     sa.append(g)});
