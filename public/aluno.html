@@ -33,7 +33,7 @@ function tabAtiv(C){
   const pend=L.filter(x=>!x.estado||x.estado==='nao'),feitas=L.filter(x=>x.estado&&x.estado!=='nao');
   const item=x=>{const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo+(x.opcional?' (OPCIONAL, pontos extras)':'')),el('br'),
     el('small','',`${x.prazo?'prazo '+fmt(x.prazo)+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${ES[x.estado]||ES.nao}${x.nota!==null&&x.nota!==undefined?' · nota '+x.nota:''}`));
-    if(x.issue){i.append(el('br'));const a=el('a','','Abrir a atividade e responder (Issue no GitHub)');a.href=x.issue;a.target='_blank';a.rel='noopener';i.append(a)}return i};
+    if(x.issue){const w=el('div','');w.style.cssText='margin-top:10px';const a=el('a','btn','Abrir no GitHub e responder');a.href=x.issue;a.target='_blank';a.rel='noopener';w.append(a,el('small','',' Se aparecer "404", aceite o convite do seu repositório em github.com/LAG-CEUMA ou avise o monitor.'));i.append(w)}else if(!x.estado||x.estado==='nao'){i.append(el('br'),el('small','','O link do GitHub aparece aqui assim que a atividade for enviada ao seu repositório.'))}return i};
   const a=secao('Pendentes',pend.length+(pend.length===1?' atividade':' atividades'));for(const x of pend)a.append(item(x));if(!pend.length)a.append(el('p','sub','Tudo em dia. Nenhuma pendência.'));C.append(a);LigaNovo.aplicar(a,'ativ-pend',pend.map(x=>x.id),true);
   const b=secao('Entregues',feitas.length+(feitas.length===1?' atividade':' atividades'));for(const x of feitas)b.append(item(x));if(!feitas.length)b.append(el('p','sub','Nada entregue ainda.'));C.append(b);LigaNovo.aplicar(b,'ativ-feitas',feitas.map(x=>x.id+x.estado),false);
 }
