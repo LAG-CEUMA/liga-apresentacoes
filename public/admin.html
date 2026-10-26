@@ -21,6 +21,14 @@
 <li><b>Quem é quem:</b> o site identifica a pessoa pelo <b>login do GitHub</b> (só o nome de usuário; nenhuma permissão sobre a conta dela é pedida).</li>
 <li><b>Onde ficam as regras:</b> no arquivo <code>acesso/acesso.json</code> do <code>liga-curriculo</code>. Este painel é só uma forma fácil de editá-lo.</li>
 </ol></details>
+<details><summary>Área do aluno, novidades e Destaque de ranking</summary>
+<ol>
+<li><b>Início</b> mostra só o que é da Liga: boas-vindas, anúncios, agenda, vitrine e destaques de ranking. O aluno logado cai nela.</li>
+<li><b>Área do aluno</b> (botão no topo da Início; para quem não entrou, o botão se chama Aulas) reúne três abas: <b>Aulas</b> (só o conteúdo), <b>Atividades</b> (pendentes e entregues, com link da Issue no GitHub) e <b>Meu progresso</b> (pontuação, posição, Top 5 da turma e presença). O endereço antigo /aulas leva para ela.</li>
+<li><b>Regra de novidade:</b> blocos recolhíveis abrem expandidos, com a etiqueta <b>novo</b>, quando o conteúdo mudou desde que a pessoa o abriu ou recolheu. Depois que ela escolhe recolher, o bloco fica recolhido até chegar algo novo. A escolha fica guardada no navegador de cada pessoa. O botão Área do aluno também ganha "novo" quando há aula ou atividade nova.</li>
+<li><b>Destaque de ranking</b> (Personalizar &rarr; 11): escolha a turma e Top 3, 5 ou 10 e clique em <b>+ Publicar foto do ranking</b>. É uma <b>foto do dia</b>: não muda sozinha. Só entra quem já tem pontos. Dê título (ex.: Top 5 de outubro), chamada, quem vê e período, e clique em Salvar. Para atualizar os números use <b>Atualizar foto agora</b>. Quem tem a permissão Personalizar o site (marketing, design) também publica.</li>
+</ol>
+</details>
 <details><summary>Ver como uma pessoa e Banco de imagens</summary>
 <p><b>Ver como:</b> na ficha de qualquer pessoa (aba Pessoas), o botão "Ver como @usuário" faz você navegar pela plataforma exatamente como ela, para testar o que ela vê e pode fazer. É somente leitura, vale por 1 hora e uma faixa roxa embaixo permite sair. Só owners usam, e não é possível entrar como outro owner.</p>
 <p><b>Banco de imagens:</b> aba só para owners com todas as imagens enviadas (site e slides). Excluir apaga o arquivo do GitHub; se a imagem estiver em uso no site ou em slides, o sistema mostra onde e pede confirmação extra.</p>
@@ -44,7 +52,7 @@
 
 <details><summary>Ordem da tela inicial (pesos e colunas)</summary>
 <ol>
-<li>Em <b>Personalizar → 10. Ordem dos blocos</b>, cada bloco (Boas-vindas, Anúncios, Agenda, Vitrine, Aulas, Minha pontuação, Minha presença) tem um número de 1 a 99, <b>obrigatório</b>. O menor aparece primeiro.</li>
+<li>Em <b>Personalizar → 10. Ordem dos blocos</b>, cada bloco (Boas-vindas, Anúncios, Agenda, Vitrine, Destaques de ranking) tem um número de 1 a 99, <b>obrigatório</b>. O menor aparece primeiro.</li>
 <li>Cada aviso, evento e destaque da Vitrine também tem sua <b>Ordem de exibição</b>.</li>
 <li>Números <b>iguais</b> ficam lado a lado (2 ou 3 colunas; no celular empilham). Dica: use 10, 20, 30… para sempre caber algo no meio.</li>
 </ol></details>
@@ -77,7 +85,7 @@
 <li><b>Regra de presença:</b> o aluno conta como presente se esteve em pelo menos <b>metade</b> das chamadas salvas (2 de 3, por exemplo). Quem ficou sem marca é salvo como falta, com confirmação.</li>
 <li><b>Participações:</b> o instrutor registra pergunta boa, ajuda a colega, apresentação ou desafio, com pontos de 0 a 10. Por enquanto só formam histórico.</li>
 <li><b>Quem faz a chamada:</b> owners, equipe com a permissão <i>Presença</i> e monitores (só das aulas liberadas para eles no item 2).</li>
-<li><b>Quem vê:</b> cada aluno vê só a própria presença na tela inicial. O histórico geral e o CSV (para Excel/Power BI) são de quem tem permissão.</li>
+<li><b>Quem vê:</b> cada aluno vê só a própria presença em <b>Área do aluno &gt; Meu progresso</b>. O histórico geral e o CSV (para Excel/Power BI) são de quem tem permissão.</li>
 <li><b>Onde ficam os dados:</b> no GitHub, pasta <code>dados/aulas/&lt;turma&gt;/…</code> do <code>liga-curriculo</code> (um arquivo por aula e turma). Guardamos só o usuário do GitHub e o estado, sem nomes nem e-mails; os commits também não citam alunos. Se um dia a liga crescer demais, a base pode migrar para um banco de dados.</li>
 <li><b>Turma:</b> um texto livre (ex.: <code>2026</code>, <code>2027.1</code>) que separa as chamadas de grupos diferentes na mesma aula.</li></ul></details>
 
@@ -109,7 +117,7 @@
 <li><b>Como se calcula:</b> presença (peso 40) + participação (peso 30) + exercícios (peso 30), <b>menos as penalidades</b>. Os pesos são configuráveis na aba Pontuação, para todas as turmas ou só para uma.</li>
 <li><b>Presença:</b> por aula, presente vale 100%, justificado 50%, falta 0. <b>Participação:</b> os pontos que o professor dá (0 a 10); atingindo a <i>meta</i> (padrão 30 pontos) o aluno ganha o peso inteiro. Cada tipo (pergunta boa, ajudou colega…) tem um multiplicador. <b>Exercícios:</b> no prazo 100%, atrasada 50%, não entregou 0; a nota 0 a 10 multiplica.</li>
 <li><b>Penalidade:</b> o tipo "Atrapalhou a aula" tira pontos direto do total do aluno (nunca abaixo de zero).</li>
-<li><b>Top 5:</b> aparece na aba Ranking da Presença (completo, para quem faz chamada) e para os alunos da turma na tela inicial, se "Top 5 visível" estiver ligado. Ao arquivar uma turma, o Top 5 final fica congelado para os prêmios.</li></ul></details>
+<li><b>Top 5:</b> aparece na aba Ranking da Presença (completo, para quem faz chamada) e para os alunos da turma em <b>Área do aluno &gt; Meu progresso</b>, se "Top 5 visível" estiver ligado (só aparece quem já tem pontos). Ao arquivar uma turma, o Top 5 final fica congelado para os prêmios.</li></ul></details>
 
 <details><summary>Eventos e certificados (/eventos)</summary>
 <ul>

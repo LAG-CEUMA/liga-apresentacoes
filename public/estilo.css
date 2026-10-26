@@ -110,3 +110,6 @@ input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;bo
 .pont-tit{margin:14px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 .pont-lin{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:8px}.pont-lin:nth-child(odd){background:#ffffff06}.pont-lin.eu{background:color-mix(in srgb,var(--ouro) 18%,transparent);font-weight:700}
 .pont-pos{width:28px;color:var(--ouro);font-weight:700}.pont-nome{flex:1;overflow:hidden;text-overflow:ellipsis}.pont-pts{color:var(--mut)}
+.novo{background:var(--ouro);color:var(--btntxt,#1a1230);font:700 11px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 8px;margin-left:8px;align-self:center}
+.btn .novo{margin-left:6px;background:#e5484d;color:#fff}
+.abas-aluno{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 16px;border-bottom:1px solid #fff2;padding-bottom:14px}

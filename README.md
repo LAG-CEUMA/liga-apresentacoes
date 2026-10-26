@@ -35,6 +35,9 @@ Use os termos e programas **em inglês**.
 ## Vitrine
 `site.vitrine` (até 24 destaques) aparece na tela inicial. Cada item tem modo `cartao`, `clique` ou `direto`. Embeds só de sites da lista em `public/vitrine.js` (YouTube, Vimeo, itch.io, Instagram, Spotify, Discord, Google Slides/Drive, TikTok), sempre em iframe com sandbox. Edição em Personalizar → 9. Vitrine.
 
+## Área do aluno, novidades e ranking
+`/aluno` (public/aluno.html): abas Aulas, Atividades e Meu progresso; `/aulas` redireciona para lá. `public/novidade.js` guarda no navegador a assinatura do conteúdo de cada bloco: abre expandido com a etiqueta "novo" quando mudou e respeita o recolhimento até a próxima mudança. `site.rankings` guarda fotos de ranking publicadas (ação `ranking_gerar` em api/personalizar.js; só quem tem a permissão `site`).
+
 ## Ordem da tela inicial
 `site.ordem` (blocos) e `peso` (anúncios, agenda, vitrine): inteiros de 1 a 99, obrigatórios (o servidor recusa o salvamento sem eles). Menor primeiro; mesmo número = colunas (até 3). Dados antigos sem peso são migrados pela ordem atual (10, 20, 30…).
 

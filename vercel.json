@@ -10,6 +10,10 @@
       "destination": "/ajuda"
     },
     {
+      "source": "/aulas",
+      "destination": "/aluno#aulas"
+    },
+    {
       "source": "/semanas",
       "destination": "/presenca"
     }

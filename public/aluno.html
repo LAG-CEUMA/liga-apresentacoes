@@ -1,0 +1,80 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Área do aluno</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"></head>
+<body data-pg="aluno"><main>
+<div class="topo"><div><p class="tag">LIGA ACADÊMICA DE GAMES · CEUMA</p><h1>Área do aluno</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a></div></div>
+<nav class="abas-aluno" id="abas" aria-label="Seções da área do aluno"></nav>
+<div id="corpo"><p>Carregando…</p></div>
+</main>
+<script src="/novidade.js"></script>
+<script>
+const NOME={owners:'só owners',membros:'membros',publico:'público'};
+const ST={presente:'Presente',ausente:'Falta',justificado:'Justificado','sem-chamada':'Sem chamada'};
+const ES={prazo:'Entregue no prazo',atraso:'Entregue com atraso',nao:'Sem entrega registrada',dispensado:'Dispensado'};
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+function secao(titulo,contagem){const d=el('details','nivel');const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
+const fmt=p=>p?new Date(p).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,ABA='aulas';
+const j=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
+
+function tabAulas(C){
+  const d=AULAS;
+  if(!d.aulas.length)C.append(el('p','sub',U?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
+  else C.append(el('p','sub','Escolha o nível para ver as aulas. Os níveis começam recolhidos e abrem sozinhos quando há aula nova.'));
+  const por={};for(const a of d.aulas)(por[a.nivel]=por[a.nivel]||[]).push(a);
+  for(const nv of Object.keys(por).sort()){const g=secao(nv,por[nv].length+' aula(s)');
+    for(const a of por[nv]){const k=el('a','aula');k.href=a.url;const n=el('div');n.style.flex='1';n.append(el('b','',a.titulo),el('br'),el('small','',a.chave));k.append(n);if(a.acesso)k.append(el('span','badge',NOME[a.acesso]));g.append(k);
+      if(a.roteiro){const r=el('a','aula');r.href=a.roteiro;r.style.marginLeft='32px';r.append(el('span','','Roteiro do apresentador (não projetar)'));g.append(r)}}
+    C.append(g);LigaNovo.aplicar(g,'aulas-'+nv,por[nv].map(a=>a.chave).sort(),false)}
+  if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));C.append(p)}
+}
+function tabAtiv(C){
+  const L=(ATIV&&ATIV.atividades)||[];
+  if(!L.length){const v=secao('Atividades','nenhuma liberada ainda');v.append(el('p','sub','Quando o professor liberar uma atividade (exercício ou tarefa), ela aparece aqui com prazo, peso e o link para responder no GitHub.'));C.append(v);v.open=true;return}
+  const pend=L.filter(x=>!x.estado||x.estado==='nao'),feitas=L.filter(x=>x.estado&&x.estado!=='nao');
+  const item=x=>{const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo+(x.opcional?' (OPCIONAL, pontos extras)':'')),el('br'),
+    el('small','',`${x.prazo?'prazo '+fmt(x.prazo)+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${ES[x.estado]||ES.nao}${x.nota!==null&&x.nota!==undefined?' · nota '+x.nota:''}`));
+    if(x.issue){i.append(el('br'));const a=el('a','','Abrir a atividade e responder (Issue no GitHub)');a.href=x.issue;a.target='_blank';a.rel='noopener';i.append(a)}return i};
+  const a=secao('Pendentes',pend.length+(pend.length===1?' atividade':' atividades'));for(const x of pend)a.append(item(x));if(!pend.length)a.append(el('p','sub','Tudo em dia. Nenhuma pendência.'));C.append(a);LigaNovo.aplicar(a,'ativ-pend',pend.map(x=>x.id),true);
+  const b=secao('Entregues',feitas.length+(feitas.length===1?' atividade':' atividades'));for(const x of feitas)b.append(item(x));if(!feitas.length)b.append(el('p','sub','Nada entregue ainda.'));C.append(b);LigaNovo.aplicar(b,'ativ-feitas',feitas.map(x=>x.id+x.estado),false);
+}
+function tabProgresso(C){
+  const m=PONT;
+  if(!m||!m.turmas.length)C.append(el('p','sub','Você ainda não está em uma turma. Quando um owner ou monitor te cadastrar, sua pontuação aparece aqui.'));
+  else{const s=secao('Minha pontuação',m.turmas.map(t=>t.total>0?`${t.nome}: ${t.total} pts · ${t.posicao}º de ${t.de}`:`${t.nome}: ainda sem pontos`).join(' | '));
+    for(const t of m.turmas){const c=el('div','pont');
+      const topo=el('div','pont-topo');const tt=el('div','');tt.append(el('b','',t.nome+(t.status==='arquivada'?' (encerrada)':'')),el('small','',t.total>0?`${t.posicao}º lugar de ${t.de}`:'Os pontos aparecem depois das primeiras aulas'));
+      const n=el('div','pont-n',String(t.total));n.append(el('small','',' pts'));topo.append(tt,n);c.append(topo);
+      const ch=el('div','pont-chips');for(const [nm,v] of [['Presença',t.partes.presenca],['Participação',t.partes.participacao],['Exercícios',t.partes.exercicios]])ch.append(el('span','pont-chip',nm+' '+v));
+      if(t.partes.penalidades)ch.append(el('span','pont-chip pen','Penalidades −'+t.partes.penalidades));c.append(ch);
+      if(t.top5.length){c.append(el('div','pont-tit','Top 5 da turma'));const ol=el('div','pont-top');for(const x of t.top5){const eu=x.usuario===U;const l=el('div','pont-lin'+(eu?' eu':''));l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome','@'+x.usuario+(eu?' (você)':'')),el('span','pont-pts',x.total+' pts'));ol.append(l)}c.append(ol)}
+      s.append(c)}
+    C.append(s);LigaNovo.aplicar(s,'prog-pontos',m.turmas.map(t=>[t.turma,t.total,t.posicao]),true)}
+  const p=PRES;
+  if(p&&p.aluno){
+    if(!p.sessoes.length){const v=secao('Minha presença','nenhuma aula registrada ainda');v.append(el('p','sub','Suas presenças e pontos de participação aparecem aqui depois da primeira chamada.'));C.append(v)}
+    else{const ok=p.sessoes.filter(x=>x.status==='presente').length,pts=p.sessoes.reduce((t,x)=>t+x.pontos,0);const s=secao('Minha presença',`${ok} de ${p.sessoes.length} aula(s) · ${pts} ponto(s)`);
+      for(const x of p.sessoes){const i=el('div','item');i.append(el('b','',x.titulo),el('br'),el('small','',`${x.data?x.data.split('-').reverse().join('/')+' · ':''}turma ${x.turma} · ${ST[x.status]||x.status} (${x.presencas}/${x.salvas} chamadas)${x.pontos?' · '+x.pontos+' ponto(s) de participação':''}`));
+        for(const q of x.participacoes)i.append(el('br'),el('small','','• '+q.tipo+(q.nota?': '+q.nota:'')));s.append(i)}
+      C.append(s);LigaNovo.aplicar(s,'prog-presenca',p.sessoes.map(x=>x.chave+x.status+x.pontos),false)}}
+}
+function desenhar(){
+  const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
+  const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
+  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso'])}
+  if(!abas.some(a=>a[0]===ABA))ABA='aulas';
+  for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
+    if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
+    A.append(b)}
+  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else tabProgresso(C);
+  // marca como visto para a faixa "novo" do menu da Início
+  try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}
+}
+(async()=>{
+  AULAS=await j('/api/aulas');if(!AULAS){document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.';return}
+  U=AULAS.usuario||null;
+  if(U)[ATIV,PONT,PRES]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha')]);
+  const h=location.hash.slice(1);if(['aulas','atividades','progresso'].includes(h))ABA=h;
+  desenhar();
+})();
+</script><script src="/como.js"></script>
+</body></html>

@@ -200,7 +200,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   global.fetch = antes;
   // ---------- site: tema, imagens, anúncios, agenda ----------
   const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40)]);
-  const completa = (x) => { if (!x || typeof x !== 'object' || x.__semPeso) return x; const o = { ...x }; o.ordem = o.ordem || { boasVindas: 10, anuncios: 20, agenda: 30, vitrine: 40, aulas: 50, pontos: 60, presenca: 70 };
+  const completa = (x) => { if (!x || typeof x !== 'object' || x.__semPeso) return x; const o = { ...x }; o.ordem = o.ordem || { boasVindas: 10, anuncios: 20, agenda: 30, vitrine: 40, rankings: 45 };
     for (const l of ['anuncios', 'agenda', 'vitrine']) if (Array.isArray(o[l])) o[l] = o[l].map((i, n) => ({ peso: 10, ...i })); return o; };
   const salvarSite = (site, user = 'dono') => chamar(h('personalizar'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: { acao: 'salvar', site: completa(site), resumo: 'teste' } });
   r = await chamar(h('site')); assert.equal(r.status, 200); assert(JSON.parse(r.body).nome); // padrão sem arquivo
@@ -504,12 +504,19 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
       { titulo: 'Membros', url: 'https://x.com/c', visivel: 'membros' }] });
     assert.equal(lim.vitrine.length, 2); assert(!lim.vitrine[0].embed.includes('evil.com'));
     assert.equal(Si.paraLeitor(lim, 'visitante').vitrine.length, 1); }
+  // Destaque de ranking: foto publicada, só com pontos, filtrada por visibilidade/data
+  { const Si = require('../lib/site.js'); const pz = (b, user = 'dono') => chamar(h('personalizar'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: b });
+    assert.equal((await pz({ acao: 'ranking_gerar', turma: 'nao-existe', quantos: 5 })).status, 400);
+    assert.equal((await pz({ acao: 'ranking_gerar', turma: 'nao-existe', quantos: 5 }, 'alu1')).status, 403);
+    const m = Si.sanitizar({ rankings: [{ titulo: 'Top 5 de outubro', turma: 'T', turmaNome: 'N0', foto: '2026-10-26', peso: 20, visivel: 'membros', itens: [{ posicao: 1, usuario: 'Ana', total: 12.55 }, { posicao: 2, usuario: 'ruim nome!', total: 3 }] }, { titulo: '' }] });
+    assert.equal(m.rankings.length, 1); assert.equal(m.rankings[0].itens.length, 1); assert.equal(m.rankings[0].itens[0].usuario, 'ana'); assert.equal(m.rankings[0].itens[0].total, 12.6);
+    assert.equal(Si.paraLeitor(m, 'visitante').rankings.length, 0); assert.equal(Si.paraLeitor(m, 'aluno').rankings.length, 1); }
   // ordem de exibição (peso obrigatório, sem peso = migra pela ordem atual)
   { const Si = require('../lib/site.js');
     const m = Si.sanitizar({ anuncios: [{ titulo: 'A' }, { titulo: 'B' }], vitrine: [{ titulo: 'V', url: 'https://x.com/a', peso: 5 }] });
-    assert.deepEqual(m.anuncios.map((x) => x.peso), [10, 20]); assert.equal(m.vitrine[0].peso, 5); assert.equal(m.ordem.aulas, 50);
+    assert.deepEqual(m.anuncios.map((x) => x.peso), [10, 20]); assert.equal(m.vitrine[0].peso, 5); assert.equal(m.ordem.rankings, 45);
     assert(Si.faltaPeso({ ordem: m.ordem, anuncios: [{ titulo: 'A' }] }).includes('aviso'));
-    assert(Si.faltaPeso({ ordem: { ...m.ordem, aulas: '' } }).includes('Aulas'));
+    assert(Si.faltaPeso({ ordem: { ...m.ordem, rankings: '' } }).includes('Destaques'));
     assert.equal(Si.faltaPeso({ ordem: m.ordem, anuncios: m.anuncios, vitrine: m.vitrine }), '');
     const l = Si.paraLeitor(Si.sanitizar({ agenda: [{ titulo: 'Z', data: '2099-01-01', peso: 1 }, { titulo: 'Y', data: '2098-01-01', peso: 2 }] }), 'aluno');
     assert.equal(l.agenda[0].titulo, 'Z'); }
