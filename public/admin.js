@@ -366,6 +366,8 @@ function desenharPendentes(){
   const inp=(v,ph)=>h('input',{type:'text',placeholder:ph||'',value:v||'',style:'width:100%;margin-top:3px'});
   const mk=(p)=>{const novo=!p;p=p||{};
     const c=h('div',{class:'card',style:'margin:10px 0;max-width:760px;padding:14px 16px;border-left:4px solid '+(novo?'#7c8cff':p.usuario?'#3ecf8e':'#f5b942')});
+    const ligados=new Set(L.map(x=>(x.usuario||'').toLowerCase()).filter(Boolean));
+    const conhecidos=[...new Set([...(D.fixos||[]),...(D.owners||[]),...Object.keys(D.equipe||{}),...(D.monitores||[])].map(x=>String(x).toLowerCase()))].filter(x=>x&&!ligados.has(x));
     const em=inp(p.email,'a000000@ceuma.com.br'),cg=inp(p.cargo,'Ex.: Vice presidente'),no=inp(p.nome,'Opcional'),us=inp(p.usuario,'Ex.: afonsofarias');
     const bt=h('button',{type:'button',class:'btn'},novo?'Adicionar contato':'Salvar alterações');
     bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'pendente_salvar',anterior:p.email||'',email:em.value,cargo:cg.value,nome:no.value,usuario:us.value});const gu=us.value.trim().replace(/^@/,'').toLowerCase();let extra='';if(gu&&!(D.equipe||{})[gu]){await enviar({acao:'equipe',usuario:gu,titulo:cg.value,permissoes:[]});extra=' @'+gu+' também foi adicionado à equipe (sem permissões extras; ajuste em Pessoas).'}aviso('Salvo.'+extra);await carregar()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
@@ -377,7 +379,9 @@ function desenharPendentes(){
     topo.append(seta,h('b',{style:'font-size:16px'},novo?'Novo contato':(p.cargo||'(sem cargo)')),novo?h('span',{style:'opacity:.6;font-size:13px'},'clique para abrir'):h('span',{style:'opacity:.65;font-size:13px'},p.email),h('span',{style:'flex:1'}),...(pill?[pill]:[]),rot);
     const atual=()=>{const ab=!corpo.hidden;seta.style.transform=ab?'rotate(90deg)':'';rot.textContent=ab?'Fechar':'Editar';if(ab)PEND_OPEN.add(chave);else PEND_OPEN.delete(chave)};
     topo.onclick=()=>{corpo.hidden=!corpo.hidden;atual()};atual();
-    const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 12px'});g.append(campo('E-mail institucional',em),campo('Cargo',cg),campo('Nome',no),campo('Usuário do GitHub',us));
+    const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 12px'});const sug=h('div',{style:'margin-top:5px;font-size:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center'});
+    if(!p.usuario&&conhecidos.length){sug.append(h('span',{style:'opacity:.7'},'Já têm acesso:'));for(const k of conhecidos){const b=h('button',{type:'button',style:'all:unset;cursor:pointer;padding:2px 9px;border-radius:99px;border:1px solid #4a5170;font-size:12px'},'@'+k);b.onclick=()=>{us.value=k};sug.append(b)}}
+    const cu=campo('Usuário do GitHub',us);cu.append(sug);g.append(campo('E-mail institucional',em),campo('Cargo',cg),campo('Nome',no),cu);
     const ac=h('div',{style:'margin-top:10px;display:flex;gap:8px;flex-wrap:wrap'},bt);
     if(!novo){const rem=h('button',{type:'button',class:'btn sec'},'Remover');rem.onclick=async()=>{if(rem.dataset.ok!=='1'){rem.dataset.ok='1';rem.textContent='Clique de novo para confirmar';setTimeout(()=>{rem.dataset.ok='';rem.textContent='Remover'},4000);return}
       try{await enviar({acao:'pendente_remover',email:p.email});aviso('Removido.');await carregar()}catch(e){aviso(e.message,true)}};ac.append(rem)}
