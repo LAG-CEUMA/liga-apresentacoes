@@ -4,6 +4,10 @@
     {
       "source": "/aula-01",
       "destination": "/aula/nivel-00-tutorial/aula-01"
+    },
+    {
+      "source": "/wiki/ajuda",
+      "destination": "/ajuda"
     }
   ],
   "rewrites": [
