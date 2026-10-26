@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
             participacoes: (s.participacoes || []).filter((x) => x.usuario === usuario).map((x) => ({ tipo: d.TIPOS[x.tipo] || x.tipo, nota: x.nota, pontos: x.pontos })) });
         }
         lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-        return u.json(res, 200, { usuario, sessoes: lista });
+        return u.json(res, 200, { usuario, sessoes: lista, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
       if (q.acao === 'minhapontuacao') {
         const sess = await d.listarSessoes(); const ativs = await A.listar(); const conf = P.configPontos(cfg); const out = [];
@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
         for (const a of todas) { const t = cfg.turmas[a.turma]; if (!a.liberada || !t || !t.alunos.includes(usuario) || !A.aplica(a, usuario)) continue;
           const e = (a.entregas || {})[usuario] || {}; const dsp = (a.disparos || {})[usuario] || {};
           out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, issue: dsp.url || '' }); }
-        return u.json(res, 200, { usuario, atividades: out });
+        return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
       if (q.acao === 'atividades') {

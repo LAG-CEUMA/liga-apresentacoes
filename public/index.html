@@ -52,7 +52,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   if(d.exigeLogin){const p=el('p','',`Há ${d.exigeLogin} aula(s) só para membros. `);const a=el('a','','Entre com o GitHub');a.href='/api/login';p.append(a,document.createTextNode(' para ver.'));sa.append(p)}
   BL.aulas=sa;organizar();
   if(d.usuario)fetch('/api/presenca?acao=minha').then(r=>r.ok?r.json():null).then(m=>{
-    if(!m||!m.sessoes.length)return;const ok=m.sessoes.filter(x=>x.status==='presente').length,pts=m.sessoes.reduce((t,x)=>t+x.pontos,0);
+    if(!m)return;if(!m.sessoes.length){if(!m.aluno)return;const v=secao('Minha presença','nenhuma aula registrada ainda');v.id='sec-presenca';lembrar(v,'presenca',false);v.append(el('p','sub','Suas presenças e pontos de participação aparecem aqui depois da primeira chamada.'));BL.presenca=v;organizar();return}const ok=m.sessoes.filter(x=>x.status==='presente').length,pts=m.sessoes.reduce((t,x)=>t+x.pontos,0);
     const s=secao('Minha presença',`${ok} de ${m.sessoes.length} aula(s) · ${pts} ponto(s)`);s.id='sec-presenca';lembrar(s,'presenca',false);
     const ST={presente:'Presente',ausente:'Falta',justificado:'Justificado','sem-chamada':'Sem chamada'};
     for(const x of m.sessoes){const i=el('div','item');i.append(el('b','',x.titulo),el('br'),el('small','',`${x.data?x.data.split('-').reverse().join('/')+' · ':''}turma ${x.turma} · ${ST[x.status]||x.status} (${x.presencas}/${x.salvas} chamadas)${x.pontos?' · '+x.pontos+' ponto(s) de participação':''}`));
@@ -74,7 +74,8 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     BL.pontos=s;organizar();
   }).catch(()=>{});
   if(d.usuario)fetch('/api/presenca?acao=minhasatividades').then(r=>r.ok?r.json():null).then(m=>{
-    if(!m||!m.atividades.length)return;
+    if(!m)return;
+    if(!m.atividades.length){if(!m.aluno)return;const v=secao('Minhas atividades','nenhuma liberada ainda');v.id='sec-ativ';lembrar(v,'ativ',true);v.append(el('p','sub','Quando o professor liberar uma atividade (exercício ou tarefa), ela aparece aqui com prazo, peso e o link para responder no GitHub.'));BL.ativ=v;organizar();return}
     const pend=m.atividades.filter(x=>!x.estado||x.estado==='nao').length;
     const s=secao('Minhas atividades',`${m.atividades.length} liberada(s) · ${pend} sem entrega registrada`);s.id='sec-ativ';lembrar(s,'ativ',true);
     const ST={prazo:'Entregue no prazo',atraso:'Entregue com atraso',nao:'Sem entrega registrada',dispensado:'Dispensado'};
