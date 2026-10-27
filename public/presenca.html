@@ -60,6 +60,7 @@ async function api(corpo){const r=await fetch('/api/presenca',{method:'POST',hea
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}},set(k,v){try{localStorage.setItem(k,v)}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
 let CTX,SESSAO=null,TURMA=ls.get('liga_turma','2026'),CHAVE=ls.get('liga_aula',''),DATA='',N=1,ESTADO={},ABA='chamada',PARTES=[];
 const ROT=['Início','Meio','Fim'];
+const ord=(r)=>{const nm=(k)=>String(((CTX&&CTX.nomes)||{})[k]||k);return [...(r||[])].sort((a,b)=>nm(a).localeCompare(nm(b),'pt-BR',{sensitivity:'base'}))};
 const quem=(k)=>{const n=((CTX&&CTX.nomes)||{})[k];return n?h('span',{},h('b',{},n),h('small',{class:'sub'},' @'+k)):h('b',{},k)};
 const rot=(k)=>{const n=((CTX&&CTX.nomes)||{})[k];return n?n+' (@'+k+')':k};
 const chaveRasc=()=>`liga_rasc_${TURMA}_${CHAVE}_${N}`;
@@ -68,7 +69,7 @@ async function carregarSessao(){
   SESSAO=null;if(!CHAVE)return;
   const r=await fetch(`/api/presenca?acao=sessao&turma=${encodeURIComponent(TURMA)}&chave=${encodeURIComponent(CHAVE)}`);
   if(!r.ok){const d=await r.json().catch(()=>({}));aviso(d.erro||'Não consegui carregar a aula.',1);return}
-  const d=await r.json();SESSAO=d.sessao;CTX.roster=d.roster;if(SESSAO&&SESSAO.data)DATA=SESSAO.data;escolherChamada(N,false)}
+  const d=await r.json();SESSAO=d.sessao;CTX.roster=ord(d.roster);if(SESSAO&&SESSAO.data)DATA=SESSAO.data;escolherChamada(N,false)}
 function escolherChamada(n,redesenhar=true){N=n;let rasc=null;try{rasc=JSON.parse(ls.get(chaveRasc(),'null'))}catch{}
   const salva=SESSAO&&SESSAO.chamadas&&SESSAO.chamadas[n];ESTADO=rasc||(salva?{...salva.estados}:{});ESTADO.__rasc=!!rasc;if(redesenhar)desenhar()}
 function rascunho(){const e={...ESTADO};delete e.__rasc;ls.set(chaveRasc(),JSON.stringify(e));ESTADO.__rasc=true}
@@ -136,7 +137,7 @@ async function telaAtiv(alvo){
   alvo.textContent='';alvo.append(h('p',{},'Carregando…'));
   const r=await fetch('/api/presenca?acao=atividades&turma='+encodeURIComponent(TURMA));
   if(!r.ok){alvo.textContent='Não consegui carregar as atividades desta turma.';return}
-  ATV=await r.json();alvo.textContent='';
+  ATV=await r.json();ATV.roster=ord(ATV.roster);alvo.textContent='';
   alvo.append(h('p',{class:'sub'},'Cada atividade é um exercício com peso, prazo e entrega próprios. Você decide quando liberar (para todos ou só alguns) e as respostas chegam separadas, cada uma na sua Issue.'));
   alvo.append(h('div',{class:'leg'},
     h('div',{class:'tg E',style:'border:1px solid #fff2'},h('span',{class:'letra'},'E'),h('span',{},h('b',{},'Exercício (Exercise)'),h('br'),h('span',{class:'expl'},'Feito em sala, durante a aula, com o instrutor.'))),
@@ -237,7 +238,7 @@ function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba
   const r=await fetch('/api/presenca?acao=contexto');
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}
   if(r.status===403){$('corpo').innerHTML='<p>Você não tem permissão para fazer chamadas. Peça a um owner a permissão <b>Presença</b> (equipe) ou a liberação da sua aula (monitor).</p>';return}
-  CTX=await r.json();if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;{const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA))TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0]}
+  CTX=await r.json();CTX.roster=ord(CTX.roster);if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;{const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA))TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0]}
   await carregarSessao();desenhar()})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 </body></html>

@@ -10,7 +10,7 @@ function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.s
 const PERM_INFO={site:['Personalizar o site','cores, logo, fundos, avisos, agenda e redes'],aulas:['Mudar o nível das aulas','define quem vê cada aula (só owners ou membros da turma)'],pessoas:['Cadastrar pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Ver tarefas de casa (antigo)','sem função hoje: as atividades ficam em Presença'],presenca:['Fazer chamada e presença','chamada, participações e histórico'],slides:['Editar slides','usar o editor (/editor) nos níveis a que a pessoa está vinculada']};
 const PODE={site:'personalizar o site e publicar avisos, agenda e redes',aulas:'mudar o nível de cada aula',pessoas:'cadastrar alunos e monitores',tarefas:'ver as tarefas de casa',presenca:'fazer a chamada de todas as aulas e ver o histórico',slides:'editar os slides dos níveis a que está vinculada pela turma'};
 const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'cadastrar pessoas',tarefas:'ver as tarefas de casa',presenca:'fazer chamada (fora das aulas de monitor)',slides:'editar slides'};
-let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='';
+let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='',AGRUPAR=(()=>{try{return !!localStorage.getItem('liga_pessoas_agrupar')}catch{return false}})();
 
 // ---------- cálculo por pessoa ----------
 function todasPessoas(){const s=new Set([...(D.owners||[]),...(D.fixos||[]),...(D.alunos||[]),...Object.keys(D.monitores||{}),...Object.keys(D.equipe||{}),...Object.keys(D.acessos||{}),...(D.contatos||[]).map(c=>c.usuario).filter(Boolean)]);return [...s].sort()}
@@ -83,18 +83,25 @@ function desenharPessoas(){
   for(const c of (D.contatos||[]))if(!c.usuario)linhas.push({n:'',i:null,c});
   const sem=(l)=>!l.i||!temPapel(l.i);
   const lista=linhas.filter(l=>{const i=l.i;return (FILTRO==='todos'||(FILTRO==='sem'&&sem(l))||(i&&((FILTRO==='owner'&&i.owner)||(FILTRO==='equipe'&&i.eq)||(FILTRO==='monitor'&&i.mon)||(FILTRO==='aluno'&&i.aluno))))&&(!TURMA_F||(i&&i.turmas.includes(TURMA_F)))&&(!BUSCA||[l.n,l.c&&l.c.nome,l.c&&l.c.email,l.c&&l.c.curso].join(' ').toLowerCase().includes(BUSCA))});
+  const nomeDe=(l)=>((l.c&&l.c.nome)||l.n||(l.c&&l.c.email)||'').trim();
+  lista.sort((a,b)=>nomeDe(a).localeCompare(nomeDe(b),'pt-BR',{sensitivity:'base'}));
   const emails=lista.map(l=>l.c&&l.c.email).filter(Boolean);
   const cp=h('button',{class:'btn sec',type:'button',onclick:async()=>{try{await navigator.clipboard.writeText(emails.join('; '));aviso(emails.length+' e-mail(s) copiado(s). Cole no campo Para/CCO.')}catch{aviso('Não consegui copiar.',1)}}},'Copiar e-mails ('+emails.length+')');
-  barra.append(sel,busca,h('span',{style:'flex:1'}),...(D.dono?[cp]:[]),h('button',{class:'btn',type:'button',onclick:()=>abrirGaveta('')},'+ Nova pessoa'));
+  const agr=h('button',{type:'button',class:'chipx'+(AGRUPAR?' on':''),title:'Mostra as pessoas separadas por turma, em ordem alfabética dentro de cada uma',onclick:()=>{AGRUPAR=!AGRUPAR;try{localStorage.setItem('liga_pessoas_agrupar',AGRUPAR?'1':'')}catch{}desenharPessoas()}},'Agrupar por turma');
+  barra.append(sel,agr,busca,h('span',{style:'flex:1'}),...(D.dono?[cp]:[]),h('button',{class:'btn',type:'button',onclick:()=>abrirGaveta('')},'+ Nova pessoa'));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo sobre uma pessoa fica aqui: dados (nome, e-mail, usuário), papéis, turma, cargos e permissões. Clique em Editar. Para cadastrar alguém novo, use + Nova pessoa.'),barra);
   const caixa=h('div',{class:'lista-cartao'});
   if(!lista.length)caixa.append(h('p',{},'Ninguém por aqui com esse filtro.'));
-  for(const l of lista){const i=l.i;const w=i?emPalavras(i):{pode:[]};const c=l.c;
+  const linha=(l)=>{const i=l.i;const w=i?emPalavras(i):{pode:[]};const c=l.c;
     const titulo=(c&&c.nome)||(l.n?'@'+l.n:(c&&c.email)||'(sem nome)');
     const sub=[(c&&c.nome&&l.n)?'@'+l.n:'',c&&c.curso,c&&c.email,!l.n?'sem usuário do GitHub':''].filter(Boolean).join(' · ');
     const falta=[];if(!(c&&c.nome))falta.push('nome');if(!l.n)falta.push('usuário do GitHub');
-    caixa.append(h('div',{class:'pessoa'},h('div',{},h('b',{},titulo),h('div',{class:'sub',style:'font-size:12px'},sub)),h('div',{},h('div',{},...(i&&temPapel(i)?pillsPapel(i):[h('span',{class:'pill',style:'opacity:.7'},'Sem acesso')]),...(falta.length?[h('span',{class:'pill',style:'background:#5a4416'},'Falta: '+falta.join(', '))]:[])),h('div',{class:'pode'},i&&i.owner?'Pode tudo.':(w.pode[0]?'Pode '+w.pode[0].replace(/;.*$/,''):''))),
-      h('button',{class:'btn sec',type:'button',onclick:()=>abrirGaveta(l.n,c)},'Editar')))}
+    return h('div',{class:'pessoa'},h('div',{},h('b',{},titulo),h('div',{class:'sub',style:'font-size:12px'},sub)),h('div',{},h('div',{},...(i&&temPapel(i)?pillsPapel(i):[h('span',{class:'pill',style:'opacity:.7'},'Sem acesso')]),...(falta.length?[h('span',{class:'pill',style:'background:#5a4416'},'Falta: '+falta.join(', '))]:[])),h('div',{class:'pode'},i&&i.owner?'Pode tudo.':(w.pode[0]?'Pode '+w.pode[0].replace(/;.*$/,''):''))),
+      h('button',{class:'btn sec',type:'button',onclick:()=>abrirGaveta(l.n,c)},'Editar'))};
+  if(!AGRUPAR)for(const l of lista)caixa.append(linha(l));
+  else{const gr={};for(const l of lista){const ts=(l.i&&l.i.turmas.length)?l.i.turmas:[''];for(const tt of ts)(gr[tt]=gr[tt]||[]).push(l)}
+    const ordem=Object.keys(gr).sort((a,b)=>(a===''?1:0)-(b===''?1:0)||(((D.turmas[b]||{}).status==='andamento')-((D.turmas[a]||{}).status==='andamento'))||a.localeCompare(b));
+    for(const tt of ordem){const det=h('details',{class:'grp-turma',style:'margin:8px 0'},h('summary',{style:'cursor:pointer;font-weight:700;padding:8px 4px'},(tt?(D.turmas[tt]||{}).nome||tt:'Sem turma')+' · '+gr[tt].length));for(const l of gr[tt])det.append(linha(l));caixa.append(det)}}
   p.append(caixa,h('p',{class:'sub'},`${lista.length} de ${linhas.length} pessoa(s)`+((D.fixos||[]).length?` · Owners fixos (variável ADMIN_USERS): ${D.fixos.join(', ')}`:'')))
 }
 
