@@ -235,6 +235,19 @@ async function auditoriaRepos(){
       for(const x of L)det.append(h('div',{style:'padding:6px 0;border-top:1px solid #fff2'},h('b',{},(x.repo?x.repo:'@'+x.usuario)+(x.repo&&x.usuario&&k!=='orfaos'?' · @'+x.usuario:'')),h('div',{class:'sub',style:'font-size:12px'},x.motivo+(x.desde?' (desde '+x.desde.slice(0,10).split('-').reverse().join('/')+')':'')),h('a',{href:x.url,target:'_blank',rel:'noopener',class:'sub'},'Abrir no GitHub')));
       corpo.append(det)}
   }catch(e){corpo.textContent=e.message}}
+function materiaisDaTurma(id){
+  let FECHA=()=>{};
+  const t=D.turmas[id];const aulas=(D.aulas||[]).filter(a=>!t.nivel||String(a.chave).startsWith(t.nivel+'/')).sort((a,b)=>a.chave.localeCompare(b.chave));
+  const ir=(href,turmaSel,aula)=>()=>{try{localStorage.setItem('liga_turma',id);if(aula)localStorage.setItem('liga_aula',aula)}catch{}location.href=href};
+  const bt=(txt,fn,cls)=>h('button',{type:'button',class:'btn '+(cls||'sec'),style:'padding:6px 12px;font-size:13px',onclick:fn},txt);
+  const lk=(txt,href,cls)=>h('a',{class:'btn '+(cls||'sec'),style:'padding:6px 12px;font-size:13px',href,target:'_blank',rel:'noopener'},txt);
+  const corpo=h('div',{},h('p',{class:'sub'},'Tudo o que o professor precisa desta turma, em um lugar só: slides, roteiro, edição, chamada e atividades de cada aula.'),
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px'},bt('Presença da turma',ir('/presenca#chamada')),bt('Atividades da turma',ir('/presenca#ativ')),bt('Ranking',ir('/presenca#rank')),bt('Histórico',ir('/presenca#hist')),D.dono?bt('Repositórios dos alunos',()=>{FECHA();reposDaTurma(id,t.nome)}):'',D.editor?lk('Editor de slides','/editor'):''));
+  if(!aulas.length)corpo.append(h('p',{class:'sub'},'Esta turma ainda não tem aulas no nível dela.'));
+  for(const a of aulas){const ac={owners:'só owners',membros:'membros',publico:'público'}[a.acesso]||a.acesso;
+    corpo.append(h('div',{style:'border-top:1px solid #fff2;padding:10px 0'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('b',{},a.titulo),h('span',{class:'pill m'},'Quem vê: '+ac)),h('div',{class:'sub',style:'font-size:12px'},a.chave),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},lk('Slides (projetar)',a.url,'btn'),a.roteiro?lk('Roteiro (não projetar)',a.roteiro):'',D.editor?lk('Editar slides','/editor'):'',bt('Chamada desta aula',ir('/presenca#chamada',id,a.chave)),bt('Atividades',ir('/presenca#ativ',id,a.chave)),(D.permissoes||[]).includes('aulas')||D.dono?bt('Quem vê',()=>{FECHA();mostrar('aulas')}):'')))}
+  FECHA=camada([h('h2',{style:'margin:0 0 8px'},'Aulas e materiais · '+t.nome),corpo],'gaveta').fechar}
 function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
   if(D.dono)p.append(h('div',{style:'margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:auditoriaRepos},'Auditar repositórios e contas (GitHub)'),h('span',{class:'sub',style:'margin-left:8px'},'acha repositórios órfãos, contas que trocaram de nome e acessos estranhos')));
@@ -246,7 +259,7 @@ function desenharTurmas(){
       h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
-      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais'),h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',

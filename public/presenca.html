@@ -239,6 +239,7 @@ function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}
   if(r.status===403){$('corpo').innerHTML='<p>Você não tem permissão para fazer chamadas. Peça a um owner a permissão <b>Presença</b> (equipe) ou a liberação da sua aula (monitor).</p>';return}
   CTX=await r.json();CTX.roster=ord(CTX.roster);if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;{const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA))TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0]}
+  {const hs=location.hash.slice(1);if(['chamada','part','ent','ativ','rank','hist'].includes(hs))ABA=hs}
   await carregarSessao();desenhar()})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 </body></html>
