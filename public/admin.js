@@ -122,7 +122,13 @@ function abrirGaveta(nome,contato){
         cx('Nome completo *',inp(DADOS.nome,'Ex.: Davi Novato Silva',v=>{DADOS.nome=v})),
         cx('E-mail institucional (opcional)',inp(DADOS.email,dono?'a000000@ceuma.com.br':(contato?'(já cadastrado; só owners veem)':'a000000@ceuma.com.br'),v=>{DADOS.email=v}),'Só contato (convocações). Não dá acesso. Só owners enxergam os e-mails já salvos.'),
         cx('Curso (opcional)',inp(DADOS.curso,'Ex.: Ciência da Computação',v=>{DADOS.curso=v})),
-        cx('Usuário do GitHub *',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?'Já cadastrado; não pode ser trocado.':'É por ele que a pessoa entra na plataforma (o nome que aparece no perfil do GitHub).')))}
+        cx('Usuário do GitHub *',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?(i0&&(i0.owner||i0.eq)?'Já cadastrado; owners e equipe não podem ter o usuário trocado por aqui.':'Cadastrado. Se foi informado errado, use o botão abaixo para corrigir.'):'É por ele que a pessoa entra na plataforma (o nome que aparece no perfil do GitHub).')))}
+    if(nome&&!(i0&&(i0.owner||i0.eq)))box.lastChild.append(h('button',{class:'btn sec',type:'button',style:'margin-top:8px',onclick:async()=>{
+      const ni=h('input',{type:'text',placeholder:'novo-usuario (sem @)',style:'width:100%;margin-top:8px'});
+      if(!await confirmar({titulo:'Corrigir o usuário do GitHub de '+(DADOS.nome||'@'+nome)+'?',corpo:[h('p',{class:'sub'},'Troca @'+nome+' pelo usuário certo em todas as listas (turma, papéis, contatos). Presença, atividades e repositório já criados com o usuário antigo não são movidos: se já houver algum, avise antes. Depois, crie o repositório do aluno em Turmas > Repositórios dos alunos.'),ni],botao:'Corrigir usuário'}))return;
+      const nv=ni.value.trim().replace(/^@/,'').toLowerCase();
+      if(!/^[a-z0-9][a-z0-9-]{0,38}$/i.test(nv)){aviso('Usuário do GitHub inválido (letras, números e hífen).',1);return}
+      try{await enviar({acao:'trocar_usuario',usuario:nome,novo:nv});aviso('Usuário corrigido para @'+nv);fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Corrigir usuário do GitHub'));
     // papéis
     box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga',ajuda('pes_papel')),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo. ',h('b',{},'Nenhum marcado = cadastro inativo (sem acesso à plataforma).'),),
       ck('Owner',E.owner,v=>{E.owner=v;desenhar()},!dono||(i0&&i0.fixo)||(i0&&nome===D.usuario),dono?'':' (só owners definem)'),

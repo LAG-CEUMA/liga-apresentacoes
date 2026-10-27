@@ -191,6 +191,19 @@ module.exports = async (req, res) => {
         }
       }
       msg = `Portal: ${usuario} atualizou a ficha de ${nome}`;
+    } else if (b.acao === 'trocar_usuario') {
+      if (!perm.includes('pessoas')) return nao();
+      const velho = nomeGh(b.usuario || ''), nv = nomeGh(b.novo || '');
+      if (!velho || !nv || !u.USER_RE.test(velho) || !u.USER_RE.test(nv)) return u.json(res, 400, { erro: 'Usuário inválido.' });
+      if (velho === nv) return u.json(res, 400, { erro: 'O usuário novo é igual ao atual.' });
+      if (novo.owners.includes(velho) || u.admins().includes(velho) || novo.equipe[velho]) return u.json(res, 400, { erro: 'Owners e equipe não podem ter o usuário trocado por aqui.' });
+      if (u.papel(cfg, nv) !== 'visitante' || novo.alunos.includes(nv) || novo.monitores[nv]) return u.json(res, 400, { erro: `@${nv} já está cadastrado na plataforma.` });
+      try { await require('../lib/pendentes').trocarUsuario(velho, nv, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+      const tr = (l) => (Array.isArray(l) ? l.map((x) => (x === velho ? nv : x)) : l);
+      novo.alunos = tr(novo.alunos);
+      for (const t of Object.values(novo.turmas)) t.alunos = tr(t.alunos);
+      for (const k of ['monitores', 'acessos', 'editores']) if (novo[k] && novo[k][velho] !== undefined) { novo[k][nv] = novo[k][velho]; delete novo[k][velho]; }
+      msg = `Portal: ${usuario} corrigiu o usuário do GitHub de ${velho} para ${nv}`;
     } else if (b.acao === 'adicionar') {
       if (!perm.includes('pessoas')) return nao();
       const papelNovo = String(b.papel || 'aluno');
