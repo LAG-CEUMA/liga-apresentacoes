@@ -18,4 +18,4 @@ function desenhar(){const L=$('lista');L.textContent='';const termos=norm($('q')
 fetch('/api/wiki?espaco=aluno',{credentials:'same-origin'}).then(async r=>{if(r.status===401){location.href='/api/login';return}if(!r.ok)throw 0;D=await r.json();desenhar()}).catch(()=>{$('lista').textContent='Não consegui carregar os guias agora.'});
 $('q').addEventListener('input',()=>D&&desenhar());
 </script></main><script src="/como.js"></script>
-</body></html>
+<script src="/voltar.js"></script></body></html>
