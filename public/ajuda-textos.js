@@ -43,6 +43,11 @@ window.AJUDA = Object.assign(window.AJUDA || {}, {
   /* ---- Área do aluno e início ---- */
   al_aulas: { t: 'Aulas', l: ['As aulas liberadas para a sua turma. Se uma aula não aparece, ela ainda não foi publicada para você.'] },
   al_atividades: { t: 'Atividades', l: ['Exercícios (feitos em sala) e tarefas (de casa) que o instrutor liberou.', 'Cada uma é uma Issue no seu repositório do GitHub. Clique em Abrir no GitHub e responder e escreva a resposta em um comentário.', 'Se aparecer erro 404, aceite o convite do seu repositório (e-mail ou github.com/notifications).'] },
+  al_perfil: { t: 'Meus dados', l: ['Aqui você mesmo completa seus contatos: e-mail institucional, e-mail pessoal e curso.', 'Só a administração da Liga vê. Servem para avisos, convocações e certificados.', 'Nome e usuário do GitHub só o professor altera.'] },
+  pf_email: { t: 'E-mail institucional', l: ['O e-mail da faculdade (ex.: a000000@ceuma.com.br). Opcional. Não dá acesso à plataforma: o login é só pelo GitHub.'] },
+  pf_pessoal: { t: 'E-mail pessoal', l: ['Um e-mail que você leia sempre (Gmail, Outlook…). Opcional. Usado para avisos e certificados.'] },
+  pf_cpf: { t: 'CPF', l: ['Obrigatório para salvar seus dados. Só números ou no formato 000.000.000-00.', 'Serve para identificar você com segurança (certificados, evitar cadastro duplicado). Nenhum outro aluno vê.'] },
+  pf_curso: { t: 'Curso', l: ['Seu curso no Ceuma, como você quer que apareça (ex.: Engenharia de Software).'] },
   al_progresso: { t: 'Meu progresso', l: ['Sua presença, participações, atividades e posição no ranking da turma.', 'O Top 5 mostra só quem já tem pontos.'] },
   ix_menu: { t: 'Botões do topo', l: ['Área do aluno: suas aulas, atividades e progresso.', 'Painel: ferramentas da equipe, só aparece para quem tem permissão.', 'Central de ajuda: respostas para dúvidas.', 'Eventos: inscrição em eventos e certificados.'] },
 

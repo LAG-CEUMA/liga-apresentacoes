@@ -13,7 +13,7 @@ const ES={prazo:'Entregue no prazo',atraso:'Entregue com atraso',nao:'Sem entreg
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
 function secao(titulo,contagem){const d=el('details','nivel');const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 const fmt=p=>p?new Date(p).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
-let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,ABA='aulas';
+let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,PERF=null,ABA='aulas';
 const j=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
 
 function tabAulas(C){
@@ -57,24 +57,37 @@ function tabProgresso(C){
         for(const q of x.participacoes)i.append(el('br'),el('small','','• '+q.tipo+(q.nota?': '+q.nota:'')));s.append(i)}
       C.append(s);LigaNovo.aplicar(s,'prog-presenca',p.sessoes.map(x=>x.chave+x.status+x.pontos),false)}}
 }
+const fmtCpf=v=>{const d=String(v||'').replace(/\D/g,'');return d.length===11?d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'):String(v||'')};
+function tabPerfil(C){
+  const P=PERF;
+  if(!P||!P.cadastrado){C.append(el('p','sub','Seu cadastro ainda não tem nome na Liga. Peça ao professor para cadastrar você; depois, aqui você completa seus contatos.'));return}
+  const s=el('div','item');s.style.cssText='max-width:560px;display:block';
+  s.append(el('b','',P.nome),el('br'),el('small','','GitHub: @'+P.usuario+' · para corrigir nome ou usuário, fale com o professor'));
+  const campo=(rot,id,valor,ph,tipo,dicaKey)=>{const l=el('label','');l.style.cssText='display:block;margin-top:14px;font-size:13px';l.append(rot);const i=el('input','');i.type=tipo||'text';i.value=valor||'';i.placeholder=ph;i.id=id;i.style.cssText='display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:10px;background:#12141c;color:inherit;border:1px solid #fff3;border-radius:8px;font:inherit';if(window.dica)window.dica(i,dicaKey);l.append(i);return l};
+  s.append(campo('E-mail institucional','pf_email',P.email,'a000000@ceuma.com.br','email','pf_email'),campo('E-mail pessoal','pf_pessoal',P.emailPessoal,'nome@gmail.com','email','pf_pessoal'),campo('CPF (obrigatório)','pf_cpf',fmtCpf(P.cpf),'000.000.000-00','text','pf_cpf'),campo('Curso','pf_curso',P.curso,'Ex.: Engenharia de Software','text','pf_curso'));
+  const msg=el('small','');msg.style.cssText='display:block;margin-top:10px;min-height:18px';
+  const b=el('button','btn','Salvar meus dados');b.type='button';b.style.marginTop='14px';
+  b.onclick=async()=>{b.disabled=true;msg.textContent='Salvando…';try{const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'meuperfil',email:document.getElementById('pf_email').value,emailPessoal:document.getElementById('pf_pessoal').value,cpf:document.getElementById('pf_cpf').value,curso:document.getElementById('pf_curso').value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Não consegui salvar agora.');Object.assign(P,d);document.getElementById('pf_email').value=d.email;document.getElementById('pf_pessoal').value=d.emailPessoal;document.getElementById('pf_curso').value=d.curso;document.getElementById('pf_cpf').value=fmtCpf(d.cpf);msg.textContent='Dados salvos. Obrigado!'}catch(e){msg.textContent=e.message}b.disabled=false};
+  s.append(msg,b);C.append(el('p','sub','Mantenha seus contatos em dia: é por eles que a Liga avisa de aulas, eventos e certificados. Só a administração da Liga tem acesso a estes dados; o CPF identifica você de forma única (certificados e evitar cadastro duplicado) e não aparece para outros alunos.'),s)
+}
 function desenhar(){
   const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
   const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
-  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso'])}
+  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);abas.push(['perfil','Meus dados'])}
   if(!abas.some(a=>a[0]===ABA))ABA='aulas';
   for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
     if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
     A.append(b)}
   A.append(ajuda('al_'+ABA));
-  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else tabProgresso(C);
+  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else tabProgresso(C);
   // marca como visto para a faixa "novo" do menu da Início
   try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}
 }
 (async()=>{
   AULAS=await j('/api/aulas');if(!AULAS){document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.';return}
   U=AULAS.usuario||null;
-  if(U)[ATIV,PONT,PRES]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha')]);
-  const h=location.hash.slice(1);if(['aulas','atividades','progresso'].includes(h))ABA=h;
+  if(U)[ATIV,PONT,PRES,PERF]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil')]);
+  const h=location.hash.slice(1);if(['aulas','atividades','progresso','perfil'].includes(h))ABA=h;
   desenhar();
 })();
 </script><script src="/como.js"></script>

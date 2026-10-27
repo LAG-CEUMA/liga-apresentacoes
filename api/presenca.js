@@ -20,6 +20,11 @@ module.exports = async (req, res) => {
     const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
 
     if (req.method === 'GET') {
+      if (q.acao === 'meuperfil') {
+        if (u.papel(cfg, usuario) === 'visitante') return u.json(res, 403, { erro: 'Sem acesso.' });
+        const c = (await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === usuario);
+        return u.json(res, 200, { usuario, cadastrado: !!c, nome: (c && c.nome) || '', email: (c && c.email) || '', emailPessoal: (c && c.emailPessoal) || '', curso: (c && c.curso) || '', cpf: (c && c.cpf) || '' });
+      }
       if (q.acao === 'minha') {
         const todas = await d.listarSessoes();
         const lista = [];
@@ -81,6 +86,11 @@ module.exports = async (req, res) => {
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     if (b.turma) b.turma = String(b.turma).toUpperCase();
+      if (b.acao === 'meuperfil') {
+      if (u.papel(cfg, usuario) === 'visitante') return u.json(res, 403, { erro: 'Sem acesso.' });
+      try { const c = await require('../lib/pendentes').salvarPerfil(usuario, b); return u.json(res, 200, { ok: true, email: c.email || '', emailPessoal: c.emailPessoal || '', curso: c.curso || '', cpf: c.cpf || '' }); }
+      catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+    }
     if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (String(b.acao || '').startsWith('ativ_')) {
       if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });

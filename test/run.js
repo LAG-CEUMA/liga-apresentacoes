@@ -355,7 +355,21 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   { const c = (await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === 'espaco-teste'); assert.equal(c.nome, 'Fulano de Tal'); assert.equal(c.curso, 'ADS'); assert.equal(c.email, 'espaco@ceuma.com.br'); }
   assert.equal((await post({ acao: 'remover_pessoa', usuario: 'espaco-teste' }, {}, 'sec')).status, 200);
   await require('../lib/pendentes').remover('espaco@ceuma.com.br', 'sec');
-  assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'novo@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);
+  { // autoatendimento do aluno: e-mails, curso e CPF (obrigatório e válido)
+    const PD = require('../lib/pendentes'); assert.equal(PD.cpfOk('529.982.247-25'), '52998224725'); assert.equal(PD.cpfOk('111.111.111-11'), ''); assert.equal(PD.cpfOk('123'), '');
+    const pf = (b, user) => chamar(h('presenca'), { user: user || 'novo-aluno', method: 'POST', headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: { acao: 'meuperfil', ...b } });
+    assert.equal((await pf({ email: 'ni-teste@ceuma.com.br', curso: 'ADS' })).status, 400); // sem CPF
+    assert.equal((await pf({ cpf: '123.456.789-00' })).status, 400);
+    { const rr = await pf({ cpf: '529.982.247-25', email: ' ni-teste@ceuma.com.br ', emailPessoal: 'x@gmail.com', curso: ' Eng.  de Software ' }); assert.equal(rr.status, 200, rr.body); }
+    const c = (await PD.ler()).lista.find((x) => x.usuario === 'novo-aluno'); assert.equal(c.cpf, '52998224725'); assert.equal(c.emailPessoal, 'x@gmail.com'); assert.equal(c.curso, 'Eng. de Software'); assert.equal(c.nome, 'Novo Aluno');
+    assert.equal((await post({ acao: 'pessoa', usuario: 'novo-aluno', nome: 'Novo Aluno', aluno: true, turmas: ['2026'] }, {}, 'sec')).status, 200); // admin salvar preserva
+    const c2 = (await PD.ler()).lista.find((x) => x.usuario === 'novo-aluno'); assert.equal(c2.cpf, '52998224725'); assert.equal(c2.emailPessoal, 'x@gmail.com');
+    const g = JSON.parse((await chamar(h('presenca'), { user: 'novo-aluno', query: { acao: 'meuperfil' } })).body); assert.equal(g.cpf, '52998224725');
+    assert.equal((await pf({ cpf: '529.982.247-25', email: 'ni-teste@ceuma.com.br' }, 'alu1')).status, 400); // CPF/e-mail de outra pessoa
+    const lst = JSON.parse((await chamar(h('admin'), { user: 'sec' })).body); assert.ok(!JSON.stringify(lst.contatos).includes('52998224725'));
+    assert.equal((await chamar(h('presenca'), { user: 'visitante-x', query: { acao: 'meuperfil' } })).status, 403);
+  }
+  assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'ni-teste@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
   assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);
   r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site']); assert.equal(r.titulo, 'Marketing e artes, Tesouraria');
