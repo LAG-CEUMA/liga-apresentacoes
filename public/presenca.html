@@ -1,5 +1,6 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Chamada e presença</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"><style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"><style>.seletores{display:grid;grid-template-columns:minmax(150px,200px) 1fr 160px;gap:14px;align-items:end}.seletores label{display:flex;flex-direction:column;gap:5px;min-width:0}.seletores label>span{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mut,#9aa0b4);font-weight:700}.seletores select,.seletores input{width:100%;box-sizing:border-box;padding:10px;background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;font:inherit}.seletores select{text-overflow:ellipsis}@media(max-width:720px){.seletores{grid-template-columns:1fr}}
+
 .ag{background:#171a26;border:1px solid #fff3;border-left:6px solid var(--ouro);border-radius:14px;margin:14px 0;padding:0 14px 6px}
 .ag>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;padding:16px 4px;font-size:20px;font-weight:800}
 .ag>summary::-webkit-details-marker{display:none}.ag>summary::before{content:"▸";color:var(--ouro);font-size:22px}.ag[open]>summary::before{content:"▾"}
@@ -78,7 +79,7 @@ function seletores(){
   for(const nv of Object.keys(niveis).sort()){const g=h('optgroup',{label:nv});for(const a of niveis[nv])g.append(h('option',{value:a.chave},a.titulo));sel.append(g)}
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
   const data=h('input',{type:'date',value:DATA||CTX.hoje});data.addEventListener('change',()=>{DATA=data.value});
-  return h('div',{class:'linha'},h('label',{},'Turma ',turma),h('label',{style:'flex:1;min-width:220px'},'Aula ',sel),h('label',{},'Data ',data))}
+  return h('div',{class:'linha seletores'},h('label',{},h('span',{},'Turma'),turma),h('label',{},h('span',{},'Aula'),sel),h('label',{},h('span',{},'Data'),data))}
 function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ent','Entregas'],['ativ','Atividades'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)),ajuda('aba_'+ABA))}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
