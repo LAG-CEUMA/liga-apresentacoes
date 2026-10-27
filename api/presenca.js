@@ -20,6 +20,18 @@ module.exports = async (req, res) => {
     const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
 
     if (req.method === 'GET') {
+      if (q.acao === 'meurepo') { // o aluno vê se já aceitou o convite do repositório; se não, recebe o atalho para aceitar
+        const ORG = process.env.GH_ORG || 'LAG-CEUMA'; const k = String(usuario).toLowerCase();
+        if (!cfg.alunos.includes(k) || /^ficticio-/.test(k)) return u.json(res, 200, { estado: 'nenhum' });
+        try {
+          const rp = await u.gh(`/repos/${ORG}/aluno-${k}`); if (rp.status === 404) return u.json(res, 200, { estado: 'sem-repo' });
+          if (!rp.ok) return u.json(res, 200, { estado: 'nenhum' });
+          const c = await u.gh(`/repos/${ORG}/aluno-${k}/collaborators/${k}`);
+          const base = `https://github.com/${ORG}/aluno-${k}`;
+          if (c.status === 204) return u.json(res, 200, { estado: 'ok', url: base });
+          return u.json(res, 200, { estado: 'convite', url: base + '/invitations', repo: base });
+        } catch { return u.json(res, 200, { estado: 'nenhum' }); }
+      }
       if (q.acao === 'meuperfil') {
         if (u.papel(cfg, usuario) === 'visitante') return u.json(res, 403, { erro: 'Sem acesso.' });
         const c = (await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === usuario);

@@ -13,7 +13,7 @@ const ES={prazo:'Entregue no prazo',atraso:'Entregue com atraso',nao:'Sem entreg
 function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
 function secao(titulo,contagem){const d=el('details','nivel');const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 const fmt=p=>p?new Date(p).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
-let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,PERF=null,ABA='aulas';
+let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,PERF=null,REPO=null,ABA='aulas';
 const j=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
 
 function tabAulas(C){
@@ -70,6 +70,13 @@ function tabPerfil(C){
   b.onclick=async()=>{b.disabled=true;msg.textContent='Salvando…';try{const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'meuperfil',email:document.getElementById('pf_email').value,emailPessoal:document.getElementById('pf_pessoal').value,cpf:document.getElementById('pf_cpf').value,curso:document.getElementById('pf_curso').value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Não consegui salvar agora.');Object.assign(P,d);document.getElementById('pf_email').value=d.email;document.getElementById('pf_pessoal').value=d.emailPessoal;document.getElementById('pf_curso').value=d.curso;document.getElementById('pf_cpf').value=fmtCpf(d.cpf);msg.textContent='Dados salvos. Obrigado!'}catch(e){msg.textContent=e.message}b.disabled=false};
   s.append(msg,b);C.append(el('p','sub','Mantenha seus contatos em dia: é por eles que a Liga avisa de aulas, eventos e certificados. Só a administração da Liga tem acesso a estes dados; o CPF identifica você de forma única (certificados e evitar cadastro duplicado) e não aparece para outros alunos.'),s)
 }
+function faixaRepo(C){
+  if(!REPO)return;
+  if(REPO.estado==='convite'){const b=el('div','item');b.style.cssText='border:2px solid #f5b83d;margin:0 0 14px;display:block';
+    b.append(el('b','','Falta um passo: aceite o convite do seu repositório'),el('br'),el('small','','O GitHub convidou você para o repositório onde chegam suas atividades. Clique no botão, depois em "Accept invitation" (botão verde). Leva 10 segundos.'));
+    const w=el('div','');w.style.marginTop='10px';const a=el('a','btn','Aceitar convite no GitHub');a.href=REPO.url;a.target='_blank';a.rel='noopener';w.append(a);b.append(w);C.append(b)}
+  else if(REPO.estado==='sem-repo'){const b=el('div','item');b.style.cssText='margin:0 0 14px;display:block';b.append(el('b','','Seu repositório ainda não foi criado'),el('br'),el('small','','Avise o professor: ele cria na hora e você recebe o convite do GitHub.'));C.append(b)}
+}
 function desenhar(){
   const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
   const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
@@ -79,6 +86,7 @@ function desenhar(){
     if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
     A.append(b)}
   A.append(ajuda('al_'+ABA));
+  if(ABA!=='perfil')faixaRepo(C);
   if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else tabProgresso(C);
   // marca como visto para a faixa "novo" do menu da Início
   try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}
@@ -86,7 +94,7 @@ function desenhar(){
 (async()=>{
   AULAS=await j('/api/aulas');if(!AULAS){document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.';return}
   U=AULAS.usuario||null;
-  if(U)[ATIV,PONT,PRES,PERF]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil')]);
+  if(U)[ATIV,PONT,PRES,PERF,REPO]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil'),j('/api/presenca?acao=meurepo')]);
   const h=location.hash.slice(1);if(['aulas','atividades','progresso','perfil'].includes(h))ABA=h;
   desenhar();
 })();

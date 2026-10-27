@@ -381,6 +381,12 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     const lst = JSON.parse((await chamar(h('admin'), { user: 'sec' })).body); assert.ok(!JSON.stringify(lst.contatos).includes('52998224725'));
     assert.equal((await chamar(h('presenca'), { user: 'visitante-x', query: { acao: 'meuperfil' } })).status, 403);
   }
+  { const mr = async (user) => JSON.parse((await chamar(h('presenca'), { user, query: { acao: 'meurepo' } })).body);
+    assert.equal((await mr('dono')).estado, 'nenhum'); // owner/não-aluno não vê a faixa
+    cfg.alunos = [...cfg.alunos, 'pronto', 'novato-sem-repo']; u.limparCache();
+    assert.equal((await mr('pronto')).estado, 'ok'); assert.equal((await mr('novato-sem-repo')).estado, 'sem-repo');
+    reposAl['aluno-pronto'].colab = false; const cv = await mr('pronto'); assert.equal(cv.estado, 'convite'); assert.ok(/aluno-pronto\/invitations$/.test(cv.url)); reposAl['aluno-pronto'].colab = true;
+    cfg.alunos = cfg.alunos.filter((x) => x !== 'pronto' && x !== 'novato-sem-repo'); u.limparCache(); }
   assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'ni-teste@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
   assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);
