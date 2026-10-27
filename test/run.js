@@ -449,6 +449,12 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     const mk = (ch, part, ent) => ({ turma: 'T', chave: 'n/aula-01', chamadas: { 1: { estados: ch }, 2: { estados: ch } }, participacoes: part, ...(ent ? { entregas: ent } : {}) });
     const s1 = mk({ a: 'p', b: 'p', c: 'j' }, [{ usuario: 'a', tipo: 'pergunta', pontos: 15 }, { usuario: 'b', tipo: 'penalidade', pontos: 3 }, { usuario: 'a', tipo: 'ajuda', pontos: 15 }], { a: { estado: 'prazo', nota: 10 }, b: { estado: 'atraso' }, c: { estado: 'nao' } });
     const r = P.ranking(c, 'T', [s1]);
+    { // owners nunca entram; monitor fica fora só das turmas em que é monitor
+      const cx = JSON.parse(JSON.stringify(c)); cx.owners = [...(cx.owners || []), 'a']; cx.monitores = { ...(cx.monitores || {}), b: { aulas: [], roteiros: [], turmas: ['T'] }, c: { aulas: [], roteiros: [], turmas: ['OUTRA'] } };
+      assert.deepEqual(P.ranking(cx, 'T', [s1]).map((x) => x.usuario), ['c']);
+      cx.turmas.T.nivel = 'n'; cx.monitores.c = { aulas: ['n/aula-01'], roteiros: [], turmas: [] }; assert.deepEqual(P.ranking(cx, 'T', [s1]), []);
+      cx.monitores.c = { aulas: ['outro/aula-01'], roteiros: [], turmas: [] }; assert.deepEqual(P.ranking(cx, 'T', [s1]).map((x) => x.usuario), ['c']);
+    }
     assert.deepEqual(r.map((x) => x.usuario), ['a', 'b', 'c']);
     assert.equal(r[0].total, 100); assert.equal(r[0].partes.participacao, 30); // 30 pts = meta
     assert.equal(r[1].total, 40 + 0 + 15 - 3); // presente + atraso (50%) − penalidade
