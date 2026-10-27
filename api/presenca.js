@@ -59,7 +59,9 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes(), await A.listar(q.turma)) });
       }
       if (q.acao === 'contexto') {
-        return u.json(res, 200, { usuario, geral, aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, turmas: turmasVisiveis, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
+        let nomes = {}; // nome completo (dos Contatos) só para quem usa a Presença; o e-mail nunca sai daqui
+        try { const lista = (await require('../lib/pendentes').ler()).lista; const quem = new Set([...cfg.alunos, ...Object.values(cfg.turmas || {}).flatMap((t) => t.alunos || [])]); for (const x of lista) if (x.usuario && x.nome && quem.has(String(x.usuario).toLowerCase())) nomes[String(x.usuario).toLowerCase()] = String(x.nome).slice(0, 80); } catch { nomes = {}; }
+        return u.json(res, 200, { usuario, geral, aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, nomes, turmas: turmasVisiveis, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
       }
       if (q.acao === 'sessao') {
         if (!validaSessao(q.turma, q.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida.' });
