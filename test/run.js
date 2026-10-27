@@ -346,7 +346,8 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-certo', novo: 'novo-aluno-certo' }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-certo', novo: 'novo-aluno' }, {}, 'sec')).status, 200);
   // duplicado da mesma pessoa (mesmo nome, sem acesso) é unificado
-  assert.equal((await require('../lib/pendentes').salvar({ usuario: 'novo-aluno-dup', nome: 'Novo Aluno' }, 'sec')).usuario, 'novo-aluno-dup');
+  await assert.rejects(() => require('../lib/pendentes').salvar({ usuario: 'novo-aluno-dup', nome: 'novo  ALUNO' }, 'sec'), /Já existe uma pessoa/);
+  await require('../lib/pendentes').gravar((l) => [...l, { email: '', cargo: '', nome: 'Novo Aluno', curso: '', usuario: 'novo-aluno-dup', obs: '' }], 'teste');
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno', novo: 'novo-aluno-dup' }, {}, 'sec')).status, 200);
   { const l = (await require('../lib/pendentes').ler()).lista.filter((x) => x.nome === 'Novo Aluno'); assert.equal(l.length, 1); assert.equal(l[0].usuario, 'novo-aluno-dup'); }
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-dup', novo: 'novo-aluno' }, {}, 'sec')).status, 200);
