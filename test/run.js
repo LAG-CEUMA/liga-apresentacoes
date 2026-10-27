@@ -345,6 +345,11 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-certo', novo: 'alu1' }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-certo', novo: 'novo-aluno-certo' }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-certo', novo: 'novo-aluno' }, {}, 'sec')).status, 200);
+  // duplicado da mesma pessoa (mesmo nome, sem acesso) é unificado
+  assert.equal((await require('../lib/pendentes').salvar({ usuario: 'novo-aluno-dup', nome: 'Novo Aluno' }, 'sec')).usuario, 'novo-aluno-dup');
+  assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno', novo: 'novo-aluno-dup' }, {}, 'sec')).status, 200);
+  { const l = (await require('../lib/pendentes').ler()).lista.filter((x) => x.nome === 'Novo Aluno'); assert.equal(l.length, 1); assert.equal(l[0].usuario, 'novo-aluno-dup'); }
+  assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-dup', novo: 'novo-aluno' }, {}, 'sec')).status, 200);
   assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'novo@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
   assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);
