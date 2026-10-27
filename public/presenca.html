@@ -98,7 +98,7 @@ async function telaRank(alvo){
   const tb=h('tbody',{});for(const x of R.ranking)tb.append(h('tr',{style:x.posicao<=5?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},x.usuario),h('td',{},h('b',{},String(x.total))),h('td',{},String(x.partes.presenca)),h('td',{},String(x.partes.participacao)),h('td',{},String(x.partes.exercicios)),h('td',{style:x.partes.penalidades?'color:var(--err)':''},x.partes.penalidades?'−'+x.partes.penalidades:'0')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['#','Aluno','Total','Presença','Particip.','Exercícios','Penal.'].map(t=>h('th',{},t)))),tb)),h('p',{class:'sub'},'As linhas em destaque são o Top 5 da turma.'))}
 
-let ATV=null,ATV_SEL='',CONF={},DRAFT={};
+let ATV=null,ATV_SEL='',ATV_MODO='resp',CONF={},DRAFT={};
 const aivToLocal=iso=>{if(!iso)return'';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
 const fmtD=iso=>iso?new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'sem prazo';
 async function postA(c){return api({...c,turma:TURMA})}
@@ -126,9 +126,10 @@ async function telaAtiv(alvo){
     const G=grupos[aula];if(!G.t[tp]){G.t[tp]=det('t:'+aula+tp,'',false,'tg '+tp,[h('span',{class:'letra'},tp==='O'?'·':tp),h('span',{},TIPOS[tp].split(':')[0].replace(/^[ET] · /,''),h('br'),h('span',{class:'expl'},TIPOS[tp].split(':')[1]||''))]);G.d.append(G.t[tp])}if(ATV_SEL===a.id){G.d.open=true;G.t[tp].open=true}return G.t[tp]};
   for(const a of ATV.atividades){
     const n=Object.values(a.disparos||{}).filter(x=>x.numero).length;
+    const bt=(m,t,dica)=>h('button',{class:ATV_SEL===a.id&&ATV_MODO===m?'btn':'btn sec',type:'button',title:dica,onclick:()=>{if(ATV_SEL===a.id&&ATV_MODO===m)ATV_SEL='';else{ATV_SEL=a.id;ATV_MODO=m}telaAtiv(alvo)}},t);
     const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo),h('span',{class:'pill '+(a.liberada?'lib':'nao')},a.liberada?'liberada ('+n+')':'não liberada'),a.opcional?h('span',{class:'pill opc'},'opcional'):'',h('div',{class:'sub'},`${a.opcional?'pontos extras':'peso '+a.peso} · prazo ${fmtD(a.prazo)}`)),
       h('button',{class:'btn',type:'button',title:'Cria a Issue desta atividade no repositório de cada aluno que ainda não a tem',onclick:async()=>{if(!confirm('Liberar "'+(a.codigo||a.titulo)+'" para TODOS os alunos da turma agora? Será criada uma Issue no repositório de cada um que ainda não tiver.'))return;try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:[]});aviso(`Issues criadas: ${r.criadas}${r.jaTinham?' · já tinham: '+r.jaTinham:''}${r.falhas.length?' · FALHAS: '+r.falhas.map(x=>x.usuario+' ('+x.erro+')').join(', '):''}`,r.falhas.length);telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},a.liberada?'Liberar a quem falta':'Liberar'),
-      h('button',{class:'btn sec',type:'button',onclick:()=>{ATV_SEL=ATV_SEL===a.id?'':a.id;telaAtiv(alvo)}},ATV_SEL===a.id?'Fechar':'Abrir / só alguns'));
+      ...(a.liberada?[bt('resp','Respostas e notas','Veja quem respondeu no GitHub, marque no prazo/atrasada e dê a nota')]:[]),bt('lib','Liberar só alguns','Escolha quais alunos recebem a atividade (ou recolha a atividade)'),bt('edit','Editar','Mude título, peso, prazo e texto da atividade'));
     const D=destino(a);D.append(el);
     if(ATV_SEL===a.id)D.append(painelAtiv(a,alvo));
   }
@@ -146,10 +147,11 @@ function painelAtiv(a,alvo){
   const sel=new Set();const escolha=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0'});
   for(const k of ATV.roster){const dsp=(a.disparos||{})[k]||{};const c=h('input',{type:'checkbox',onchange:e=>{e.target.checked?sel.add(k):sel.delete(k)}});escolha.append(h('label',{style:'display:inline-flex;gap:4px;align-items:center'},c,k,dsp.numero?' ✓':dsp.erro?' ⚠':''))}
   const liberar=async(todos)=>{const q=todos?'Liberar para TODOS os alunos da turma? Será criada uma Issue no repositório de cada um que ainda não tiver.':`Liberar para ${sel.size} aluno(s) selecionado(s)?`;if(!todos&&!sel.size){aviso('Marque ao menos um aluno.',1);return}if(!confirm(q))return;try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:todos?[]:[...sel]});aviso(`Issues criadas: ${r.criadas}${r.jaTinham?' · já tinham: '+r.jaTinham:''}${r.falhas.length?' · FALHAS: '+r.falhas.map(x=>x.usuario+' ('+x.erro+')').join(', '):''}`,r.falhas.length);telaAtiv(alvo)}catch(e){aviso(e.message,1)}};
-  box.append(h('h4',{},'1. Liberar (disparar)'),h('p',{class:'sub'},a.liberada?'Já liberada. Você pode liberar de novo para quem faltou receber (quem já tem Issue não duplica).':'Ainda não liberada: os alunos não veem nada.'),escolha,
+  const S1=h('div',{});S1.append(h('h4',{},'Liberar só alguns alunos'),h('p',{class:'sub'},a.liberada?'Já liberada. Você pode liberar de novo para quem faltou receber (quem já tem Issue não duplica).':'Ainda não liberada: os alunos não veem nada.'),escolha,
     h('div',{class:'barra'},h('button',{class:'btn',type:'button',onclick:()=>liberar(true)},'Liberar para todos'),h('button',{class:'btn sec',type:'button',onclick:()=>liberar(false)},'Liberar para os marcados'),h('button',{class:'btn sec',type:'button',onclick:async()=>{const t=`${a.codigo?a.codigo+' · ':''}${a.titulo}\n\n${a.descricao||''}`;try{await navigator.clipboard.writeText(t);aviso('Texto da Issue copiado (plano B: crie a Issue à mão)')}catch{aviso('Não consegui copiar',1)}}},'Copiar texto da Issue'),
       a.liberada?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Recolher? Os alunos deixam de ver a atividade na plataforma. As Issues continuam no GitHub.'))return;try{await postA({acao:'ativ_recolher',id:a.id});telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Recolher'):h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Remover esta atividade?'))return;try{await postA({acao:'ativ_remover',id:a.id});ATV_SEL='';telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Remover')));
-  box.append(h('h4',{style:'margin-top:16px'},'2. Respostas e notas'));
+  if(ATV_MODO==='lib')box.append(S1);
+  const S2=h('div',{});S2.append(h('h4',{},'Respostas e notas'));
   if(!DRAFT[a.id]){const D={};for(const k of roster){const e=(a.entregas||{})[k]||{};D[k]={estado:e.estado||'nao',nota:e.nota===undefined?'':e.nota}}DRAFT[a.id]=D}
   const E=DRAFT[a.id];for(const k of roster)if(!E[k])E[k]={estado:'nao',nota:''};
   const conf=CONF[a.id]||{};const lista=h('div',{});
@@ -162,9 +164,11 @@ function painelAtiv(a,alvo){
     lista.append(h('div',{class:'linha',style:'flex-wrap:wrap'},h('div',{class:'t'},h('b',{},k)),seg,nota,info))}
   const fazConferir=async(auto)=>{conferir.disabled=true;conferir.textContent='Buscando respostas no GitHub…';try{const r=await postA({acao:'ativ_conferir',id:a.id});CONF[a.id]=r.conferencia;for(const [k,c] of Object.entries(r.conferencia))if(c.respondeu&&E[k]&&E[k].estado==='nao')E[k].estado=c.sugestao;if(!auto)aviso('Respostas atualizadas. Os estados foram sugeridos: revise e clique em Salvar entregas.');telaAtiv(alvo);return}catch(e){CONF[a.id]=null;aviso(e.message,1)}conferir.disabled=false;conferir.textContent='Atualizar respostas do GitHub'};
   const conferir=h('button',{class:'btn sec',type:'button',onclick:()=>fazConferir(false)},'Atualizar respostas do GitHub');
-  if(a.liberada&&CONF[a.id]===undefined){CONF[a.id]=null;setTimeout(()=>fazConferir(true),0)}
+  if(ATV_MODO==='resp'&&a.liberada&&CONF[a.id]===undefined){CONF[a.id]=null;setTimeout(()=>fazConferir(true),0)}
   const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{if(!confirm('Salvar as entregas desta atividade? Quem está como "Não entregou" fica com 0; "Dispensado" não entra na conta.'))return;try{const r=await postA({acao:'ativ_entregas',id:a.id,estados:E});aviso(`Entregas salvas: ${r.entregues} de ${roster.length}`);delete DRAFT[a.id];telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar entregas');
-  box.append(h('p',{class:'sub'},'No prazo vale 100% do peso, atrasada 50%, não entregou 0. A nota 0–10 multiplica. Dispensado: o aluno não faz esta atividade e ela não conta para ele.'),h('div',{class:'barra'},conferir),lista,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar),h('div',{style:'margin-top:12px'},formAtiv(a,alvo)));
+  S2.append(h('p',{class:'sub'},'No prazo vale 100% do peso, atrasada 50%, não entregou 0. A nota 0–10 multiplica. Dispensado: o aluno não faz esta atividade e ela não conta para ele.'),h('div',{class:'barra'},conferir),lista,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar));
+  if(ATV_MODO==='resp')box.append(S2);
+  if(ATV_MODO==='edit'){const F=formAtiv(a,alvo);F.open=true;box.append(h('div',{style:'margin-top:12px'},F))}
   return box}
 let HIST=null;
 async function telaHist(alvo){
