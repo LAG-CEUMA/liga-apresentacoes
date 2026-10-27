@@ -19,7 +19,7 @@
 </head>
 <body data-pg="painel"><main>
 <div class="topo"><div><p class="tag" data-site="tag">CHAMADA E PRESENÇA</p><h1>Presença</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a></div></div>
-<p>Faça a chamada em <b>até 3 momentos</b> da aula (início, meio e fim). O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.</p>
+<p>Faça a chamada em <b>2 momentos</b> da aula: <b>Início</b> e <b>Fim</b>. O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.</p>
 <div id="corpo"><p>Carregando…</p></div>
 </main><div id="msg" class="msg" hidden></div>
 <script src="/site.js"></script>
@@ -54,7 +54,7 @@ function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
   if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
-  const passos=h('div',{class:'passos'},...[1,2,3].map(n=>{const c=SESSAO&&SESSAO.chamadas&&SESSAO.chamadas[n];return h('button',{type:'button',class:N===n?'on':'',onclick:()=>escolherChamada(n)},h('b',{},`${n}. ${ROT[n-1]}`),h('small',{},c?`salva ${hora(c.em)} por ${c.por}`:'ainda não salva'))}));
+  const passos=h('div',{class:'passos'},...[1,2,3].filter(n=>n!==2||(SESSAO&&SESSAO.chamadas&&SESSAO.chamadas[2])).map(n=>{const c=SESSAO&&SESSAO.chamadas&&SESSAO.chamadas[n];return h('button',{type:'button',class:N===n?'on':'',onclick:()=>escolherChamada(n)},h('b',{},ROT[n-1]),h('small',{},c?`salva ${hora(c.em)} por ${c.por}`:'ainda não salva'))}));
   const cont=h('b',{});const conta=()=>{let p=0,a=0,j=0,s=0;for(const k of CTX.roster){const e=ESTADO[k];if(e==='p')p++;else if(e==='a')a++;else if(e==='j')j++;else s++}cont.textContent=`Presentes ${p} · Faltas ${a} · Justificados ${j} · Sem marca ${s}`;return s};
   const lista=h('div',{});
   for(const k of CTX.roster){const seg=h('div',{class:'seg tri'});
@@ -63,9 +63,9 @@ function telaChamada(){
     lista.append(h('div',{class:'linha'},h('div',{class:'t'},h('b',{},k)),seg))}
   const rasc=h('small',{style:'color:var(--ouro)'});const aviso2=()=>{rasc.textContent=ESTADO.__rasc?'Rascunho neste aparelho: ainda não foi salvo.':''};aviso2();
   const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{const sem=conta();
-    if(sem&&!confirm(`${sem} aluno(s) estão sem marca e serão salvos como FALTA. Salvar a chamada ${N} (${ROT[N-1]})?`))return;
-    if(!sem&&!confirm(`Salvar a chamada ${N} (${ROT[N-1]})?`))return;
-    salvar.disabled=true;try{const e={...ESTADO};delete e.__rasc;const r=await api({acao:'chamada',turma:TURMA,chave:CHAVE,data:DATA||CTX.hoje,n:N,estados:e});ls.del(chaveRasc());aviso(`Chamada ${N} salva: ${r.presentes} presentes, ${r.ausentes} faltas, ${r.justificados} justificados`);await carregarSessao();desenhar()}catch(x){aviso(x.message,1)}salvar.disabled=false}},`Salvar chamada ${N}`);
+    if(sem&&!confirm(`${sem} aluno(s) estão sem marca e serão salvos como FALTA. Salvar a chamada do ${ROT[N-1]}?`))return;
+    if(!sem&&!confirm(`Salvar a chamada do ${ROT[N-1]}?`))return;
+    salvar.disabled=true;try{const e={...ESTADO};delete e.__rasc;const r=await api({acao:'chamada',turma:TURMA,chave:CHAVE,data:DATA||CTX.hoje,n:N,estados:e});ls.del(chaveRasc());aviso(`Chamada ${N} salva: ${r.presentes} presentes, ${r.ausentes} faltas, ${r.justificados} justificados`);await carregarSessao();desenhar()}catch(x){aviso(x.message,1)}salvar.disabled=false}},`Salvar chamada: ${ROT[N-1]}`);
   conta();
   return h('div',{},passos,h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px'},
     h('button',{class:'btn sec',type:'button',onclick:()=>{for(const k of CTX.roster)ESTADO[k]='p';rascunho();desenhar()}},'Todos presentes'),h('button',{class:'btn sec',type:'button',onclick:()=>{for(const k of CTX.roster)delete ESTADO[k];ls.del(chaveRasc());ESTADO.__rasc=false;desenhar()}},'Limpar'),cont,rasc),lista,h('div',{class:'barra'},rasc.cloneNode(true),h('span',{style:'flex:1'}),salvar))}
