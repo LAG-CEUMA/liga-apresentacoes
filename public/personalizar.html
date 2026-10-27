@@ -6,7 +6,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="barra" id="barra" hidden><b id="estado">Sem alterações</b><span style="flex:1"></span><button class="btn sec" id="descartar" type="button">Descartar</button><button class="btn" id="salvar" type="button">Salvar alterações</button></div>
 </main><div id="msg" class="msg" hidden></div>
-<script src="/site.js"></script><script src="/vitrine.js"></script>
+<script src="/site.js"></script><script src="/vitrine.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 function h(t,p,...f){const e=document.createElement(t);for(const [k,v] of Object.entries(p||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k in e&&k!=='list')e[k]=v;else e.setAttribute(k,v)}
@@ -31,7 +31,7 @@ function previa(){const r=document.documentElement.style,t=S.tema;
   else{b.backgroundImage='';b.backgroundColor=t.bg}}
 function mudou(refazer){previa();const sujo=JSON.stringify(S)!==ORIG;$('barra').hidden=!sujo;$('estado').textContent=sujo?'Há alterações não salvas (a prévia já está valendo só para você)':'Sem alterações';if(refazer)desenhar()}
 window.addEventListener('beforeunload',e=>{if(S&&JSON.stringify(S)!==ORIG){e.preventDefault();e.returnValue=''}});
-function secao(titulo,resumo,aberta,...corpo){const d=h('details',{class:'nivel',open:!!aberta},h('summary',{},h('span',{class:'nvt'},titulo),h('span',{class:'nvc'},resumo||'')),...corpo);
+function secao(titulo,resumo,aberta,...corpo){const d=h('details',{class:'nivel',open:!!aberta},h('summary',{},h('span',{class:'nvt'},titulo),h('span',{class:'nvc'},resumo||''),ajuda('pers_'+parseInt(titulo))),...corpo);
   d.dataset.k=titulo;try{const v=localStorage.getItem('liga_pers_'+titulo);if(v!==null)d.open=v==='1'}catch{}d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_pers_'+titulo,d.open?'1':'0')}catch{}});return d}
 function campo(rot,el,larga){return h('label',{class:larga?'larga':''},rot,el)}
 function texto(obj,k,{max=120,area=false,tipo='text',ph=''}={}){const e=h(area?'textarea':'input',{value:obj[k]||'',maxLength:max,placeholder:ph});if(!area)e.type=tipo;e.addEventListener('input',()=>{obj[k]=e.value;mudou()});return e}

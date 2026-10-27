@@ -6,7 +6,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
-<script src="/novidade.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
+<script src="/novidade.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
@@ -55,7 +55,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
   organizar();
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
-  const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);
+  const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);if(d.usuario)conta.append(ajuda('ix_menu'));
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 </body></html>

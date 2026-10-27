@@ -222,7 +222,7 @@ function painel() {
   if (sel && sel.isConnected) {
     const cs = getComputedStyle(foco && foco.isConnected ? foco : sel), f = foco && foco.isConnected ? foco : sel;
     const rot = sel.tagName.toLowerCase() + ': ' + (sel.textContent.trim().slice(0, 28) || '(sem texto)');
-    P.append(h('div', { class: 'pg' }, h('h4', {}, 'Bloco selecionado'), h('div', { class: 'sub', style: 'margin-bottom:6px' }, rot),
+    P.append(h('div', { class: 'pg' }, h('h4', {}, 'Bloco selecionado', ajuda('ed_bloco')), h('div', { class: 'sub', style: 'margin-bottom:6px' }, rot),
       h('div', { class: 'rw', 'data-pos': '1' }, campoNumPos('X', 'x', (v) => aplica(sel, 'left', v + 'px')), campoNumPos('Y', 'y', (v) => aplica(sel, 'top', v + 'px')), campoNumPos('Largura', 'w', (v) => aplica(sel, 'width', v + 'px')), sel.style.height ? campoNumPos('Altura', 'h', (v) => aplica(sel, 'height', v + 'px')) : null),
       h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px' }, h('button', { class: 'b', onclick: () => camada(true) }, 'Para frente'), h('button', { class: 'b', onclick: () => camada(false) }, 'Para trás'), h('button', { class: 'b', onclick: duplicarSel }, 'Duplicar'), h('button', { class: 'b perigo', onclick: excluirSel }, 'Excluir')),
       h('p', { class: 'sub' }, 'Dica: arraste o bloco com o mouse (ele gruda nas guias; segure Alt para não grudar), setas movem 1 px (Shift: 10 px), duplo clique edita o texto.')));
@@ -231,20 +231,20 @@ function painel() {
     const nc = h('input', { type: 'number', min: 1, max: 20, value: m ? m[2] : 1 });
     const grava = () => { if (!ef.value) sel.removeAttribute('data-build-in'); else sel.setAttribute('data-build-in', `${ef.value} ${Math.max(1, Math.min(20, +nc.value || 1))}`); commit(); };
     ef.onchange = grava; nc.oninput = grava;
-    P.append(h('div', { class: 'pg' }, h('h4', {}, 'Animação (apresentação)'), ef, h('div', { style: 'margin-top:6px' }, h('label', { class: 'sub' }, 'Aparece no clique nº'), nc)));
+    P.append(h('div', { class: 'pg' }, h('h4', {}, 'Animação (apresentação)', ajuda('ed_anim')), ef, h('div', { style: 'margin-top:6px' }, h('label', { class: 'sub' }, 'Aparece no clique nº'), nc)));
     const temTexto = f.textContent.trim().length > 0;
-    if (temTexto) P.append(h('div', { class: 'pg' }, h('h4', {}, 'Texto ' + (f !== sel ? '(parte clicada)' : '')),
+    if (temTexto) P.append(h('div', { class: 'pg' }, h('h4', {}, 'Texto ' + (f !== sel ? '(parte clicada)' : ''), ajuda('ed_texto')),
       h('div', { class: 'rw' }, campoNum('Tamanho (px)', Math.round(parseFloat(cs.fontSize)), (v) => aplica(f, 'fontSize', v + 'px')), campoNum('Altura da linha', parseFloat(cs.lineHeight) / parseFloat(cs.fontSize) || 1.2, (v) => aplica(f, 'lineHeight', String(v)), { step: 0.05 })),
       campoCor('Cor do texto', hex(cs.color), (v) => aplica(f, 'color', v)),
       h('div', { style: 'display:flex;gap:6px;margin-top:8px;flex-wrap:wrap' }, h('button', { class: 'b' + (+cs.fontWeight >= 600 ? ' on' : ''), onclick: () => { aplica(f, 'fontWeight', +getComputedStyle(f).fontWeight >= 600 ? '400' : '700'); painel(); } }, 'Negrito'),
         ...['left', 'center', 'right'].map((a, k) => h('button', { class: 'b' + (cs.textAlign === a ? ' on' : ''), onclick: () => { aplica(f, 'textAlign', a); painel(); } }, ['Esquerda', 'Centro', 'Direita'][k])),
         h('button', { class: 'b', onclick: () => { const t = /Space/.test(getComputedStyle(f).fontFamily); aplica(f, 'fontFamily', t ? "'DM Sans', Arial, sans-serif" : "'Space Grotesk', Arial, sans-serif"); } }, 'Trocar fonte'))));
-    P.append(h('div', { class: 'pg' }, h('h4', {}, 'Aparência ' + (f !== sel ? '(parte clicada)' : '')),
+    P.append(h('div', { class: 'pg' }, h('h4', {}, 'Aparência ' + (f !== sel ? '(parte clicada)' : ''), ajuda('ed_aparencia')),
       campoCor('Cor de fundo', transp(cs.backgroundColor) ? '#000000' : hex(cs.backgroundColor), (v) => aplica(f, 'background', v), () => { aplica(f, 'background', 'transparent'); painel(); }),
       h('div', { class: 'rw' }, campoNum('Arredondar (px)', parseInt(cs.borderTopLeftRadius) || 0, (v) => aplica(f, 'borderRadius', v + 'px'), { min: 0 }), campoNum('Opacidade (%)', Math.round((+cs.opacity || 1) * 100), (v) => aplica(f, 'opacity', String(Math.max(0, Math.min(100, v)) / 100)), { min: 0 })),
       f !== sel ? h('button', { class: 'b', style: 'margin-top:6px', onclick: () => { foco = sel; painel(); } }, 'Editar o bloco inteiro') : null));
   }
-  P.append(h('div', { class: 'pg' }, h('h4', {}, 'Este slide ' + (cur + 1)),
+  P.append(h('div', { class: 'pg' }, h('h4', {}, 'Este slide ' + (cur + 1), ajuda('ed_slide')),
     campoCor('Cor de fundo do slide', /^#/.test(s.fundo) ? s.fundo : '#12141c', (v) => { s.fundo = v; slideEl().style.background = v; commit(); }),
     campoCor('Cor padrão do texto', /^#/.test(s.cor) ? s.cor : '#f3efe6', (v) => { s.cor = v; slideEl().style.color = v; commit(); }),
     (() => {
@@ -384,13 +384,13 @@ async function salvar() {
 function barra() {
   const B = $('barra'); B.textContent = '';
   const tit = h('input', { id: 'tit', type: 'text', value: M.titulo, maxlength: 120, 'aria-label': 'Título da aula' }); tit.oninput = () => { M.titulo = tit.value; marcarSujo(true); agendarSnap(); };
-  B.append(h('a', { class: 'b', href: '/editor' }, '← Aulas'), tit, h('span', { class: 'sub' }, DIR + ' / ' + ID), h('span', { style: 'flex:1' }), h('button', { class: 'b', id: 'tmp', onclick: () => { const c = M0.checarTempos(M.slides), l = c.erros.concat(c.avisos); aviso(l.length ? l.join(' · ') : 'Tempos conferem: a aula fecha em ' + c.fim + ' min.', l.length ? 1 : 0); } }, '⏱'), h('span', { id: 'est' }, ''),
+  B.append(h('a', { class: 'b', href: '/editor' }, '← Aulas'), tit, h('span', { class: 'sub' }, DIR + ' / ' + ID), h('span', { style: 'flex:1' }), ajuda('ed_barra'), h('button', { class: 'b', id: 'tmp', onclick: () => { const c = M0.checarTempos(M.slides), l = c.erros.concat(c.avisos); aviso(l.length ? l.join(' · ') : 'Tempos conferem: a aula fecha em ' + c.fim + ' min.', l.length ? 1 : 0); } }, '⏱'), h('span', { id: 'est' }, ''),
     h('button', { class: 'b', id: 'desf', onclick: () => desfazer(-1), title: 'Ctrl+Z' }, '↶ Desfazer'), h('button', { class: 'b', id: 'ref', onclick: () => desfazer(1), title: 'Ctrl+Y' }, '↷ Refazer'),
     h('button', { class: 'b', onclick: historico, title: 'Versões salvas desta aula' }, '🕘 Histórico'), h('button', { class: 'b perigo', onclick: () => modalExcluir(DIR, ID, M.titulo), title: 'Como excluir esta aula' }, 'Excluir…'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}`, target: '_blank', title: 'Abre a versão salva' }, 'Ver aula'), h('a', { class: 'b', href: `/aula/${DIR}/${ID}/roteiro`, target: '_blank' }, 'Ver roteiro'),
     h('button', { class: 'b pri', id: 'salvarb', onclick: salvar, title: 'Ctrl+S' }, 'Salvar'));
   const F = $('ferr'); F.textContent = '';
   const ic = h('select', { style: 'width:130px', 'aria-label': 'Ícone' }, ...Object.keys(M0.ICONES).map((n) => h('option', { value: n }, n)));
-  F.append(h('span', { class: 'sub' }, 'Adicionar:'), ...[['Título', 'titulo'], ['Texto', 'texto'], ['Etiqueta', 'etiqueta'], ['Cartão', 'cartao'], ['Caixa', 'caixa'], ['Número', 'numero'], ['Pílula', 'pilula']].map(([t, k]) => h('button', { class: 'b', onclick: () => inserir(M0.ELEMENTOS[k]()) }, t)),
+  F.append(h('span', { class: 'sub' }, 'Adicionar:'), ajuda('ed_adicionar'), ...[['Título', 'titulo'], ['Texto', 'texto'], ['Etiqueta', 'etiqueta'], ['Cartão', 'cartao'], ['Caixa', 'caixa'], ['Número', 'numero'], ['Pílula', 'pilula']].map(([t, k]) => h('button', { class: 'b', onclick: () => inserir(M0.ELEMENTOS[k]()) }, t)),
     h('button', { class: 'b', onclick: modalImagens }, '🖼 Imagem'), ic, h('button', { class: 'b', onclick: () => inserir(M0.ELEMENTOS.icone(ic.value)) }, '+ Ícone'), h('span', { style: 'flex:1' }), h('a', { class: 'b', target: '_blank', href: `/aula/${DIR}/${ID}#${cur + 1}`, onclick: (e) => { e.currentTarget.href = `/aula/${DIR}/${ID}#${cur + 1}`; } }, '▶ Ver este slide'));
   marcarSujo(sujo); atualizaBarra();
 }

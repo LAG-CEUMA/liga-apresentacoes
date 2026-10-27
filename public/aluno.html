@@ -5,7 +5,7 @@
 <nav class="abas-aluno" id="abas" aria-label="Seções da área do aluno"></nav>
 <div id="corpo"><p>Carregando…</p></div>
 </main>
-<script src="/novidade.js"></script>
+<script src="/novidade.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const ST={presente:'Presente',ausente:'Falta',justificado:'Justificado','sem-chamada':'Sem chamada'};
@@ -65,6 +65,7 @@ function desenhar(){
   for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
     if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
     A.append(b)}
+  A.append(ajuda('al_'+ABA));
   if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else tabProgresso(C);
   // marca como visto para a faixa "novo" do menu da Início
   try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}

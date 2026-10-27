@@ -19,7 +19,7 @@
     const d = (window.AJUDA || {})[chave]; if (!d) return document.createTextNode('');
     const b = document.createElement('button'); b.type = 'button'; b.className = 'ajuda'; b.textContent = '?';
     b.setAttribute('aria-label', 'Ajuda: ' + d.t); b.setAttribute('aria-expanded', 'false'); b.title = 'O que é isto?';
-    b.onclick = (e) => { e.stopPropagation(); if (dono === b) fechar(); else abrir(b, d); };
+    b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); if (dono === b) fechar(); else abrir(b, d); };
     return b;
   };
   document.addEventListener('click', (e) => { if (pop && !pop.contains(e.target)) fechar(); });

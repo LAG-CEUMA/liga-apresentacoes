@@ -1,0 +1,61 @@
+/* Textos das janelas de ajuda "?" das telas (menos a Presença, que tem os seus na própria página). */
+window.AJUDA = Object.assign(window.AJUDA || {}, {
+  /* ---- Painel ---- */
+  adm_ferramentas: { t: 'Ferramentas', l: ['Atalhos das ferramentas liberadas para o seu perfil: Personalizar site, Presença e atividades, Editor de slides e Guias.', 'Se faltar alguma, peça a um owner para ajustar o seu perfil em Pessoas.'] },
+  adm_pessoas: { t: 'Pessoas', l: ['Cadastro único de todos: owners, monitores, equipe e alunos. Cadastre cada pessoa uma vez só, aqui.', 'Clique em uma pessoa para abrir a ficha: dados, papel, turma e permissões.', 'Na ficha, o botão Ver como mostra o site do jeito que aquela pessoa vê, só para olhar (nada é alterado).'] },
+  adm_cargos: { t: 'Perfis (cargos)', l: ['Um perfil é um conjunto de permissões, como Marketing ou Design. Uma pessoa pode ter vários e vale a soma.', 'Crie o perfil aqui e atribua em Pessoas.'] },
+  adm_turmas: { t: 'Turmas', l: ['A turma é o perfil do aluno: define o nível, as datas, os alunos e os monitores.', 'Estados: Planejada, Em andamento e Arquivada. Ao encerrar, use Arquivar: some das listas do dia a dia, mas presença e certificados continuam guardados.'] },
+  adm_pontos: { t: 'Pontuação', l: ['Define quanto vale presença, participação e atividades no ranking, e o Top 5 de cada turma.', 'Há pesos padrão e pesos por turma.'] },
+  adm_reservadas: { t: 'Páginas reservadas', l: ['Páginas HTML secretas. Só abre quem tem o link longo (começa com /r/); não precisa de login.', 'Use para material que não deve aparecer no site, mas que você quer compartilhar por link.'] },
+  adm_imagens: { t: 'Banco de imagens', l: ['Todas as imagens enviadas ao site (logo, fundos, editor de slides) e onde cada uma é usada.', 'Excluir uma imagem em uso deixa esses locais sem imagem; o site avisa e pede confirmação.'] },
+  adm_wiki: { t: 'Guias e dúvidas', l: ['Os tutoriais da equipe e a Central de ajuda dos alunos.', 'Aqui você escolhe a visibilidade de cada página: quem não tem a função não vê a página nem na busca.'] },
+  adm_aulas: { t: 'Níveis das aulas', l: ['Define quem vê cada aula. Só owners (padrão): somente vocês. Membros: monitores, equipe e os alunos das turmas ligadas ao nível da aula.', 'Nenhuma aula é pública. O roteiro nunca depende desse nível.', 'Para publicar uma aula, clique em Membros na linha dela.'] },
+  adm_guia: { t: 'Guia dos owners', l: ['Explicações passo a passo de tudo o que o painel faz. Clique em cada item para abrir.'] },
+  pes_dados: { t: 'Dados da pessoa', l: ['Nome e contato. O usuário do GitHub é o identificador: é por ele que o site reconhece a pessoa.'] },
+  pes_papel: { t: 'Papel na Liga', l: ['Marque o que a pessoa é (owner, monitor, equipe, aluno). O papel define o acesso básico ao site.'] },
+  pes_turma: { t: 'Perfil de aluno: turma', l: ['A turma do aluno define o nível dele e quais aulas ele vê.'] },
+  pes_monitor: { t: 'Aulas que o monitor ministra', l: ['Marque as turmas em que o monitor ensina. O acesso dele às aulas e à Presença segue essa lista.'] },
+  pes_perfis: { t: 'Perfis de permissão', l: ['Dão acesso às ferramentas (Personalizar, Presença, Pessoas…). Pode ter vários perfis; vale a soma, prevalece o que dá mais acesso.'] },
+  pes_editor: { t: 'Permissão para editar slides', l: ['Libera o Editor de slides para um monitor ou alguém da equipe. É opcional e vale só para quem precisa criar aulas.'] },
+  cargos_info: { t: 'O que cada permissão libera', l: ['Lista de cada permissão e o que ela abre no Painel. Consulte antes de montar um perfil novo.'] },
+  turma_botoes: { t: 'Botões da turma', l: ['Ver alunos: abre a lista de Pessoas filtrada por esta turma.', 'Repositórios dos alunos: confere e cria o repositório de cada aluno e envia o convite (só owners).', 'Abrir a turma, Arquivar e Reabrir: mudam o estado da turma.', 'Promover alunos…: leva os alunos aprovados para a turma seguinte.', 'Mover…: passa todos os alunos desta turma para outra.', 'Editar: nome, datas, nível e demais dados.'] },
+  repos: { t: 'Repositórios dos alunos', l: ['Cada aluno precisa de um repositório privado aluno-USUÁRIO (criado a partir do modelo aluno-modelo) e de aceitar o convite.', 'Criar o que falta e convidar faz tudo de uma vez. Alunos fictícios (de teste) não usam o GitHub.', 'Se o aluno não aceitar o convite, o botão Abrir no GitHub dá erro 404 para ele.'] },
+  promover: { t: 'Promover alunos', l: ['Os alunos marcados entram na turma de destino. Quem você desmarcar (não passou, desistiu) fica só na turma atual.','Os promovidos continuam também na turma de origem, que guarda o histórico de presença.'] },
+  mover: { t: 'Mover alunos', l: ['Move todos os alunos desta turma para outra: eles saem desta turma. Use para corrigir cadastro.'] },
+  pontos_pesos: { t: 'Pesos padrão', l: ['Quanto cada parte vale no ranking: presença, participação e atividades. Valem para as turmas que não tiverem pesos próprios.'] },
+  pontos_part: { t: 'Valor de cada tipo de participação', l: ['Multiplicador dos pontos que a pessoa recebe em cada tipo de participação (ajuda, apresentação, penalidade…).'] },
+  pontos_turma: { t: 'Pesos por turma e Top 5', l: ['Escolha uma turma para dar pesos só para ela e ver o Top 5 atual. Sem pesos próprios, ela usa os padrão.'] },
+  aulas_niveis: { t: 'Todas deste nível', l: ['Muda o acesso de todas as aulas deste nível de uma vez.', 'Só owners: só vocês veem. Membros: monitores, equipe e alunos das turmas ligadas ao nível.'] },
+
+  /* ---- Personalizar ---- */
+  pers_1: { t: 'Identidade', l: ['Nome, subtítulo e logo do site. Aparecem no topo de todas as telas.'] },
+  pers_2: { t: 'Cores e botões', l: ['As 7 cores e o arredondamento dos botões. Vale para o site inteiro.'] },
+  pers_3: { t: 'Papel de parede por tela', l: ['Um fundo diferente para cada tela do site.'] },
+  pers_4: { t: 'Temas prontos e salvos', l: ['Os prontos mudam só as cores e o arredondamento. Você também pode salvar o seu tema e voltar a ele depois.'] },
+  pers_5: { t: 'Boas-vindas', l: ['Título e texto que aparecem no topo da tela inicial.'] },
+  pers_6: { t: 'Anúncios e notícias', l: ['Avisos que aparecem na tela inicial.', 'O número (peso) define a ordem: o menor aparece primeiro.'] },
+  pers_7: { t: 'Agenda', l: ['Datas de eventos e aulas que aparecem na tela inicial.'] },
+  pers_8: { t: 'Redes sociais e links', l: ['Até 12 links de redes e páginas da Liga, mostrados no site.'] },
+  pers_9: { t: 'Vitrine', l: ['Destaques de redes, vídeos e jogos mostrados na tela inicial. É a seção do marketing.'] },
+  pers_10: { t: 'Destaques de ranking', l: ['Publica na tela inicial uma FOTO do ranking de uma turma (Top 3, 5 ou 10) no momento em que você gera. Não muda sozinho.', 'Pode haver mais de um publicado. Cada um tem peso (ordem) e datas opcionais de início e fim.', 'Só entra quem já tem pontos.'] },
+  pers_11: { t: 'Ordem dos blocos', l: ['Dê um número de 1 a 99 para cada bloco da tela inicial. O menor aparece primeiro.'] },
+
+  /* ---- Área do aluno e início ---- */
+  al_aulas: { t: 'Aulas', l: ['As aulas liberadas para a sua turma. Se uma aula não aparece, ela ainda não foi publicada para você.'] },
+  al_atividades: { t: 'Atividades', l: ['Exercícios (feitos em sala) e tarefas (de casa) que o instrutor liberou.', 'Cada uma é uma Issue no seu repositório do GitHub. Clique em Abrir no GitHub e responder e escreva a resposta em um comentário.', 'Se aparecer erro 404, aceite o convite do seu repositório (e-mail ou github.com/notifications).'] },
+  al_progresso: { t: 'Meu progresso', l: ['Sua presença, participações, atividades e posição no ranking da turma.', 'O Top 5 mostra só quem já tem pontos.'] },
+  ix_menu: { t: 'Botões do topo', l: ['Área do aluno: suas aulas, atividades e progresso.', 'Painel: ferramentas da equipe, só aparece para quem tem permissão.', 'Central de ajuda: respostas para dúvidas.', 'Eventos: inscrição em eventos e certificados.'] },
+
+  /* ---- Eventos ---- */
+  ev_pagina: { t: 'Eventos', l: ['Entre com o GitHub para se inscrever. Se houver limite de vagas, quem passar dele entra na lista de espera, por ordem de inscrição.', 'No dia, confirme sua presença. Quem comparece recebe o certificado (se o evento emitir).'] },
+  ev_checkin: { t: 'Check-in', l: ['Marque quem compareceu. Quem comparece recebe o certificado (se o evento emite).', 'Quem estava inscrito e não veio fica no histórico como não compareceu.'] },
+
+  /* ---- Editor de slides ---- */
+  ed_barra: { t: 'Barra do editor', l: ['← Aulas volta à lista. O relógio (⏱) confere se os tempos dos slides fecham a aula em 60 min.', 'Desfazer e Refazer (Ctrl+Z e Ctrl+Y) voltam e avançam as mudanças.', 'Histórico mostra as versões salvas e permite restaurar uma. Ver aula abre a versão já salva.', 'Excluir… explica como remover a aula com segurança. Salvar (Ctrl+S) grava a aula.'] },
+  ed_adicionar: { t: 'Adicionar elementos', l: ['Insere no slide atual um Título, Texto, Etiqueta, Cartão, Caixa, Número ou Pílula. Depois é só clicar para editar o texto e arrastar para mover.', 'Imagem abre o banco de imagens. Ícone insere o ícone escolhido ao lado.'] },
+  ed_bloco: { t: 'Bloco selecionado', l: ['Posição (X, Y) e tamanho (largura, altura) do bloco clicado. Para frente e Para trás mudam qual fica por cima; Duplicar copia; Excluir apaga.', 'Arraste com o mouse (gruda nas guias; segure Alt para não grudar). Setas movem 1 px (Shift: 10 px). Duplo clique edita o texto.'] },
+  ed_anim: { t: 'Animação (apresentação)', l: ['Escolhe se o bloco já aparece com o slide ou entra com um clique (sobe, surge ou aparece) e em qual clique.', 'Só vale na hora de apresentar. No editor, o bloco fica sempre visível.'] },
+  ed_texto: { t: 'Texto', l: ['Tamanho, altura da linha, cor, negrito, alinhamento e fonte do texto do bloco.'] },
+  ed_aparencia: { t: 'Aparência', l: ['Cor de fundo, arredondamento dos cantos e opacidade do bloco.', 'Se você clicou em uma parte do texto, Editar o bloco inteiro volta a mexer no bloco todo.'] },
+  ed_slide: { t: 'Este slide', l: ['Cor de fundo do slide, cor padrão do texto e o tempo previsto do slide (digite só o número de minutos).', 'Mostra o total da aula contra os 60 minutos.'] }
+});

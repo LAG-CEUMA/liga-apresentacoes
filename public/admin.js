@@ -118,19 +118,19 @@ function abrirGaveta(nome,contato){
     box.append(h('div',{style:'display:flex;justify-content:space-between;gap:10px;align-items:flex-start'},h('div',{},h('h2',{style:'margin:0;font-size:22px'},tit),h('div',{class:'sub'},nome||contato?'Ficha da pessoa: tudo em um lugar':'Cadastro novo: preencha os dados e escolha o papel')),h('button',{class:'btn sec',type:'button',onclick:fechar},'Fechar')));
     {const cx=(rot,el,dica)=>h('label',{style:'display:block;font-size:12px;opacity:.9;margin:8px 0 0'},rot,el,dica?h('span',{class:'sub',style:'display:block;font-size:11px;margin-top:2px'},dica):'');
       const inp=(v,ph,on,ro)=>{const e=h('input',{type:'text',placeholder:ph||'',value:v||'',style:'width:100%;margin-top:3px',oninput:e2=>on(e2.target.value)});if(ro)e.readOnly=true;return e};
-      box.append(h('div',{class:'sec'},h('h3',{},'Dados da pessoa'),
+      box.append(h('div',{class:'sec'},h('h3',{},'Dados da pessoa',ajuda('pes_dados')),
         cx('Nome completo *',inp(DADOS.nome,'Ex.: Davi Novato Silva',v=>{DADOS.nome=v})),
         cx('E-mail institucional (opcional)',inp(DADOS.email,dono?'a000000@ceuma.com.br':(contato?'(já cadastrado; só owners veem)':'a000000@ceuma.com.br'),v=>{DADOS.email=v}),'Só contato (convocações). Não dá acesso. Só owners enxergam os e-mails já salvos.'),
         cx('Curso (opcional)',inp(DADOS.curso,'Ex.: Ciência da Computação',v=>{DADOS.curso=v})),
         cx('Usuário do GitHub *',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?'Já cadastrado; não pode ser trocado.':'É por ele que a pessoa entra na plataforma (o nome que aparece no perfil do GitHub).')))}
     // papéis
-    box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga'),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo. ',h('b',{},'Nenhum marcado = cadastro inativo (sem acesso à plataforma).'),),
+    box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga',ajuda('pes_papel')),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo. ',h('b',{},'Nenhum marcado = cadastro inativo (sem acesso à plataforma).'),),
       ck('Owner',E.owner,v=>{E.owner=v;desenhar()},!dono||(i0&&i0.fixo)||(i0&&nome===D.usuario),dono?'':' (só owners definem)'),
       ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()}),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()}),
       dono?ck('Equipe (cargos)',E.equipe,v=>{E.equipe=v;desenhar()}):''));
-    if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma'),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...tot.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
+    if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma',ajuda('pes_turma')),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...tot.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
     if(E.monitor){
-      const bl=h('div',{class:'sec'},h('h3',{},'Aulas que o monitor ministra'),h('div',{class:'sub'},'Turmas em que ensina (nenhuma marcada = todas):'),...tot.map(t=>chip(D.turmas[t].nome,E.mturmas.has(t),()=>{E.mturmas.has(t)?E.mturmas.delete(t):E.mturmas.add(t);desenhar()})));
+      const bl=h('div',{class:'sec'},h('h3',{},'Aulas que o monitor ministra',ajuda('pes_monitor')),h('div',{class:'sub'},'Turmas em que ensina (nenhuma marcada = todas):'),...tot.map(t=>chip(D.turmas[t].nome,E.mturmas.has(t),()=>{E.mturmas.has(t)?E.mturmas.delete(t):E.mturmas.add(t);desenhar()})));
       const grupos={};for(const a of D.aulas||[])(grupos[a.nivel]=grupos[a.nivel]||[]).push(a);
       bl.append(h('div',{class:'aulaln sub',style:'border:0'},h('span',{},'Aula'),h('span',{},'Slides'),h('span',{},'Roteiro')));
       Object.keys(grupos).sort().forEach(nv=>{const l=grupos[nv];const n=l.filter(a=>E.aulas.has(a.chave)||E.roteiros.has(a.chave)).length;
@@ -141,13 +141,13 @@ function abrirGaveta(nome,contato){
       box.append(bl)}
     if(E.equipe&&dono){
       const cs=Object.keys(D.cargos);
-      const bl=h('div',{class:'sec'},h('h3',{},'Perfis de permissão (pode ter vários; vale a soma: prevalece o que dá mais acesso)'),...cs.map(c=>chip(D.cargos[c].nome,E.cargos.has(c),()=>{E.cargos.has(c)?E.cargos.delete(c):E.cargos.add(c);desenhar()},'cargo')),
+      const bl=h('div',{class:'sec'},h('h3',{},'Perfis de permissão (pode ter vários; vale a soma: prevalece o que dá mais acesso)',ajuda('pes_perfis')),...cs.map(c=>chip(D.cargos[c].nome,E.cargos.has(c),()=>{E.cargos.has(c)?E.cargos.delete(c):E.cargos.add(c);desenhar()},'cargo')),
         cs.length?'':h('p',{class:'sub'},'Ainda não há perfis. Crie na aba Perfis.'),h('div',{class:'sub'},'Precisa de uma permissão a mais? Crie um perfil na aba Perfis com ela e marque aqui. Não há permissão avulsa por pessoa.'));
       const x=rascunhoInfo();
       for(const p of Object.keys(PERM_INFO)){const on=x.perms.includes(p);bl.append(h('div',{class:'permlinha'},h('span',{class:on?'on':'off'},on?'✓':'–'),h('span',{class:on?'':'off'},h('b',{},PERM_INFO[p][0]),' · '+PERM_INFO[p][1]),h('span',{class:'src'},on&&x.origem[p]?'por '+x.origem[p].join(', '):'')))}
       if(E.extras.size)bl.append(h('div',{style:'background:#3a2a10;border:1px solid #b66d00;border-radius:10px;padding:10px 14px;margin-top:10px'},h('b',{},'Permissões individuais antigas: '+[...E.extras].map(p=>PERM_INFO[p][0]).join(', ')),h('div',{class:'sub'},'Não são mais usadas. Crie um perfil na aba Perfis com essas permissões, marque-o acima e remova as individuais.'),h('button',{class:'chipx',type:'button',style:'margin-top:6px',onclick:()=>{E.extras.clear();desenhar()}},'Remover permissões individuais')));
       box.append(bl)}
-    if(dono&&(E.monitor||E.equipe)&&!E.owner){const bl=h('div',{class:'sec'},h('h3',{},'Permissão para editar slides (opcional)'),h('div',{class:'sub'},'Só para monitor ou equipe que vão criar/editar aulas no editor. Escolha o nível (ou uma aula) e clique em Liberar. Aluno comum não precisa disso.'));
+    if(dono&&(E.monitor||E.equipe)&&!E.owner){const bl=h('div',{class:'sec'},h('h3',{},'Permissão para editar slides (opcional)',ajuda('pes_editor')),h('div',{class:'sub'},'Só para monitor ou equipe que vão criar/editar aulas no editor. Escolha o nível (ou uma aula) e clique em Liberar. Aluno comum não precisa disso.'));
       const rot=(v)=>{const [d,i]=v.split('/');const a=(D.aulas||[]).find(x=>x.dir===d&&(!i||x.id===i));const n=((D.aulas||[]).find(x=>x.dir===d)||{}).nivel||d;return i?`${n} · ${a?a.titulo:i}`:`${n} (todas as aulas)`};
       [...E.editor].forEach(v=>bl.append(h('div',{class:'permlinha'},h('span',{class:'on'},'✓'),h('span',{},rot(v)),h('button',{class:'chipx',type:'button',onclick:()=>{E.editor.delete(v);desenhar()}},'Remover'))));
       const ops=[];for(const [d,n] of niveisLista()){ops.push([d,n+' (todas as aulas)']);for(const a of (D.aulas||[]).filter(x=>x.dir===d))ops.push([d+'/'+a.id,n+' · '+a.titulo])}
@@ -197,7 +197,7 @@ function desenharCargos(){
         h('button',{class:'btn sec',type:'button',onclick:async()=>{const ocup=Object.entries(D.equipe||{}).filter(([k,v])=>(v.cargos||[]).includes(id)).map(([k])=>'@'+k);if(!await confirmar({titulo:'Apagar o cargo "'+c.nome+'"?',corpo:[h('p',{class:'sub'},ocup.length?'Estas pessoas perdem as permissões deste cargo: '+ocup.join(', ')+'.':'Ninguém ocupa este cargo agora.'),h('p',{class:'sub'},'Nada é alterado no GitHub.')],digitar:c.nome,botao:'Apagar cargo'}))return;try{await enviar({acao:'remover_cargo',id});aviso('Cargo apagado');await carregar()}catch(e){aviso(e.message,1)}}},'Apagar'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:async()=>{const n=prompt('Nome do novo cargo (ex.: Secretaria, Vice-presidência):');if(!n)return;try{await enviar({acao:'cargo',nome:n,permissoes:[]});aviso('Cargo criado: marque as permissões e salve');await carregar()}catch(e){aviso(e.message,1)}}},'+ Novo cargo'),h('div',{class:'sub'},'Ex.: Vice-presidência, Eventos, Monitoria geral')));
   p.append(g);
-  const det=h('div',{class:'cartao2'},h('h3',{},'O que cada permissão libera'),...Object.keys(PERM_INFO).map(k=>h('div',{style:'margin:6px 0;font-size:14px'},h('b',{},PERM_INFO[k][0]+': '),PERM_INFO[k][1]+'.')),h('div',{class:'sub'},'Owners sempre têm tudo.'));
+  const det=h('div',{class:'cartao2'},h('h3',{},'O que cada permissão libera',ajuda('cargos_info')),...Object.keys(PERM_INFO).map(k=>h('div',{style:'margin:6px 0;font-size:14px'},h('b',{},PERM_INFO[k][0]+': '),PERM_INFO[k][1]+'.')),h('div',{class:'sub'},'Owners sempre têm tudo.'));
   p.append(det)}
 
 // ---------- aba Turmas ----------
@@ -205,7 +205,7 @@ function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;re
 const nomeNivel=d=>d?((niveisLista().find(x=>x[0]===d)||[])[1]||d):'Todos os níveis';
 const ESTADO_REPO={ficticio:['Aluno de teste (fictício): não usa GitHub','ok'],ok:['Pronto','ok'],'criado-com-acesso':['Criado, com acesso','ok'],convidado:['Convite enviado','m'],'criado-e-convidado':['Criado e convite enviado','m'],'convite-pendente':['Convite enviado, aguardando o aluno aceitar','m'],'sem-convite':['Repositório existe, falta convidar','t'],'sem-repo':['Repositório ainda não existe','t'],erro:['Erro','t']};
 async function reposDaTurma(id,nome){
-  const corpo=h('div',{},h('p',{class:'sub'},'Verificando…'));const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Repositórios dos alunos · '+nome),h('p',{class:'sub'},'Cada aluno precisa de um repositório privado aluno-<usuario> (criado do modelo aluno-modelo) e de um convite aceito. Aqui você confere e resolve de uma vez.'),corpo,h('div',{style:'display:flex;justify-content:flex-end;margin-top:12px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'))],'modal');
+  const corpo=h('div',{},h('p',{class:'sub'},'Verificando…'));const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Repositórios dos alunos · '+nome,ajuda('repos')),h('p',{class:'sub'},'Cada aluno precisa de um repositório privado aluno-<usuario> (criado do modelo aluno-modelo) e de um convite aceito. Aqui você confere e resolve de uma vez.'),corpo,h('div',{style:'display:flex;justify-content:flex-end;margin-top:12px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'))],'modal');
   const mostrarR=(R,criou)=>{corpo.textContent='';const falta=R.some(x=>['sem-repo','sem-convite'].includes(x.estado));
     corpo.append(h('div',{style:'max-height:46vh;overflow:auto'},...R.map(x=>h('div',{class:'linha',style:'display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid #fff2'},h('b',{},'@'+x.usuario),h('span',{class:'pill '+(ESTADO_REPO[x.estado]||['','t'])[1]},(ESTADO_REPO[x.estado]||[x.estado])[0]+(x.msg?': '+x.msg:''))))));
     if(falta)corpo.append(h('button',{class:'btn',type:'button',style:'margin-top:12px',onclick:async()=>{if(!await confirmar({titulo:'Criar os repositórios que faltam?',corpo:[h('p',{class:'sub'},'Cria os repositórios privados a partir do modelo e envia o convite do GitHub a cada aluno. Nada é apagado.')],botao:'Criar e convidar'}))return;corpo.textContent='Trabalhando…';try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:true})).resultados,true)}catch(e){corpo.textContent=e.message}}},'Criar o que falta e convidar'));
@@ -226,7 +226,7 @@ function desenharTurmas(){
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',
         t.alunos.length?h('button',{class:'btn',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
-        h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'))))}
+        h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'),ajuda('turma_botoes'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalTurma('')},'+ Nova turma'),h('div',{class:'sub'},'Dê um código curto (ex.: 2027.2). Alunos novos entram na turma em andamento ou na que você escolher.')));
   p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
 function modalTurma(id){
@@ -255,14 +255,14 @@ function modalPromover(de){
   for(const a of D.turmas[de].alunos)lista.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:true,onchange:e=>{e.target.checked?marcados.add(a):marcados.delete(a);conta()}}),'@'+a));
   const todos=(v)=>{lista.querySelectorAll('input').forEach((x,i)=>{x.checked=v;const a=D.turmas[de].alunos[i];v?marcados.add(a):marcados.delete(a)});conta()};
   conta();
-  const {fechar}=camada([h('h2',{style:'margin:0 0 6px'},'Promover alunos de '+D.turmas[de].nome),
+  const {fechar}=camada([h('h2',{style:'margin:0 0 6px'},'Promover alunos de '+D.turmas[de].nome,ajuda('promover')),
     h('p',{class:'sub'},'Os alunos marcados entram na turma de destino. Quem você desmarcar (não passou, desistiu) fica só na turma atual. Os promovidos continuam também na turma de origem, que guarda o histórico de presença e, se arquivada com acesso, o material do nível concluído. Depois você pode editar a lista da turma nova.'),
     h('label',{},'Para a turma ',para),h('div',{style:'display:flex;gap:8px;align-items:center;margin:10px 0'},h('button',{class:'chipx',type:'button',onclick:()=>todos(true)},'Marcar todos'),h('button',{class:'chipx',type:'button',onclick:()=>todos(false)},'Desmarcar todos'),cont),lista,
     h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'promover',de,para:para.value,usuarios:[...marcados]});aviso(`${marcados.size} aluno(s) promovido(s)`);fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Promover'))],'modal');}
 function modalMover(de){
   const outras=Object.keys(D.turmas).filter(t=>t!==de);if(!outras.length){aviso('Crie outra turma primeiro.',1);return}
   const para=h('select',{},...outras.map(t=>h('option',{value:t},D.turmas[t].nome)));
-  const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Mover alunos da turma '+D.turmas[de].nome),h('p',{class:'sub'},`Move todos os ${D.turmas[de].alunos.length} aluno(s) (saem desta turma). Use para corrigir cadastro; para avançar de nível use Promover.`),h('label',{},'Para a turma ',para),
+  const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Mover alunos da turma '+D.turmas[de].nome,ajuda('mover')),h('p',{class:'sub'},`Move todos os ${D.turmas[de].alunos.length} aluno(s) (saem desta turma). Use para corrigir cadastro; para avançar de nível use Promover.`),h('label',{},'Para a turma ',para),
     h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'mover_turma',de,para:para.value});aviso('Alunos movidos');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Mover'))],'modal');}
 
 // ---------- aba Pontuação (owners) ----------
@@ -274,9 +274,9 @@ async function desenharPontos(){
   const soma=h('b',{});const calc=()=>{soma.textContent=String((+pr.value||0)+(+pa.value||0)+(+ex.value||0))};[pr,pa,ex].forEach(x=>x.addEventListener('input',calc));calc();
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Nota final do aluno = presença + participação + exercícios − penalidades. Os pesos abaixo valem para todas as turmas; você pode mudar só uma turma mais abaixo.'),
     h('div',{class:'grade'},
-      h('div',{class:'cartao2'},h('h3',{},'Pesos padrão'),h('label',{class:'ck'},pr,'Presença'),h('label',{class:'ck'},pa,'Participação'),h('label',{class:'ck'},ex,'Exercícios'),h('div',{class:'sub'},'Soma dos pesos (nota máxima): ',soma),
+      h('div',{class:'cartao2'},h('h3',{},'Pesos padrão',ajuda('pontos_pesos')),h('label',{class:'ck'},pr,'Presença'),h('label',{class:'ck'},pa,'Participação'),h('label',{class:'ck'},ex,'Exercícios'),h('div',{class:'sub'},'Soma dos pesos (nota máxima): ',soma),
         h('label',{class:'ck',style:'margin-top:10px'},meta,'Meta de participação (pontos para ganhar o peso inteiro)'),h('label',{class:'ck'},top,'Alunos veem o Top 5 da turma')),
-      h('div',{class:'cartao2'},h('h3',{},'Valor de cada tipo de participação'),h('div',{class:'sub'},'Multiplicador dos pontos que o professor dá (1 = normal, 2 = vale o dobro, 0 = não conta).'),...linhasTipos)),
+      h('div',{class:'cartao2'},h('h3',{},'Valor de cada tipo de participação',ajuda('pontos_part')),h('div',{class:'sub'},'Multiplicador dos pontos que o professor dá (1 = normal, 2 = vale o dobro, 0 = não conta).'),...linhasTipos)),
     h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'pontuacao',pesos:{presenca:pr.value,participacao:pa.value,exercicios:ex.value},meta:meta.value,top5Visivel:top.checked,tipos:Object.fromEntries(Object.entries(tipos).map(([k,i])=>[k,i.value]))});aviso('Pontuação padrão salva');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar pontuação padrão'));
   const ids=Object.keys(D.turmas);const sel=h('select',{},...ids.map(t=>h('option',{value:t},D.turmas[t].nome)));
   const box=h('div',{class:'cartao2',style:'margin-top:16px'});
@@ -285,7 +285,7 @@ async function desenharPontos(){
       h('div',{style:'display:flex;gap:8px;margin:8px 0'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'pontuacao',turma:sel.value,pesos:{presenca:a.value,participacao:b.value,exercicios:d.value}});aviso('Pesos da turma salvos');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar para esta turma'),t.pesos?h('button',{class:'btn sec',type:'button',onclick:async()=>{try{await enviar({acao:'pontuacao',turma:sel.value,padrao:true});aviso('Voltou ao padrão');await carregar()}catch(e){aviso(e.message,1)}}},'Voltar ao padrão'):''));
     const r=await fetch('/api/presenca?acao=ranking&turma='+encodeURIComponent(sel.value));
     if(r.ok){const R=await r.json();box.append(h('div',{style:'font-weight:700;margin:8px 0 4px'},t.status==='arquivada'&&t.rankingFinal?'Top 5 final (congelado)':'Top 5 agora'),...(t.status==='arquivada'&&t.rankingFinal?t.rankingFinal.map((x,i)=>({posicao:i+1,usuario:x.usuario,total:x.total})):R.ranking.slice(0,5)).map(x=>h('div',{class:'permlinha',style:'grid-template-columns:40px 1fr auto'},h('span',{},x.posicao+'º'),h('span',{},'@'+x.usuario),h('b',{},String(x.total)))),R.ranking.length?'':h('div',{class:'sub'},'Ainda sem alunos nesta turma.'))}};
-  sel.addEventListener('change',ver);p.append(h('h3',{style:'margin:22px 0 8px'},'Pesos por turma e Top 5'),sel,box);ver()}
+  sel.addEventListener('change',ver);p.append(h('h3',{style:'margin:22px 0 8px'},'Pesos por turma e Top 5',ajuda('pontos_turma')),sel,box);ver()}
 
 // ---------- aba Níveis das aulas ----------
 function desenharAulas(d){
@@ -303,7 +303,7 @@ function desenharAulas(d){
     det.addEventListener('toggle',()=>salvarAbertos(todos));
     const sm=el('summary');const tt=el('span','nvt',nv);const cont=el('span','nvc');sm.append(tt,cont);
     const atualizaCont=()=>{const c={owners:0,membros:0};lista.forEach(a=>c[a.acesso]=(c[a.acesso]||0)+1);cont.textContent=`${lista.length} aula(s) · ${c.membros} membros · ${c.owners} só owners`};atualizaCont();
-    const massa=el('div','massa');massa.append(el('small','','Todas deste nível:'));
+    const massa=el('div','massa');massa.append(el('small','','Todas deste nível:'),ajuda('aulas_niveis'));
     const corpo=el('div','nvcorpo');
     const pintar=(l)=>{l.seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===l.a.acesso));l.info.textContent=INFO[l.a.acesso]};
     const linhas=[];
@@ -413,6 +413,7 @@ function desenharFerramentas(){
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
+  $('abas').append(ajuda('adm_'+k));
   for(const [id] of [['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
   if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){

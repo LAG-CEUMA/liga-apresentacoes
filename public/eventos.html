@@ -3,9 +3,10 @@
 <style>input[type=text],input[type=date],input[type=time],input[type=number],textarea,select{background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;padding:8px;font:inherit}.sub{color:var(--mut);font-size:13px}.ev p{margin:6px 0}</style></head>
 <body data-pg="painel"><main>
 <div class="topo"><div><p class="tag" data-site="tag">LIGA ACADÊMICA DE GAMES</p><h1>Eventos</h1></div><div class="acoes" id="topo"><a class="btn sec" href="/">&larr; Início</a></div></div>
+<script>document.addEventListener("DOMContentLoaded",()=>{const t=document.querySelector(".topo h1");if(t&&window.ajuda)t.append(ajuda("ev_pagina"))})</script>
 <div id="corpo"><p>Carregando…</p></div>
 </main><div id="msg" class="msg" hidden></div>
-<script src="/site.js"></script>
+<script src="/site.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 function h(t,p,...f){const e=document.createElement(t);for(const [k,v] of Object.entries(p||{})){if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='style')e.style.cssText=v;else if(k in e&&k!=='list'&&k!=='for')e[k]=v;else e.setAttribute(k,v)}
@@ -38,7 +39,7 @@ async function modalCheckin(ev){
       for(const [v,t] of [[true,'Compareceu'],[false,'Não veio']]){const b=h('button',{type:'button'},t);b.addEventListener('click',()=>{E[k]=E[k]===v?null:v;pinta()});seg.append(b)}pinta();
       const i=J.inscritos.find(x=>x.usuario===k);lista.append(h('div',{class:'linha'},h('div',{class:'t'},h('b',{},'@'+k),i&&i.nome&&i.nome!==k?' · '+i.nome:'',i&&i.espera?' (lista de espera)':'',i&&i.estado==='confirmado'?' · confirmou':''),seg))}};
   desenha();
-  const fechar=camada([h('h2',{style:'margin:0 0 6px'},'Check-in: '+ev.titulo),h('p',{class:'sub'},'Marque quem compareceu. Quem comparece recebe o certificado (se o evento emite). Quem estava inscrito e não veio fica no histórico como "não compareceu".'),lista,
+  const fechar=camada([h('h2',{style:'margin:0 0 6px'},'Check-in: '+ev.titulo,ajuda('ev_checkin')),h('p',{class:'sub'},'Marque quem compareceu. Quem comparece recebe o certificado (se o evento emite). Quem estava inscrito e não veio fica no histórico como "não compareceu".'),lista,
     h('div',{style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'},extra,h('button',{class:'btn sec',type:'button',onclick:()=>{const n=extra.value.trim().replace(/^@/,'').toLowerCase();if(!/^[a-z0-9][a-z0-9-]{0,38}$/.test(n)){aviso('Usuário inválido.',1);return}E[n]=true;extra.value='';desenha()}},'Adicionar')),
     h('div',{style:'display:flex;justify-content:flex-end;gap:8px;margin-top:14px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'),h('button',{class:'btn',type:'button',onclick:async()=>{const est={};for(const [k,v] of Object.entries(E))if(typeof v==='boolean')est[k]=v;try{const x=await api({acao:'checkin',id:ev.id,estados:est});aviso(`Check-in salvo (${x.alterados} alterado(s))`);fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar check-in'))])}
 function cartao(ev){
