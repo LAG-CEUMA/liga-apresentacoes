@@ -351,6 +351,10 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno', novo: 'novo-aluno-dup' }, {}, 'sec')).status, 200);
   { const l = (await require('../lib/pendentes').ler()).lista.filter((x) => x.nome === 'Novo Aluno'); assert.equal(l.length, 1); assert.equal(l[0].usuario, 'novo-aluno-dup'); }
   assert.equal((await post({ acao: 'trocar_usuario', usuario: 'novo-aluno-dup', novo: 'novo-aluno' }, {}, 'sec')).status, 200);
+  assert.equal((await post({ acao: 'pessoa', usuario: ' Espaco-Teste\u00a0', nome: '  Fulano   de\u00a0Tal \u200b', curso: ' ADS  ', email: ' espaco@ceuma.com.br ', aluno: true, turmas: ['2026'] }, {}, 'sec')).status, 200);
+  { const c = (await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === 'espaco-teste'); assert.equal(c.nome, 'Fulano de Tal'); assert.equal(c.curso, 'ADS'); assert.equal(c.email, 'espaco@ceuma.com.br'); }
+  assert.equal((await post({ acao: 'remover_pessoa', usuario: 'espaco-teste' }, {}, 'sec')).status, 200);
+  await require('../lib/pendentes').remover('espaco@ceuma.com.br', 'sec');
   assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'novo@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
   assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);

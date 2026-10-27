@@ -1,7 +1,7 @@
 'use strict';
 // Painel: nível de cada aula, listas, monitores e equipe. Cada ação exige a permissão certa; só owners mexem na lista de owners e na equipe.
 const u = require('../lib/util'); const d = require('../lib/dados'); const P = require('../lib/pontos');
-const nomeGh = (x) => String(x).trim().replace(/^https?:\/\/github\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, '').toLowerCase();
+const nomeGh = (x) => String(x).replace(/[\u200b-\u200d\u2060\ufeff]/g, '').replace(/^[\s\u00a0]+|[\s\u00a0]+$/g, '').replace(/^https?:\/\/github\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, '').toLowerCase();
 const ler = (l) => (Array.isArray(l) ? l : []).map((x) => String(x).trim().replace(/^@/, '').toLowerCase()).filter(Boolean);
 module.exports = async (req, res) => {
   try {
@@ -151,9 +151,9 @@ module.exports = async (req, res) => {
       if (!perm.includes('pessoas')) return nao();
       const nome = nomeGh(b.usuario || '');
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
-      { const PDp = require('../lib/pendentes'); const ex = (await PDp.ler()).lista.find((x) => x.usuario === nome); const nm = String(b.nome || (ex && ex.nome) || '').trim();
+      { const PDp = require('../lib/pendentes'); const ex = (await PDp.ler()).lista.find((x) => x.usuario === nome); const nm = String(b.nome || (ex && ex.nome) || '').replace(/[\u200b-\u200d\u2060\ufeff]/g, '').replace(/[\s\u00a0]+/g, ' ').trim();
         if (!nm) return u.json(res, 400, { erro: 'Falta o nome da pessoa (campo Nome, em Dados da pessoa).' });
-        const em = String(b.email || '').trim() || (ex && ex.email) || '';
+        const em = String(b.email || '').replace(/[\s\u200b-\u200d\u2060\ufeff\u00a0]/g, '') || (ex && ex.email) || '';
         try { await PDp.salvar({ usuario: nome, nome: nm, email: em, curso: b.curso !== undefined ? b.curso : (ex && ex.curso), cargo: b.cargo !== undefined ? b.cargo : (ex && ex.cargo), anterior: b.anterior || (ex ? (ex.email || ('@' + ex.usuario)) : '') }, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; } }
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
       const turmasOk = (Array.isArray(b.turmas) ? b.turmas : []).map(String).filter((t) => novo.turmas[t]);
