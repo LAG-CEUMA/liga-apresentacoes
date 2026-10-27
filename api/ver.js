@@ -7,7 +7,10 @@ const VOLTAR = '<a id="liga-voltar" href="/" onclick="event.stopPropagation();re
   '<script>' +
   // voltar de verdade: volta para a tela anterior (a de onde a pessoa veio); sem histórico, vai ao início
   'function ligaVoltar(e){var r=document.referrer,mesmo=false;try{mesmo=r&&new URL(r).origin===location.origin}catch(x){}' +
-  'if(history.length>1){e.preventDefault();history.back();return false}if(mesmo){e.preventDefault();location.href=r;return false}return true}' +
+  'if(history.length>1){e.preventDefault();history.back();return false}' +
+  // aba aberta a partir do Painel: fecha a aba e a tela de origem continua exatamente como estava
+  'e.preventDefault();try{window.close()}catch(x){}setTimeout(function(){location.href=mesmo?r:"/"},200);return false}' +
+  '(function(){var a=document.getElementById("liga-voltar");if(a&&history.length<=1)a.innerHTML="&times; Fechar slides"})();' +
   // número do slide no rodapé, em qualquer slide (some quando o próprio slide já mostra o número)
   '(function(){var S=[].slice.call(document.querySelectorAll(".slide")),el=document.getElementById("liga-pg");if(!S.length||!el)return;' +
   'function p2(n){return(n<10?"0":"")+n}function up(){var k=S.findIndex(function(s){return s.classList.contains("on")});if(k<0){el.style.display="none";return}' +
