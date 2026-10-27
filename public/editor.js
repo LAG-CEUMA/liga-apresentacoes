@@ -257,7 +257,7 @@ function painel() {
       return h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Duração em minutos, obrigatória (ex.: 5). O início é o fim do bloco anterior.'), h('div', { style: 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px' }, inp, info, tot),
         ...(ant ? [h('label', { class: 'sub', style: 'display:flex;gap:6px;align-items:center;margin-top:6px' }, junto, 'Mesmo bloco do slide anterior (dividem o mesmo tempo)')] : []));
     })(),
-    h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Roteiro do apresentador (uma ideia por linha)'), h('textarea', { rows: 7, maxlength: 4000, placeholder: 'Fica só no arquivo de roteiro. Nunca aparece no slide projetado.', oninput: (e) => { s.notas = e.target.value; marcarSujo(true); agendarSnap(); } }, s.notas))));
+    h('div', { style: 'margin-top:8px' }, h('label', { class: 'sub' }, 'Roteiro do apresentador (uma ideia por linha)'), h('textarea', { rows: 7, maxlength: 4000, placeholder: 'Só no roteiro, nunca no slide. Vermelho: o que falar (entre aspas ou Diga:). Azul: ideias (Ideia:, Explique, Reforce). Preto: o resto.', oninput: (e) => { s.notas = e.target.value; marcarSujo(true); agendarSnap(); } }, s.notas))));
 }
 function campoNumPos(rot, k, fn) { const i = h('input', { type: 'number', 'data-k': k, value: k === 'x' ? sel.offsetLeft : k === 'y' ? sel.offsetTop : k === 'w' ? sel.offsetWidth : sel.offsetHeight }); i.oninput = () => { if (i.value !== '') fn(+i.value); }; return h('div', {}, h('label', {}, rot), i); }
 

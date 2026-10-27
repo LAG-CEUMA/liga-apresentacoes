@@ -44,10 +44,11 @@ const PAINEL_JS = '<script>(function(){var P=document.getElementById("liga-tempo
   'function pinta(){var d=dec(),min=d/60000;bt.textContent=run?"\\u23F8 Pausar":"\\u25B6 Iniciar";var tot=fim?" de "+fim+" min":"";inf.innerHTML="\\u23F1 <b>"+f(d)+"</b>"+tot+(k>=0?" \\u00B7 slide "+(k+1)+"/"+N:"");' +
   'var pl=k>=0?PL[k]:null,c="#9aa3b8",tx="Abra os slides na outra tela para sincronizar.";if(k>=0&&pl){if(min>pl.b){c="#ff6b5b";tx="atrasado "+f(d-pl.b*60000)+" (previsto at\\u00E9 "+Math.floor(pl.b/60)+":"+(pl.b%60<10?"0":"")+(pl.b%60)+")"}else if(min<pl.a){c="#3ec9b0";tx="adiantado "+f(pl.a*60000-d)}else{c="#3ec9b0";tx="no tempo \\u00B7 restam "+f(pl.b*60000-d)+" neste slide"}}else if(k>=0){tx="slide sem tempo previsto"}st.style.color=c;st.textContent=tx}' +
   'setInterval(pinta,1000);pinta()})()</script>';
+const CORES = require('../lib/cores-roteiro');
 function comVoltar(html, roteiro) {
   html = html.replace(/location\.hash\s*=\s*i\s*\+\s*1\s*;/g, "history.replaceState(null,'','#'+(i+1));"); // trocar de slide não empilha histórico
   if (roteiro) { const b = html.indexOf('<h1'); if (b > -1) html = html.slice(0, b) + PAINEL_DIV + html.slice(b); }
-  const extra = VOLTAR + (roteiro ? PAINEL_JS : '');
+  const extra = VOLTAR + (roteiro ? PAINEL_JS + CORES : '');
   const i = html.lastIndexOf('</body>');
   return i === -1 ? html + extra : html.slice(0, i) + extra + html.slice(i);
 }
