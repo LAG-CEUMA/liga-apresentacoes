@@ -21,7 +21,8 @@ const VOLTAR = '<a id="liga-voltar" href="/" onclick="event.stopPropagation();re
   'function idx(){return S.findIndex(function(s){return s.classList.contains("on")})}' +
   'function envia(){var k=idx();if(k<0)return;if(k!==cur){cur=k;ts=Date.now()}ch.postMessage({k:k,n:S.length})}' +
   'new MutationObserver(envia).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]});envia();' +
-  'ch.onmessage=function(e){if(e.data&&e.data.hello)envia()};' +
+  'ch.onmessage=function(e){var d=e.data;if(!d)return;if(d.hello)envia();else if(typeof d.go==="number"&&d.go>=0&&d.go<S.length){var tk=function(k){dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true}))};' +
+  'if(d.go<idx())tk("Home");var g=0;while(idx()!==d.go&&g++<400)tk("ArrowRight");envia()}};' +
   'function f(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60);return(m<10?"0":"")+m+":"+(s%60<10?"0":"")+(s%60)}' +
   'function pinta(){if(box)box.textContent="\u23F1 "+f(Date.now()-t0)+"  \u00B7  slide "+f(Date.now()-ts)}' +
   'addEventListener("keydown",function(e){if(e.key==="t"||e.key==="T"){if(box){box.remove();box=null}else{box=document.createElement("div");box.style.cssText="position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:99998;font:600 16px Arial,sans-serif;color:#fff;background:rgba(0,0,0,.6);border-radius:99px;padding:4px 14px;pointer-events:none";document.body.appendChild(box);pinta()}}});setInterval(pinta,500)})();' +
@@ -41,6 +42,7 @@ const PAINEL_JS = '<script>(function(){var P=document.getElementById("liga-tempo
   'var inf=document.createElement("span"),st=document.createElement("span");P.append(bt,rz,inf,st);' +
   'bt.onclick=function(){if(run){base=dec();run=false}else{t0=Date.now();run=true}salva();pinta()};rz.onclick=function(){base=0;run=false;salva();pinta()};' +
   'ch.onmessage=function(e){if(e.data&&typeof e.data.k==="number"){var novo=e.data.k!==k;k=e.data.k;if(!run&&base===0){t0=Date.now();run=true;salva()}if(novo&&SEC[k]){SEC.forEach(function(s,i){s.style.outline=i===k?"3px solid #f5b83d":"";s.style.background=i===k?"#fff6dd":""});SEC[k].scrollIntoView({behavior:"smooth",block:"start"})}pinta()}};ch.postMessage({hello:1});' +
+  'SEC.forEach(function(s,i){s.style.cursor="pointer";s.title="Clique para levar a apresenta\u00E7\u00E3o a este slide";s.addEventListener("click",function(e){if(String(getSelection())||e.target.closest("a,button"))return;ch.postMessage({go:i})})});' +
   'function pinta(){var d=dec(),min=d/60000;bt.textContent=run?"\\u23F8 Pausar":"\\u25B6 Iniciar";var tot=fim?" de "+fim+" min":"";inf.innerHTML="\\u23F1 <b>"+f(d)+"</b>"+tot+(k>=0?" \\u00B7 slide "+(k+1)+"/"+N:"");' +
   'var pl=k>=0?PL[k]:null,c="#9aa3b8",tx="Abra os slides na outra tela para sincronizar.";if(k>=0&&pl){if(min>pl.b){c="#ff6b5b";tx="atrasado "+f(d-pl.b*60000)+" (previsto at\\u00E9 "+Math.floor(pl.b/60)+":"+(pl.b%60<10?"0":"")+(pl.b%60)+")"}else if(min<pl.a){c="#3ec9b0";tx="adiantado "+f(pl.a*60000-d)}else{c="#3ec9b0";tx="no tempo \\u00B7 restam "+f(pl.b*60000-d)+" neste slide"}}else if(k>=0){tx="slide sem tempo previsto"}st.style.color=c;st.textContent=tx}' +
   'setInterval(pinta,1000);pinta()})()</script>';
