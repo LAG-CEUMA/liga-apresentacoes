@@ -238,7 +238,7 @@ async function auditoriaRepos(){
 function materiaisDaTurma(id){
   let FECHA=()=>{};
   const t=D.turmas[id];const aulas=(D.aulas||[]).filter(a=>!t.nivel||String(a.chave).startsWith(t.nivel+'/')).sort((a,b)=>a.chave.localeCompare(b.chave));
-  const ir=(href,turmaSel,aula)=>()=>{try{localStorage.setItem('liga_turma',id);if(aula)localStorage.setItem('liga_aula',aula)}catch{}location.href=href};
+  const ir=(href,turmaSel,aula)=>()=>{try{localStorage.setItem('liga_turma',id);if(aula)localStorage.setItem('liga_aula',aula)}catch{}window.open(href,'liga-presenca')}; // uma aba só para a Presença: clicar de novo reaproveita a mesma
   const bt=(txt,fn,cls)=>h('button',{type:'button',class:'btn '+(cls||'sec'),style:'padding:6px 12px;font-size:13px',onclick:fn},txt);
   const lk=(txt,href,cls)=>h('a',{class:'btn '+(cls||'sec'),style:'padding:6px 12px;font-size:13px',href,target:'_blank',rel:'noopener'},txt);
   const corpo=h('div',{},h('p',{class:'sub'},'Tudo o que o professor precisa desta turma, em um lugar só: slides, roteiro, edição, chamada e atividades de cada aula.'),
