@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
         const todas = await A.listar(); const out = [];
         for (const a of todas) { const t = cfg.turmas[a.turma]; if (!a.liberada || !t || !t.alunos.includes(usuario) || !A.aplica(a, usuario)) continue;
           const e = (a.entregas || {})[usuario] || {}; const dsp = (a.disparos || {})[usuario] || {};
-          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, issue: dsp.url || '' }); }
+          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, notaMax: a.notaMax || 10, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, issue: dsp.url || '' }); }
         return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });

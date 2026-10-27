@@ -31,6 +31,18 @@ aba_ent:{t:'Entregas (aba antiga)',l:['Marcação manual de uma tarefa única po
 aba_ativ:{t:'Atividades',l:['Cada atividade tem peso, prazo e uma Issue por aluno no GitHub.','Liberar cria a Issue no repositório de cada aluno. O aluno responde comentando na Issue.','Depois use Respostas e notas para ver quem respondeu e dar a nota.']},
 aba_rank:{t:'Ranking',l:['Soma presença, participação e atividades, por turma. Só entra quem já tem pontos.','Para mostrar no Início do site, use Personalizar, seção Destaques.']},
 aba_hist:{t:'Histórico',l:['Todas as chamadas já salvas, por turma e data.']},
+est_prazo:{t:'No prazo',l:['Entregou até o prazo. Vale 100% do peso da atividade (multiplicado pela nota, se você der uma).']},
+est_atraso:{t:'Atrasada',l:['Entregou depois do prazo. Vale 50% do peso (multiplicado pela nota, se houver).']},
+est_nao:{t:'Não entregou',l:['Não respondeu. Vale 0 ponto nesta atividade.']},
+est_dispensado:{t:'Dispensado',l:['Este aluno não faz esta atividade e ela não entra na conta dele (nem como 0).']},
+pts_ativ:{t:'Pontos deste aluno',l:['Cálculo: peso × (100% no prazo, 50% atrasada, 0 não entregou) × (nota ÷ nota máxima).','É só uma prévia: o valor só vale depois de Salvar entregas.']},
+f_codigo:{t:'Código',l:['Identifica e agrupa a atividade na lista. Padrão: nível, aula e tipo. Ex.: N0.1-2·E1.','E = exercício feito em sala; T = tarefa de casa.']},
+f_titulo:{t:'Título',l:['Nome que o aluno vê na Issue e na Área do aluno.']},
+f_peso:{t:'Peso',l:['Quanto a atividade vale nos pontos da turma, de 1 a 100. Quanto maior, mais importa no ranking.']},
+f_notamax:{t:'Nota máxima',l:['A maior nota que você poderá dar nesta atividade (de 1 a 100; padrão 10). Ao corrigir, só aparecem as opções de 0 até esse valor, de 0,5 em 0,5.','Ex.: máximo 4: a nota 3 vale 75% do peso. Defina antes de corrigir.']},
+f_prazo:{t:'Prazo',l:['Data e hora limite. Respostas depois dela são sugeridas como Atrasada (50% do peso). Para mudar todos de uma vez, use Adiar ou antecipar todos os prazos.']},
+f_opcional:{t:'Opcional (pontos extras)',l:['Não entra no total da turma: só soma pontos extras para quem entregar.']},
+f_desc:{t:'Texto da Issue',l:['O enunciado que o aluno recebe na Issue do repositório dele. Aceita Markdown (títulos, listas, **negrito**). Escreva o objetivo, o passo a passo e o que entregar.']},
 adiar:{t:'Adiar ou antecipar prazos',l:['Muda os prazos de todas as atividades da turma de uma vez.','Número positivo adia (7 = uma semana depois). Negativo antecipa (-7). Use múltiplos de 7 para manter o dia da semana.']},
 ativ_botoes:{t:'Botões da atividade',l:['Liberar a quem falta: cria a Issue para todo aluno que ainda não recebeu. Quem já tem não duplica.','Respostas e notas: mostra quem respondeu no GitHub, marca no prazo ou atrasada e permite dar a nota.','Liberar só alguns: escolha quais alunos recebem (aluno novo, reposição, reforço ou teste). Também tem o Recolher.','Editar: muda título, peso, prazo e o texto que vai na Issue.']},
 resp:{t:'Respostas e notas',l:['As respostas do GitHub são buscadas sozinhas ao abrir. Quem comentou na Issue já vem marcado como No prazo ou Atrasada, comparando com o prazo.','Você revisa, digita a nota de 0 a 10 (opcional) e clica em Salvar entregas.','No prazo vale 100% do peso, atrasada 50%, não entregou 0. A nota multiplica.','Dispensado: o aluno não faz esta atividade e ela não conta para ele.']},
@@ -152,11 +164,12 @@ async function telaAtiv(alvo){
 }
 function formAtiv(a,alvo){
   const novo=!a;const opc=h('input',{type:'checkbox'});opc.checked=!!(a&&a.opcional);const f=h('details',{class:'box',open:!!a},h('summary',{},novo?'+ Nova atividade':'Editar dados da atividade'));
-  const cod=h('input',{placeholder:'Código (ex.: N0.1-2·E1)',value:a?a.codigo:'',style:'width:200px'}),tit=h('input',{placeholder:'Título',value:a?a.titulo:'',style:'width:min(360px,100%)'}),peso=h('input',{type:'number',min:1,max:100,step:1,value:a?a.peso:10,style:'width:80px'}),prazo=h('input',{type:'datetime-local',value:a?aivToLocal(a.prazo):''}),
+  const cod=h('input',{placeholder:'Código (ex.: N0.1-2·E1)',value:a?a.codigo:'',style:'width:200px'}),tit=h('input',{placeholder:'Título',value:a?a.titulo:'',style:'width:min(360px,100%)'}),peso=h('input',{type:'number',min:1,max:100,step:1,value:a?a.peso:10,style:'width:80px'}),nmax=h('input',{type:'number',min:1,max:100,step:1,value:a?(a.notaMax||10):10,style:'width:80px'}),prazo=h('input',{type:'datetime-local',value:a?aivToLocal(a.prazo):''}),
     desc=h('textarea',{rows:8,placeholder:'Texto que vai na Issue do aluno (Markdown): objetivo, passo a passo, o que entregar.',style:'width:100%'},a?a.descricao:'');
   desc.value=a?a.descricao:'';
-  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{try{await postA({acao:'ativ_salvar',id:a?a.id:'',codigo:cod.value,titulo:tit.value,peso:peso.value,prazo:prazo.value?new Date(prazo.value).toISOString():'',opcional:opc.checked,descricao:desc.value});aviso('Atividade salva');telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar atividade');
-  f.append(h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},cod,tit,h('label',{},'Peso ',peso),h('label',{},'Prazo ',prazo),h('label',{title:'Não conta no total: só soma pontos extras a quem entregar'},opc,' Opcional (pontos extras)')),desc,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar));return f}
+  dica(cod,'f_codigo');dica(tit,'f_titulo');dica(peso,'f_peso');dica(nmax,'f_notamax');dica(prazo,'f_prazo');dica(opc,'f_opcional');dica(desc,'f_desc');
+  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{try{await postA({acao:'ativ_salvar',id:a?a.id:'',codigo:cod.value,titulo:tit.value,peso:peso.value,notaMax:nmax.value,prazo:prazo.value?new Date(prazo.value).toISOString():'',opcional:opc.checked,descricao:desc.value});aviso('Atividade salva');telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},'Salvar atividade');
+  f.append(h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},cod,tit,h('label',{},'Peso ',peso),h('label',{},'Nota máxima ',nmax),h('label',{},'Prazo ',prazo),h('label',{},opc,' Opcional (pontos extras)')),desc,h('div',{class:'barra'},h('span',{style:'flex:1'}),salvar));return f}
 function painelAtiv(a,alvo){
   const box=h('div',{class:'box'});const roster=ATV.roster.filter(k=>!a.alvo||!a.alvo.length||a.alvo.includes(k));
   const sel=new Set();const escolha=h('div',{style:'display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0'});
@@ -171,12 +184,21 @@ function painelAtiv(a,alvo){
   const E=DRAFT[a.id];for(const k of roster)if(!E[k])E[k]={estado:'nao',nota:''};
   const conf=CONF[a.id]||{};const lista=h('div',{});
   const estados=[['prazo','No prazo','p'],['atraso','Atrasada','j'],['nao','Não entregou','a'],['dispensado','Dispensado','']];
-  for(const k of roster){const seg=h('div',{class:'seg tri'});const nota=h('input',{type:'number',min:0,max:10,step:0.5,placeholder:'nota',value:E[k].nota,style:'width:80px',oninput:e=>{E[k].nota=e.target.value}});
-    const pinta=()=>seg.querySelectorAll('button').forEach((x,i)=>x.className=E[k].estado===estados[i][0]?'on '+estados[i][2]:'');
-    for(const [v,t] of estados){const b=h('button',{type:'button'},t);b.addEventListener('click',()=>{E[k].estado=v;pinta()});seg.append(b)}pinta();
+  const mx=a.notaMax||10,pas=mx>10?1:0.5;
+  AJUDA.nota_ativ={t:'Nota (opcional)',l:['Escolha de 0 até '+mx+' (a nota máxima desta atividade, definida ao criá-la em Editar). Não dá para digitar um valor acima disso.','A nota multiplica os pontos: Sem nota vale 100% do peso; '+(mx/2)+' de '+mx+' vale 50%.']};
+  for(const k of roster){const seg=h('div',{class:'seg tri'});
+    const ops=[['','Sem nota (vale 100%)']];for(let v=mx;v>=0;v-=pas)ops.push([String(v),v+' de '+mx]);
+    const atual=E[k].nota;if(atual!==''&&atual!==undefined&&atual!==null&&!ops.some(o=>o[0]===String(atual)))ops.push([String(atual),atual+' de '+mx+' (valor antigo)']);
+    const nota=h('select',{style:'width:170px'},...ops.map(([v,t])=>h('option',{value:v},t)));dica(nota,'nota_ativ');
+    nota.value=(atual===''||atual===undefined||atual===null)?'':String(atual);
+    const pts=h('span',{class:'sub',style:'min-width:130px'});dica(pts,'pts_ativ');
+    const prev=()=>{const m={prazo:1,atraso:0.5,nao:0}[E[k].estado];if(m===undefined){pts.textContent=E[k].estado==='dispensado'?'não entra na conta':'';return}const fr=(E[k].nota===''||E[k].nota===undefined||E[k].nota===null)?1:Number(E[k].nota)/mx;const v=Math.round((a.peso||10)*m*fr*10)/10;pts.textContent=a.opcional?'≈ '+v+' pontos extras':'≈ '+v+' de '+(a.peso||10)+' pontos'};
+    nota.addEventListener('change',()=>{E[k].nota=nota.value===''?'':Number(nota.value);prev()});
+    const pinta=()=>{seg.querySelectorAll('button').forEach((x,i)=>x.className=E[k].estado===estados[i][0]?'on '+estados[i][2]:'');prev()};
+    for(const [v,t] of estados){const b=h('button',{type:'button'},t);dica(b,'est_'+v);b.addEventListener('click',()=>{E[k].estado=v;pinta()});seg.append(b)}pinta();
     const c=conf[k];const dsp=(a.disparos||{})[k]||{};
     const info=h('div',{class:'sub',style:'flex-basis:100%'},dsp.url?h('a',{href:dsp.url,target:'_blank',rel:'noopener'},'Abrir Issue'):(dsp.erro?'⚠ Issue não criada: '+dsp.erro:'Issue ainda não criada'),c?(c.erro?' · ⚠ não consegui ler o GitHub: '+c.erro:c.respondeu?` · respondeu em ${fmtD(c.quando)} (${c.comentarios} comentário${c.comentarios>1?'s':''}): “${c.previa}”`:c.issue?' · ainda sem resposta':''):(CONF[a.id]===null&&a.liberada?' · buscando respostas…':''));
-    lista.append(h('div',{class:'linha',style:'flex-wrap:wrap'},h('div',{class:'t'},h('b',{},k)),seg,nota,info))}
+    lista.append(h('div',{class:'linha',style:'flex-wrap:wrap'},h('div',{class:'t'},h('b',{},k)),seg,nota,pts,info))}
   const fazConferir=async(auto)=>{conferir.disabled=true;conferir.textContent='Buscando respostas no GitHub…';try{const r=await postA({acao:'ativ_conferir',id:a.id});CONF[a.id]=r.conferencia;for(const [k,c] of Object.entries(r.conferencia))if(c.respondeu&&E[k]&&E[k].estado==='nao')E[k].estado=c.sugestao;if(!auto)aviso('Respostas atualizadas. Os estados foram sugeridos: revise e clique em Salvar entregas.');telaAtiv(alvo);return}catch(e){CONF[a.id]=null;aviso(e.message,1)}conferir.disabled=false;conferir.textContent='Atualizar respostas do GitHub'};
   const conferir=h('button',{class:'btn sec',type:'button',onclick:()=>fazConferir(false)},'Atualizar respostas do GitHub');
   if(ATV_MODO==='resp'&&a.liberada&&CONF[a.id]===undefined){CONF[a.id]=null;setTimeout(()=>fazConferir(true),0)}

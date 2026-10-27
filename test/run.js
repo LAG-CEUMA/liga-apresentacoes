@@ -466,6 +466,14 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     r = JSON.parse((await ap({ acao: 'ativ_conferir', id: id1 })).body).conferencia; assert.equal(r.alu1.sugestao, 'prazo'); assert.equal(r.alu2.sugestao, 'atraso'); assert.equal(r.alu3.respondeu, false); assert.equal(r.alu1.comentarios, 1);
     // entregas: um dispensado, um atrasado com nota, um que não entregou
     assert.equal((await ap({ acao: 'ativ_entregas', id: id1, estados: { alu1: { estado: 'prazo', nota: 10 }, alu2: { estado: 'atraso', nota: 8 }, alu3: { estado: 'dispensado' } } })).status, 200);
+    // nota máxima por atividade: padrão 10; com máximo 4, 100 é recusado e 3,5 vale 87,5%
+    assert.equal(JSON.parse((await getp({ acao: 'atividades', turma: T })).body).atividades.find((x) => x.id === id1).notaMax, 10);
+    r = await ap({ acao: 'ativ_salvar', codigo: 'N0.1-2·E8', titulo: 'Nota baixa', peso: 10, notaMax: 4, prazo: '2026-11-09T23:59:00-03:00' }); assert.equal(r.status, 200); const idN = JSON.parse(r.body).id; assert.equal(JSON.parse(r.body).atividade.notaMax, 4);
+    r = await ap({ acao: 'ativ_entregas', id: idN, estados: { alu1: { estado: 'prazo', nota: 100 } } }); assert.equal(r.status, 400); assert(/de 0 a 4/.test(JSON.parse(r.body).erro));
+    assert.equal((await ap({ acao: 'ativ_entregas', id: idN, estados: { alu1: { estado: 'prazo', nota: -1 } } })).status, 400);
+    assert.equal((await ap({ acao: 'ativ_entregas', id: idN, estados: { alu1: { estado: 'prazo', nota: 3.5 }, alu2: { estado: 'nao', nota: 100 } } })).status, 200); // 'não entregou' ignora a nota
+    assert.equal(JSON.parse((await getp({ acao: 'atividades', turma: T })).body).atividades.find((x) => x.id === idN).entregas.alu1.nota, 3.5);
+    assert.equal((await ap({ acao: 'ativ_remover', id: idN })).status, 200); // tira a atividade do teste para não mexer nas contas abaixo
     const sess = await d.listarSessoes(); const ativs = await A.listar(T);
     const rk = P.ranking(cfg, T, sess, ativs); const ex = (k) => rk.find((x) => x.usuario === k).partes.exercicios;
     assert(ex('alu1') > ex('alu2')); assert.equal(ex('alu2') > 0, true);
