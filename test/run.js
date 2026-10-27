@@ -24,6 +24,9 @@ const reposAl = { 'aluno-pronto': { colab: true } };
 const issues = {}, issuesCriadas = [], comentarios = {};
 global.fetch = async (url, op = {}) => {
   const p = new URL(url).pathname;
+  if (/\/orgs\/LAG-CEUMA\/repos$/.test(p)) return resp(200, [...Object.keys(reposAl).map((name) => ({ name })), { name: 'aluno-orfao-teste' }, { name: 'aluno-modelo' }, { name: 'site' }]);
+  { const mc = /\/repos\/LAG-CEUMA\/(aluno-[a-z0-9-]+)\/collaborators$/.exec(p); if (mc) return resp(200, mc[1] === 'aluno-orfao-teste' ? [{ login: 'intruso' }] : []); }
+  { const mu = /\/users\/([a-z0-9-]+)$/.exec(p); if (mu) return mu[1] === 'sumiu-da-silva' ? resp(404, {}) : mu[1] === 'renomeado' ? resp(200, { login: 'nome-novo' }) : resp(200, { login: mu[1] }); }
   { const gen = /\/repos\/LAG-CEUMA\/aluno-modelo\/generate$/.exec(p);
     if (gen) { const n = JSON.parse(op.body).name; reposAl[n] = { colab: false }; return resp(201, {}); }
     const rp = /\/repos\/LAG-CEUMA\/(aluno-[a-z0-9-]+)(?:\/(collaborators)\/([a-z0-9-]+)|\/(invitations))?$/.exec(p);
@@ -108,6 +111,15 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     {
       assert.equal((await ad({ acao: 'repos_alunos', turma: tid }, 'alu1')).status, 403);
       assert.equal((await ad({ acao: 'repos_alunos', turma: 'nao-existe' })).status, 400);
+      { // auditoria: só owner; aponta repo órfão, acesso estranho e conta inexistente/renomeada
+        assert.equal((await ad({ acao: 'repos_auditoria' }, 'alu1')).status, 403);
+        cfg.alunos = [...cfg.alunos, 'sumiu-da-silva', 'renomeado']; u.limparCache();
+        const au = JSON.parse((await ad({ acao: 'repos_auditoria' })).body); assert.ok(au.total >= 2);
+        assert.ok(au.alertas.orfaos.some((x) => x.repo === 'aluno-orfao-teste'));
+        assert.ok(au.alertas.acessosEstranhos.some((x) => x.usuario === 'intruso'));
+        assert.ok(au.alertas.contasInexistentes.some((x) => x.usuario === 'sumiu-da-silva') && au.alertas.contasInexistentes.some((x) => x.usuario === 'renomeado' && /nome-novo/.test(x.motivo)));
+        cfg.alunos = cfg.alunos.filter((x) => x !== 'sumiu-da-silva' && x !== 'renomeado'); u.limparCache();
+      }
       const rr0 = await ad({ acao: 'repos_alunos', turma: tid }); let q = JSON.parse(rr0.body).resultados; const est = (k) => q.find((x) => x.usuario === k).estado;
       assert.equal(est('pronto'), 'ok'); assert.equal(est('ficticio-um'), 'ficticio'); assert.equal(est('novato'), 'sem-repo'); assert(!reposAl['aluno-novato']); // só verifica, não cria
       q = JSON.parse((await ad({ acao: 'repos_alunos', turma: tid, criar: true })).body).resultados;

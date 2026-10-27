@@ -224,8 +224,20 @@ async function reposDaTurma(id,nome){
     if(falta)corpo.append(h('button',{class:'btn',type:'button',style:'margin-top:12px',onclick:async()=>{if(!await confirmar({titulo:'Criar os repositórios que faltam?',corpo:[h('p',{class:'sub'},'Cria os repositórios privados a partir do modelo e envia o convite do GitHub a cada aluno. Nada é apagado.')],botao:'Criar e convidar'}))return;corpo.textContent='Trabalhando…';try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:true})).resultados,true)}catch(e){corpo.textContent=e.message}}},'Criar o que falta e convidar'));
     else if(R.every(x=>['ok','criado-com-acesso','ficticio'].includes(x.estado)))corpo.append(h('p',{class:'sub',style:'margin-top:10px'},'Tudo certo: todos os alunos têm repositório e acesso.'))};
   try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:false})).resultados)}catch(e){corpo.textContent=e.message}}
+async function auditoriaRepos(){
+  const corpo=h('div',{},h('p',{class:'sub'},'Verificando no GitHub… (pode levar alguns segundos)'));
+  camada([h('h2',{style:'margin:0 0 8px'},'Auditoria dos repositórios',ajuda('auditoria')),h('p',{class:'sub'},'Compara os repositórios aluno-* da organização e as contas do GitHub com as pessoas cadastradas. A plataforma só aponta: quem remove acesso ou apaga repositório é você, no GitHub (cada item tem o link).'),corpo],'gaveta');
+  try{const d=await enviar({acao:'repos_auditoria'});const A=d.alertas;corpo.textContent='';
+    const G=[['contasInexistentes','Contas do GitHub trocadas ou inexistentes (risco de segurança)','Prioridade: se alguém registrar esse nome, poderia entrar como a pessoa.'],['orfaos','Repositórios sem pessoa na plataforma','Sobraram de usuário corrigido, aluno removido ou teste.'],['acessosEstranhos','Acessos estranhos nos repositórios','Alguém com acesso a um repositório que não é dele(a) ou fora da plataforma.'],['semTurma','Repositórios de quem não está em nenhuma turma','Ex-alunos: decida se mantém ou arquiva.'],['convitesPendentes','Convites ainda não aceitos','Lembre o aluno de aceitar; convite para a pessoa errada pode ser cancelado.']];
+    const total=G.reduce((s,[k])=>s+A[k].length,0);
+    corpo.append(h('p',{style:'font-weight:700'},total?`${total} ponto(s) de atenção em ${d.total} repositório(s) aluno-*.`:`Tudo certo: ${d.total} repositório(s) aluno-* verificados, sem problemas.`));
+    for(const [k,tit,dica] of G){const L=A[k];if(!L.length)continue;const det=h('details',{open:k==='contasInexistentes'},h('summary',{style:'cursor:pointer;font-weight:700;padding:8px 0'},tit+' · '+L.length),h('p',{class:'sub'},dica));
+      for(const x of L)det.append(h('div',{style:'padding:6px 0;border-top:1px solid #fff2'},h('b',{},(x.repo?x.repo:'@'+x.usuario)+(x.repo&&x.usuario&&k!=='orfaos'?' · @'+x.usuario:'')),h('div',{class:'sub',style:'font-size:12px'},x.motivo+(x.desde?' (desde '+x.desde.slice(0,10).split('-').reverse().join('/')+')':'')),h('a',{href:x.url,target:'_blank',rel:'noopener',class:'sub'},'Abrir no GitHub')));
+      corpo.append(det)}
+  }catch(e){corpo.textContent=e.message}}
 function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
+  if(D.dono)p.append(h('div',{style:'margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:auditoriaRepos},'Auditar repositórios e contas (GitHub)'),h('span',{class:'sub',style:'margin-left:8px'},'acha repositórios órfãos, contas que trocaram de nome e acessos estranhos')));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Uma turma é um grupo de alunos que percorre os níveis junto. A chamada, a presença e os certificados sempre pertencem a uma turma. O conteúdo das aulas é o mesmo para todas.'));
   const g=h('div',{class:'grade'});const ROT={andamento:'Em andamento',planejada:'Planejada',arquivada:'Arquivada'};
   for(const id of Object.keys(D.turmas)){const t=D.turmas[id];const mons=Object.keys(D.monitores).filter(n=>D.monitores[n].turmas.includes(id)).length;

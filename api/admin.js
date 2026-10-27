@@ -51,6 +51,29 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { ok: true });
       } catch (e) { if (e && e.status) return u.json(res, e.status, { erro: e.message, usos: e.usos }); throw e; }
     }
+    if (b.acao === 'repos_auditoria') {
+      if (!dono) return nao();
+      const ORG = process.env.GH_ORG || 'LAG-CEUMA'; const alertas = { orfaos: [], semTurma: [], contasInexistentes: [], acessosEstranhos: [], convitesPendentes: [] };
+      const conhecidos = new Set([...cfg.owners, ...u.admins(), ...cfg.alunos, ...Object.keys(cfg.monitores || {}), ...Object.keys(cfg.equipe || {}), ...Object.values(cfg.turmas || {}).flatMap((x) => x.alunos || [])].map((x) => String(x).toLowerCase()));
+      const donos = new Set([...cfg.owners, ...u.admins()].map((x) => String(x).toLowerCase()));
+      const emTurma = new Map(); for (const [id, tt] of Object.entries(cfg.turmas || {})) for (const a of tt.alunos || []) (emTurma.get(String(a).toLowerCase()) || emTurma.set(String(a).toLowerCase(), []).get(String(a).toLowerCase())).push(id);
+      let repos = []; for (let pg = 1; pg <= 5; pg++) { const r = await u.gh(`/orgs/${ORG}/repos?per_page=100&type=all&page=${pg}`); if (!r.ok) return u.json(res, 502, { erro: `GitHub ${r.status} ao listar os repositórios da organização (o token precisa enxergar todos os repositórios).` }); const l = await r.json(); repos.push(...l); if (l.length < 100) break; }
+      repos = repos.filter((r) => /^aluno-/.test(r.name) && r.name !== 'aluno-modelo').slice(0, 120);
+      const url = (n) => `https://github.com/${ORG}/${n}/settings/access`;
+      const unico = async (r) => {
+        const k = r.name.slice(6).toLowerCase(); const lista = [];
+        if (!conhecidos.has(k)) alertas.orfaos.push({ repo: r.name, usuario: k, url: url(r.name), motivo: 'O usuário deste repositório não está cadastrado na plataforma.' });
+        else if (!donos.has(k) && !emTurma.has(k)) alertas.semTurma.push({ repo: r.name, usuario: k, url: url(r.name), motivo: 'A pessoa está cadastrada, mas não está em nenhuma turma (ex-aluno ou acesso removido).' });
+        try { const co = await u.gh(`/repos/${ORG}/${r.name}/collaborators?affiliation=direct&per_page=100`); if (co.ok) for (const x of await co.json()) { const lg = String(x.login).toLowerCase(); if (lg !== k && !donos.has(lg)) alertas.acessosEstranhos.push({ repo: r.name, usuario: lg, url: url(r.name), motivo: conhecidos.has(lg) ? `@${lg} tem acesso a um repositório que não é dele(a).` : `@${lg} tem acesso e não está cadastrado na plataforma.` }); } } catch { /* segue */ }
+        try { const iv = await u.gh(`/repos/${ORG}/${r.name}/invitations?per_page=100`); if (iv.ok) for (const x of await iv.json()) { const lg = String((x.invitee || {}).login || '').toLowerCase(); alertas.convitesPendentes.push({ repo: r.name, usuario: lg, url: url(r.name), desde: x.created_at || '', motivo: lg === k ? 'Convite enviado e ainda não aceito.' : `Convite pendente para @${lg}, que não é o dono do repositório.` }); } } catch { /* segue */ }
+        return lista;
+      };
+      for (let i = 0; i < repos.length; i += 5) await Promise.all(repos.slice(i, i + 5).map(unico));
+      const contas = [...new Set([...cfg.alunos, ...Object.keys(cfg.monitores || {}), ...Object.keys(cfg.equipe || {}), ...cfg.owners].map((x) => String(x).toLowerCase()))].filter((x) => !/^ficticio-/.test(x)).slice(0, 150);
+      for (let i = 0; i < contas.length; i += 8) await Promise.all(contas.slice(i, i + 8).map(async (k) => { try { const r = await u.gh(`/users/${k}`); if (r.ok) { let j = null; try { j = await r.json(); } catch { j = null; } if (j && j.login && String(j.login).toLowerCase() !== k) alertas.contasInexistentes.push({ usuario: k, url: `https://github.com/${j.login}`, motivo: `A conta @${k} trocou de nome no GitHub e agora é @${j.login}. Atualize o usuário na ficha da pessoa (Corrigir usuário do GitHub); o nome antigo pode ser registrado por outra pessoa.` }); }
+          if (r.status === 404) alertas.contasInexistentes.push({ usuario: k, url: `https://github.com/${k}`, motivo: `A conta @${k} não existe mais no GitHub (trocou de nome ou foi apagada). Se alguém criar uma conta com esse nome, poderia entrar como esta pessoa na plataforma.` }); } catch { /* segue */ } }));
+      return u.json(res, 200, { ok: true, total: repos.length, alertas });
+    }
     if (b.acao === 'repos_alunos') {
       if (!dono) return nao();
       const t = (cfg.turmas || {})[String(b.turma || '')]; if (!t) return u.json(res, 400, { erro: 'Turma inválida.' });
@@ -66,6 +89,7 @@ module.exports = async (req, res) => {
             existe = true; criado = true;
           }
           if (!existe) return { usuario: k, estado: 'sem-repo' };
+          if (criar) { try { await u.gh(`/repos/${ORG}/aluno-${k}/topics`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ names: ['liga-aluno', 'turma-' + String(b.turma).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)] }) }); } catch { /* etiqueta é só organização */ } }
           const c = await u.gh(`/repos/${ORG}/aluno-${k}/collaborators/${k}`);
           if (c.status === 204) return { usuario: k, estado: criado ? 'criado-com-acesso' : 'ok' };
           if (!criar) {
