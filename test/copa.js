@@ -124,4 +124,8 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   const mi = C.missaoInfo(C.normalizar({}), 'T', INI, AG, us, at); assert.equal(mi.vida, Math.round((1 - 1 / us.length) * 100));
   assert(C.narracao(C.normalizar({ log: [{ em: new Date(AG).toISOString(), de: 'chefao', item: 'maldicao', faixa: 'falha_critica', dado: 1, vit: 'ana' }] }), AG, (k) => k, 3).includes('O Chefão'));
 }
+// ---------- sorteio de alvo ----------
+{ const e = C.normalizar({ ativa: true, inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }] } }); const r = C.usar(e, 'bia', 'b1', '__sorteio', rank, INI, AG);
+  assert(r.ok, JSON.stringify(r)); const alvo = e.efeitos[0].para; assert(alvo !== 'bia' && alvo !== 'davi'); // nunca em si mesmo nem no último colocado
+  const e2 = C.normalizar({ ativa: true }); const r2 = C.usarChefao(e2, 'prof', '__sorteio', rank, INI, AG, '2999-01-01'); assert(r2.ok, JSON.stringify(r2)); assert(e2.efeitos.length === 1); }
 console.log('Copa: todos os testes passaram.');

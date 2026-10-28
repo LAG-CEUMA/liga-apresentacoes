@@ -98,6 +98,9 @@ function girarRoleta(dado,t){return new Promise(fim=>{
   const msg=el('p','','Girando…');msg.style.cssText='font-size:20px;font-weight:800;margin:10px';ov.append(svg,msg);document.body.append(ov);
   g.style.transition='transform 2.8s cubic-bezier(.12,.7,.15,1)';g.style.transform='rotate(0deg)';requestAnimationFrame(()=>requestAnimationFrame(()=>{g.style.transform=`rotate(${360*5-(dado-1)*36}deg)`}));
   setTimeout(()=>{msg.textContent='🎲 Tirou '+dado;setTimeout(()=>{ov.remove();fim()},1100)},2900);ov.onclick=()=>{ov.remove();fim()}})}
+function explicaDado(t){if(!t)return null;const f=(a,b)=>a>b?null:(a===b?String(a):a+'–'+b);
+  const partes=[['💥 falha crítica (vira contra você)',f(1,t[0])],['❌ falha (nada acontece)',f(t[0]+1,t[1])],['🔸 fraco (metade)',f(t[1]+1,t[2])],['✅ normal',f(t[2]+1,t[3])],['⭐ crítico (+50%)','10']].filter(x=>x[1]);
+  const e=el('small','','🎲 O dado (1 a 10) decide o quanto o item funciona: '+partes.map(([n,r])=>`${r} = ${n}`).join(' · ')+'. Você só aperta o botão, o resultado é sorteado.');e.style.cssText='display:block;margin-top:6px;opacity:.85';return e}
 function seletorModo(){const mb=el('div','');mb.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap';mb.append(el('small','','Como mostrar o resultado:'));
   for(const [v,t] of [['dado','🎲 Dado'],['roleta','🎰 Roleta']]){const x=el('button','btn'+(modoJogo()===v?'':' sec'),t);x.type='button';x.onclick=()=>{try{localStorage.setItem('liga_modo_jogo',v)}catch{}desenhar()};mb.append(x)}
   const t=el('button','btn sec','▶ Ver a roleta (teste)');t.type='button';t.title='Só uma demonstração: não gasta item nem muda pontos';t.onclick=()=>girarRoleta(1+Math.floor(Math.random()*10),[1,3,6,9]);mb.append(t);
@@ -136,10 +139,10 @@ function tabCopa(C){
   for(const it of m.inventario){const def=c.itens[it.tipo]||{ic:'❔',nome:it.tipo,txt:'',alvo:'si'};const w=el('div','item');
     w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
     const bloqueado=c.tregua||(m.jaUsouNaSemana&&!it.bonus);
-    let sel=null;if(def.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o colega…');o0.value='';sel.append(o0);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
+    let sel=null;if(def.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o colega…');o0.value='';sel.append(o0);const o1=el('option','','🎲 Sortear um colega');o1.value='__sorteio';sel.append(o1);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
     const b=el('button','btn',rotuloJogo());b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
     b.onclick=async()=>{if(def.alvo==='outro'&&!sel.value){alert('Escolha o colega primeiro.');return}const r=await jogar(b,()=>postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''}),(c.dado||{})[it.tipo]);if(!r)return;COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
-    if(sel)caixa.append(sel);caixa.append(b);if(bloqueado)caixa.append(el('small','',c.tregua?'Trégua final.':'Já usado esta semana.'));w.append(caixa);inv.append(w)}
+    if(sel)caixa.append(sel);caixa.append(b);if(bloqueado)caixa.append(el('small','',c.tregua?'Trégua final.':'Já usado esta semana.'));w.append(caixa);if(!bloqueado){const ex=explicaDado((c.dado||{})[it.tipo]);if(ex)w.append(ex)}inv.append(w)}
   C.append(inv);
   const reg=secao('Como funciona','regras rápidas');reg.append(el('p','sub','Ganha item na semana: presença na aula, participação e entrega no prazo (até 3 por semana). O tipo é sorteado.'));
   for(const [k,d] of Object.entries(c.itens))reg.append(el('p','',`${d.ic} ${d.nome}: ${d.txt}`));
@@ -166,10 +169,10 @@ async function previa(C,qual){
   if(!c||c.erro){corpo.append(el('p','sub','Não consegui carregar a Copa desta turma.'));return}
   if(c.chefao&&c.chefao.def){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 1 ataque por dia, trégua).'));
     const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
-    let sel=null;if(d.alvo==='outro'&&!ch.aleatorio){sel=el('select','');const o0=el('option','','Escolha o aluno…');o0.value='';sel.append(o0);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
+    let sel=null;if(d.alvo==='outro'&&!ch.aleatorio){sel=el('select','');const o0=el('option','','Escolha o aluno…');o0.value='';sel.append(o0);const o1=el('option','','🎲 Sortear um aluno');o1.value='__sorteio';sel.append(o1);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
     const b=el('button','btn',rotuloJogo());b.type='button';if(ch.usado||ch.tregua){b.disabled=true}
     b.onclick=async()=>{if(sel&&!sel.value){alert('Escolha o aluno primeiro.');return}const r=await jogar(b,()=>postCopa({acao:'copa_chefao',turma:PREVT,alvo:sel?sel.value:''}),(c.dadoChefao||{})[ch.tipo]);if(!r)return;desenhar()};
-    if(sel)caixa.append(sel);caixa.append(b);if(ch.aleatorio&&d.alvo==='outro')caixa.append(el('small','','Monitor: o alvo é sorteado.'));if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);corpo.append(bx)}
+    if(sel)caixa.append(sel);caixa.append(b);if(ch.aleatorio&&d.alvo==='outro')caixa.append(el('small','','Monitor: o alvo é sorteado.'));if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);{const ex=explicaDado((c.dadoChefao||{})[ch.tipo]);if(ex&&!ch.usado)bx.append(ex)}corpo.append(bx)}
   if(c.missao&&c.missao.vida!=null&&c.ativa)corpo.append(vidaChefao(c.missao));
   corpo.append(seletorModo());
   if(c.monitor)corpo.append(el('p','sub','Você entra como monitor: joga como Chefão com alvo sorteado, e só o dono vê o placar completo e configura a Copa.'));
