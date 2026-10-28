@@ -98,6 +98,10 @@ function girarRoleta(dado,t){return new Promise(fim=>{
   const msg=el('p','','Girando…');msg.style.cssText='font-size:20px;font-weight:800;margin:10px';ov.append(svg,msg);document.body.append(ov);
   g.style.transition='transform 2.8s cubic-bezier(.12,.7,.15,1)';g.style.transform='rotate(0deg)';requestAnimationFrame(()=>requestAnimationFrame(()=>{g.style.transform=`rotate(${360*5-(dado-1)*36}deg)`}));
   setTimeout(()=>{msg.textContent='🎲 Tirou '+dado;setTimeout(()=>{ov.remove();fim()},1100)},2900);ov.onclick=()=>{ov.remove();fim()}})}
+function seletorModo(){const mb=el('div','');mb.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap';mb.append(el('small','','Como mostrar o resultado:'));
+  for(const [v,t] of [['dado','🎲 Dado'],['roleta','🎰 Roleta']]){const x=el('button','btn'+(modoJogo()===v?'':' sec'),t);x.type='button';x.onclick=()=>{try{localStorage.setItem('liga_modo_jogo',v)}catch{}desenhar()};mb.append(x)}
+  const t=el('button','btn sec','▶ Ver a roleta (teste)');t.type='button';t.title='Só uma demonstração: não gasta item nem muda pontos';t.onclick=()=>girarRoleta(1+Math.floor(Math.random()*10),[1,3,6,9]);mb.append(t);
+  mb.append(el('small','','O resultado é o mesmo nos dois: o sorteio é do servidor.'));return mb}
 async function jogar(b,chamar,tab){
   const modo=modoJogo();b.disabled=true;let giro=null;if(modo==='dado')giro=setInterval(()=>{b.textContent='🎲 '+(1+Math.floor(Math.random()*10))},80);
   const [r]=await Promise.all([chamar(),new Promise(z=>setTimeout(z,modo==='dado'?900:0))]);if(giro)clearInterval(giro);
@@ -127,9 +131,7 @@ function tabCopa(C){
   // meus itens
   const inv=secao('Meus itens',m.inventario.length+' item(ns) · valem só até '+(ateData(c)||'o fim da semana'));inv.open=true;
   inv.append(el('p','sub','Item não passa de uma semana para a outra: use ou perca. Você pode usar 1 item por semana (os itens extras de uma chuva não contam). Quem está em último lugar fica protegido de ataques.'));
-  { const mb=el('div','');mb.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap';mb.append(el('small','','Como mostrar o resultado:'));
-    for(const [v,t] of [['dado','🎲 Dado'],['roleta','🎰 Roleta']]){const x=el('button','btn'+(modoJogo()===v?'':' sec'),t);x.type='button';x.onclick=()=>{try{localStorage.setItem('liga_modo_jogo',v)}catch{}desenhar()};mb.append(x)}
-    mb.append(el('small','','O resultado é o mesmo: o sorteio é do servidor.'));inv.append(mb)}
+  inv.append(seletorModo());
   if(!m.inventario.length)inv.append(el('p','sub','Você ainda não tem item nesta semana. Vá às aulas, participe e entregue no prazo para ganhar.'));
   for(const it of m.inventario){const def=c.itens[it.tipo]||{ic:'❔',nome:it.tipo,txt:'',alvo:'si'};const w=el('div','item');
     w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
@@ -169,6 +171,7 @@ async function previa(C,qual){
     b.onclick=async()=>{if(sel&&!sel.value){alert('Escolha o aluno primeiro.');return}const r=await jogar(b,()=>postCopa({acao:'copa_chefao',turma:PREVT,alvo:sel?sel.value:''}),(c.dadoChefao||{})[ch.tipo]);if(!r)return;desenhar()};
     if(sel)caixa.append(sel);caixa.append(b);if(ch.aleatorio&&d.alvo==='outro')caixa.append(el('small','','Monitor: o alvo é sorteado.'));if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);corpo.append(bx)}
   if(c.missao&&c.missao.vida!=null&&c.ativa)corpo.append(vidaChefao(c.missao));
+  corpo.append(seletorModo());
   if(c.monitor)corpo.append(el('p','sub','Você entra como monitor: joga como Chefão com alvo sorteado, e só o dono vê o placar completo e configura a Copa.'));
   if(!c.ativa&&!c.monitor)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
   else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio kart',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
