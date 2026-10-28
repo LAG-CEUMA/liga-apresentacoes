@@ -519,6 +519,31 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     comentarios['alu1#1'] = [{ user: { login: 'Alu1' }, created_at: '2026-11-08T12:00:00Z', body: 'feito! print', html_url: 'u1' }, { user: { login: 'monitor' }, created_at: '2026-11-08T13:00:00Z', body: 'ok' }];
     comentarios['alu2#1'] = [{ user: { login: 'alu2' }, created_at: '2026-11-11T12:00:00Z', body: 'tarde', html_url: 'u2' }];
     r = JSON.parse((await ap({ acao: 'ativ_conferir', id: id1 })).body).conferencia; assert.equal(r.alu1.sugestao, 'prazo'); assert.equal(r.alu2.sugestao, 'atraso'); assert.equal(r.alu3.respondeu, false); assert.equal(r.alu1.comentarios, 1);
+    // painel de correção: quem respondeu, quem tem dúvida, notas por aluno e aviso de novidades
+    comentarios['alu3#undefined'] = [{ number: 9, title: 'Não consigo abrir o Godot', html_url: 'https://github.com/LAG-CEUMA/aluno-alu3/issues/9', created_at: '2026-11-10T10:00:00Z', updated_at: '2026-11-10T11:00:00Z', comments: 2, user: { login: 'alu3' } },
+      { number: 1, title: 'Atividade da plataforma', html_url: 'x', created_at: '2026-11-01T10:00:00Z', updated_at: '2026-11-01T10:00:00Z', comments: 0, user: { login: 'alu3' } }, { number: 7, title: 'PR', pull_request: {}, html_url: 'y', user: { login: 'alu3' } }];
+    { let pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); let pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu1.status, 'acorrigir'); assert.equal(pa.linhas.alu1.respondeu, true); assert.equal(pa.linhas.alu2.status, 'acorrigir'); assert.equal(pa.linhas.alu3.status, 'semresposta');
+      assert.equal(pn.duvidas.length, 1); assert.equal(pn.duvidas[0].usuario, 'alu3'); assert.equal(pn.duvidas[0].numero, 9); // a Issue da atividade (nº 1) e PRs não contam como dúvida
+      assert(pn.resumo.acorrigir >= 2 && pn.resumo.duvidas === 1);
+      assert.equal((await ap({ acao: 'ativ_painel' }, 'alu1')).status, 403); // aluno não vê a correção
+      let rs = JSON.parse((await getp({ acao: 'correcao_resumo' })).body); assert(rs.acorrigir >= 2 && rs.duvidas === 1 && rs.turmas.some((x) => x.turma === T));
+      assert.equal((await getp({ acao: 'correcao_resumo' }, 'alu1')).status, 403);
+      // (as datas do mock estão no futuro do relógio real; para este teste a resposta do alu1 precisa ser anterior à correção)
+      const dataOrig = comentarios['alu1#1'][0].created_at; comentarios['alu1#1'][0].created_at = '2020-01-01T00:00:00Z';
+      // corrige só um aluno, sem apagar os outros
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu1', estado: 'prazo', nota: 9 })).status, 200);
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu2', estado: 'atraso', nota: 11 })).status, 400); // acima do máximo
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'intruso', estado: 'prazo' })).status, 400);
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu2', estado: 'xx' })).status, 400);
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu2', estado: 'prazo', nota: 5 }, 'alu1')).status, 403);
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu1.status, 'corrigida'); assert.equal(pa.entregas.alu1.nota, 9); assert.equal(pa.linhas.alu2.status, 'acorrigir');
+      // o aluno escreve de novo depois da correção: aparece como nova mensagem (e a pergunta é sinalizada)
+      comentarios['alu1#1'].push({ user: { login: 'alu1' }, created_at: '2099-01-01T00:00:00Z', body: 'professor, posso refazer?', html_url: 'u1b' });
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu1.status, 'novamsg'); assert.equal(pa.linhas.alu1.pergunta, true); assert.equal(pa.linhas.alu1.comentarios, 2); assert.equal(pn.resumo.novas >= 1, true);
+      comentarios['alu1#1'].pop(); comentarios['alu1#1'][0].created_at = dataOrig; }
     // entregas: um dispensado, um atrasado com nota, um que não entregou
     assert.equal((await ap({ acao: 'ativ_entregas', id: id1, estados: { alu1: { estado: 'prazo', nota: 10 }, alu2: { estado: 'atraso', nota: 8 }, alu3: { estado: 'dispensado' } } })).status, 200);
     // nota máxima por atividade: padrão 10; com máximo 4, 100 é recusado e 3,5 vale 87,5%

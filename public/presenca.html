@@ -16,6 +16,13 @@
 .leg{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.leg div{flex:1 1 260px;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
 .pill{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle}
 .pill.lib{background:#3ec9b033;color:var(--ver)}.pill.nao{background:#fff1;color:var(--mut)}.pill.opc{background:#f5b83d33;color:var(--ouro)}
+.pz{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.pz.adi{background:#3ec9b033;color:var(--ver)}.pz.ok{background:#3ec9b022;color:#9be6d8}.pz.atr{background:#ff6b5b33;color:#ff8f82}.pz.perto{background:#f5b83d33;color:var(--ouro)}.pz.sem{background:#fff1;color:var(--mut)}
+.st{display:inline-block;border-radius:8px;padding:2px 10px;font-size:12px;font-weight:800;margin-left:6px;vertical-align:middle}
+.st.acorrigir{background:var(--ouro);color:#12141c}.st.novamsg{background:#6aa7ff;color:#12141c}.st.corrigida{background:#3ec9b033;color:var(--ver)}.st.semresposta{background:#fff1;color:var(--mut)}.st.dispensado{background:#fff1;color:var(--mut)}.st.erro{background:#ff6b5b33;color:#ff8f82}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.chips div{flex:1 1 150px;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px}.chips b{display:block;font-size:28px;font-family:'Space Grotesk',sans-serif}.chips span{color:var(--mut);font-size:13px}
+.bdg{display:inline-block;background:#ff6b5b;color:#fff;border-radius:99px;min-width:22px;padding:0 7px;margin-left:8px;font-size:13px;font-weight:800;line-height:22px;text-align:center}
+.cr{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 6px;border-top:1px solid #fff1}.cr .prev{flex-basis:100%;color:var(--mut);font-size:14px}
 </style>
 </head>
 <body data-pg="painel"><main>
@@ -28,6 +35,8 @@
 window.AJUDA={
 aba_chamada:{t:'Chamada',l:['Aqui você marca quem está na aula, em 2 momentos: Início e Fim.','Marque Presente, Falta ou Justificado. O que você marca fica como rascunho neste aparelho até clicar em Salvar chamada.','O aluno conta como presente se esteve em pelo menos metade das chamadas salvas. Com 2 chamadas, basta uma.','Quem ficar sem marca é salvo como Falta (o site pergunta antes).']},
 aba_part:{t:'Participações',l:['Pontos extras ou descontos dados a um aluno durante a aula (ajuda, apresentação, penalidade).','Eles somam ou tiram pontos no ranking e no Meu progresso do aluno.']},
+aba_corr:{t:'Correção',l:['Todas as respostas que os alunos devolveram no GitHub, numa tela só, sem precisar abrir atividade por atividade.','A corrigir: o aluno respondeu e você ainda não deu nota. Nova mensagem: o aluno escreveu de novo depois da sua correção (pode ser dúvida). Sem resposta: ainda não respondeu. Dúvidas avulsas: Issues que o próprio aluno abriu no repositório dele.','Ao lado de cada nome aparece o prazo: adiantado (entregou com dias de folga), no prazo, atrasado, ou quanto falta.','O número vermelho na aba é a quantidade de respostas esperando você. A tela se atualiza sozinha enquanto está aberta.']},
+corr_estado:{t:'Estado e nota',l:['Já vem sugerido: No prazo ou Atrasada, conforme a hora do comentário do aluno. Mude se quiser.','A nota (opcional) multiplica os pontos. Salvar corrige só este aluno, sem mexer nos outros.']},
 aba_ent:{t:'Entregas (aba antiga)',l:['Marcação manual de uma tarefa única por aula. Não lê o GitHub.','Para exercícios e tarefas use a aba Atividades.']},
 aba_ativ:{t:'Atividades',l:['Cada atividade tem peso, prazo e uma Issue por aluno no GitHub.','Liberar cria a Issue no repositório de cada aluno. O aluno responde comentando na Issue.','Depois use Respostas e notas para ver quem respondeu e dar a nota.']},
 aba_rank:{t:'Ranking',l:['Soma presença, participação e atividades, por turma. Só entra quem já tem pontos.','Owners nunca aparecem no ranking. Monitores ficam de fora do ranking das turmas em que são monitores.','Para mostrar no Início do site, use Personalizar, seção Destaques.']},
@@ -81,7 +90,7 @@ function seletores(){
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
   const data=h('input',{type:'date',value:DATA||CTX.hoje});data.addEventListener('change',()=>{DATA=data.value});
   return h('div',{class:'linha seletores'},h('label',{},h('span',{},'Turma'),turma),h('label',{},h('span',{},'Aula'),sel),h('label',{},h('span',{},'Data'),data))}
-function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ent','Entregas'],['ativ','Atividades'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button',class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t)),ajuda('aba_'+ABA))}
+function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ent','Entregas'],['ativ','Atividades'],['corr','Correção'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button','data-aba':k,class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t,k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA))}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
   if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
@@ -133,6 +142,14 @@ let ATV=null,ATV_SEL='',ATV_MODO='resp',CONF={},DRAFT={};
 const aivToLocal=iso=>{if(!iso)return'';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
 const fmtD=iso=>iso?new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'sem prazo';
 async function postA(c){return api({...c,turma:TURMA})}
+const DIA=864e5;
+// prazo ao lado do nome: adiantado X dias · no prazo · atrasado X dias (com resposta) ou faltam X / atrasado há X (sem resposta)
+function prazoInfo(prazo,quando){
+  if(!prazo)return{t:'sem prazo',c:'sem'};
+  const lim=new Date(prazo).getTime(),n=v=>{v=Math.abs(v);const d=Math.floor(v/DIA),hh=Math.floor((v%DIA)/36e5);return d>=1?d+(d>1?' dias':' dia'):(hh>=1?hh+'h':'menos de 1h')};
+  if(quando){const df=lim-new Date(quando).getTime();if(df>=DIA)return{t:'adiantado '+n(df),c:'adi'};if(df>=0)return{t:'no prazo',c:'ok'};return{t:'atrasado '+n(df),c:'atr'}}
+  const df=lim-Date.now();if(df>=0)return{t:'faltam '+n(df),c:df<DIA?'perto':'sem'};return{t:'atrasado há '+n(df)+' (sem resposta)',c:'atr'}}
+const pz=(prazo,quando)=>{const i=prazoInfo(prazo,quando);return h('span',{class:'pz '+i.c,title:'Prazo: '+fmtD(prazo)+(quando?' · resposta em '+fmtD(quando):'')},i.t)};
 async function telaAtiv(alvo){
   alvo.textContent='';alvo.append(h('p',{},'Carregando…'));
   const r=await fetch('/api/presenca?acao=atividades&turma='+encodeURIComponent(TURMA));
@@ -202,7 +219,8 @@ function painelAtiv(a,alvo){
     for(const [v,t] of estados){const b=h('button',{type:'button'},t);dica(b,'est_'+v);b.addEventListener('click',()=>{E[k].estado=v;pinta()});seg.append(b)}pinta();
     const c=conf[k];const dsp=(a.disparos||{})[k]||{};
     const info=h('div',{class:'sub',style:'flex-basis:100%'},dsp.url?h('a',{href:dsp.url,target:'_blank',rel:'noopener'},'Abrir Issue'):(dsp.erro?'⚠ Issue não criada: '+dsp.erro:'Issue ainda não criada'),c?(c.erro?' · ⚠ não consegui ler o GitHub: '+c.erro:c.respondeu?` · respondeu em ${fmtD(c.quando)} (${c.comentarios} comentário${c.comentarios>1?'s':''}): “${c.previa}”`:c.issue?' · ainda sem resposta':''):(CONF[a.id]===null&&a.liberada?' · buscando respostas…':''));
-    lista.append(h('div',{class:'linha',style:'flex-wrap:wrap'},h('div',{class:'t'},quem(k)),seg,nota,pts,info))}
+    const bz=(a.prazo&&c&&c.issue&&E[k].estado!=='dispensado')?pz(a.prazo,c.respondeu?c.quando:null):null;
+    lista.append(h('div',{class:'linha',style:'flex-wrap:wrap'},h('div',{class:'t'},quem(k),bz),seg,nota,pts,info))}
   const fazConferir=async(auto)=>{conferir.disabled=true;conferir.textContent='Buscando respostas no GitHub…';try{const r=await postA({acao:'ativ_conferir',id:a.id});CONF[a.id]=r.conferencia;for(const [k,c] of Object.entries(r.conferencia))if(c.respondeu&&E[k]&&E[k].estado==='nao')E[k].estado=c.sugestao;if(!auto)aviso('Respostas atualizadas. Os estados foram sugeridos: revise e clique em Salvar entregas.');telaAtiv(alvo);return}catch(e){CONF[a.id]=null;aviso(e.message,1)}conferir.disabled=false;conferir.textContent='Atualizar respostas do GitHub'};
   const conferir=h('button',{class:'btn sec',type:'button',onclick:()=>fazConferir(false)},'Atualizar respostas do GitHub');
   if(ATV_MODO==='resp'&&a.liberada&&CONF[a.id]===undefined){CONF[a.id]=null;setTimeout(()=>fazConferir(true),0)}
@@ -232,17 +250,76 @@ async function telaHist(alvo){
     for(const s of HIST.sessoes)for(const [k,r] of Object.entries(s.resumo))linhas.push([k,s.turma,s.chave,s.data,r.status,r.presencas,r.salvas,r.pontos]);
     const txt=linhas.map(l=>l.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+txt],{type:'text/csv'}));a.download='presenca.csv';a.click()};
   alvo.append(h('div',{class:'linha'},h('label',{},'Turma ',filtro),h('span',{style:'flex:1'}),h('button',{class:'btn sec',type:'button',onclick:csv},'Baixar CSV (Excel / Power BI)')),corpo,h('p',{class:'sub'},'P = presente, F = falta, J = justificado, – = sem registro. Presença = % das aulas com chamada em que o aluno foi considerado presente.'))}
+
+let BADGE=0,CORR_FORCAR=false;
+function atualizaBadge(n){if(n!==undefined)BADGE=n;const b=document.querySelector('[data-aba=corr]');if(b){let x=b.querySelector('.bdg');if(BADGE>0){if(!x){x=h('span',{class:'bdg'});b.append(x)}x.textContent=String(BADGE)}else if(x)x.remove()}document.title=(BADGE>0?'('+BADGE+') ':'')+'Chamada e presença'}
+const vistos=()=>{try{return JSON.parse(ls.get('liga_corr_visto','{}'))}catch{return{}}};
+async function checaCorr(inicial){
+  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const d=await r.json();const n=d.acorrigir+d.duvidas;let antes=0;try{antes=Number(sessionStorage.getItem('liga_corr_n')||0)}catch{}
+    atualizaBadge(n);try{sessionStorage.setItem('liga_corr_n',String(n))}catch{}
+    if(n>0&&(inicial||n>antes)){const t=d.turmas.filter(x=>x.acorrigir+x.novas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');aviso('Alunos responderam no GitHub. '+t+'. Abra a aba Correção.')}}catch{}}
+async function telaCorr(alvo){
+  alvo.append(h('p',{},'Buscando as respostas dos alunos no GitHub…'));delete alvo.dataset.sujo;alvo.onchange=()=>{alvo.dataset.sujo='1'};
+  let P;try{P=await postA({acao:'ativ_painel',atualizar:CORR_FORCAR});CORR_FORCAR=false}catch(e){alvo.textContent='';alvo.append(h('p',{class:'sub'},'Não consegui buscar agora: '+e.message));return}
+  alvo.textContent='';const R=P.resumo;const V=vistos();const visiveis=P.duvidas.filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]);
+  atualizaBadge(R.acorrigir+R.novas+visiveis.length);try{sessionStorage.setItem('liga_corr_n',String(BADGE))}catch{}
+  const chip=(n,t)=>h('div',{},h('b',{},String(n)),h('span',{},t));
+  alvo.append(h('p',{class:'sub'},'Tudo o que os alunos devolveram no GitHub, por atividade. Ao lado do nome: o estado e o prazo (adiantado, no prazo, atrasado). A tela se atualiza sozinha.'),
+    h('div',{class:'chips'},chip(R.acorrigir,'A corrigir'),chip(R.novas,'Novas mensagens'),chip(R.semresposta,'Sem resposta'),chip(visiveis.length,'Dúvidas avulsas')));
+  const ver=h('select',{},h('option',{value:'at'},'Só o que precisa de atenção'),h('option',{value:'tudo'},'Mostrar todos os alunos'));ver.value=ls.get('liga_corr_ver','at');ver.addEventListener('change',()=>{ls.set('liga_corr_ver',ver.value);alvo.textContent='';telaCorr(alvo)});
+  const atu=h('button',{class:'btn sec',type:'button',onclick:()=>{CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}},'Atualizar agora');
+  alvo.append(h('div',{class:'barra'},atu,ver,h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm)),ajuda('aba_corr')));
+  window.ATV_OPEN=window.ATV_OPEN||new Set();
+  if(!P.atividades.length)alvo.append(h('p',{},'Nenhuma atividade liberada nesta turma ainda. Libere uma na aba Atividades.'));
+  const ordem={acorrigir:0,novamsg:1,semresposta:2,corrigida:3,dispensado:4,semissue:5,erro:6};
+  for(const a of [...P.atividades].sort((x,y)=>(x.prazo||'').localeCompare(y.prazo||''))){
+    const cont=st=>Object.values(a.linhas).filter(l=>l.status===st).length;
+    const det=h('details',{class:'ag'});const key='c:'+a.id;
+    const mx=a.notaMax,pas=mx>10?1:0.5;
+    det.append(h('summary',{},h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),cont('acorrigir')?h('span',{class:'st acorrigir'},cont('acorrigir')+' a corrigir'):'',cont('novamsg')?h('span',{class:'st novamsg'},cont('novamsg')+' nova(s) msg'):'',h('span',{class:'cnt'},'prazo '+fmtD(a.prazo)+' · '+cont('corrigida')+' corrigida(s) · '+cont('semresposta')+' sem resposta')));
+    det.open=ATV_OPEN.has(key)||(cont('acorrigir')+cont('novamsg')>0&&!ATV_OPEN.has('x:'+key));
+    det.addEventListener('toggle',()=>{if(det.open)ATV_OPEN.add(key);else{ATV_OPEN.delete(key);ATV_OPEN.add('x:'+key)}});
+    const ks=ord(Object.keys(a.linhas)).sort((x,y)=>(ordem[a.linhas[x].status]-ordem[a.linhas[y].status]));
+    let mostrou=0;
+    for(const k of ks){const l=a.linhas[k];if(ver.value==='at'&&!['acorrigir','novamsg','semresposta','erro'].includes(l.status))continue;mostrou++;
+      const e=a.entregas[k]||{};
+      const rot={acorrigir:'A corrigir',novamsg:'Nova mensagem',corrigida:'Corrigida'+(e.nota!==undefined?' · '+e.nota+'/'+mx:''),semresposta:'Sem resposta',dispensado:'Dispensado',semissue:'Sem Issue',erro:'Não consegui ler o GitHub'}[l.status];
+      const linha=h('div',{class:'cr'},h('div',{class:'t',style:'min-width:200px'},quem(k),h('span',{class:'st '+l.status},rot),a.prazo&&l.status!=='dispensado'&&l.status!=='semissue'?pz(a.prazo,l.respondeu?l.quando:null):''));
+      if(l.respondeu){
+        const sug=a.prazo&&new Date(l.quando).getTime()>new Date(a.prazo).getTime()?'atraso':'prazo';
+        const est=h('select',{},...[['prazo','No prazo'],['atraso','Atrasada'],['nao','Não entregou'],['dispensado','Dispensado']].map(([v,t])=>h('option',{value:v},t)));est.value=(e.estado&&e.estado!=='nao')?e.estado:sug;
+        const ops=[['','Sem nota (vale 100%)']];for(let v=mx;v>=0;v-=pas)ops.push([String(v),v+' de '+mx]);
+        const nota=h('select',{style:'width:170px'},...ops.map(([v,t])=>h('option',{value:v},t)));nota.value=e.nota===undefined||e.nota===null?'':String(e.nota);
+        const sv=h('button',{class:'btn',type:'button',onclick:async()=>{sv.disabled=true;try{await postA({acao:'ativ_nota',id:a.id,aluno:k,estado:est.value,nota:nota.value});aviso('Salvo: '+rot2(k)+'.');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);sv.disabled=false}}},l.status==='acorrigir'?'Salvar correção':'Salvar');
+        linha.append(est,nota,sv,ajuda('corr_estado'));
+        linha.append(h('div',{class:'prev'},'Respondeu em '+fmtD(l.quando)+(l.comentarios>1?' · '+l.comentarios+' comentários (última em '+fmtD(l.ultima)+')':'')+(l.pergunta?' · ❓ tem pergunta':'')+': “'+l.previa+'” ',h('a',{href:l.status==='novamsg'?l.urlUltima:l.url,target:'_blank',rel:'noopener'},l.status==='novamsg'?'Abrir a nova mensagem':'Abrir resposta no GitHub')))}
+      else if(l.issue&&l.url)linha.append(h('div',{class:'prev'},h('a',{href:l.url,target:'_blank',rel:'noopener'},'Abrir Issue'),l.erro?' · ⚠ '+l.erro:''));
+      det.append(linha)}
+    if(!mostrou)det.append(h('p',{class:'sub',style:'padding:10px 6px'},ver.value==='at'?'Nada pendente nesta atividade. Mude o filtro para ver todos.':'Nenhum aluno nesta atividade.'));
+    alvo.append(det)}
+  // dúvidas avulsas: Issues que o próprio aluno abriu no repositório dele
+  const dd=h('details',{class:'ag'});dd.append(h('summary',{},h('span',{},'Dúvidas e mensagens avulsas'),visiveis.length?h('span',{class:'st novamsg'},visiveis.length+' nova(s)'):'',h('span',{class:'cnt'},P.duvidas.length+' aberta(s) no GitHub')));
+  dd.open=visiveis.length>0&&!ATV_OPEN.has('x:duv');dd.addEventListener('toggle',()=>{if(!dd.open)ATV_OPEN.add('x:duv')});
+  const lista=ver.value==='at'?visiveis:P.duvidas;
+  if(!lista.length)dd.append(h('p',{class:'sub',style:'padding:10px 6px'},'Nenhuma dúvida avulsa aberta pelos alunos.'));
+  for(const d of lista){const chave=d.usuario+'#'+d.numero+'@'+d.atualizado;const visto=!!V[chave];
+    dd.append(h('div',{class:'cr'},h('div',{class:'t',style:'min-width:200px'},quem(d.usuario),h('span',{class:'st '+(visto?'corrigida':'novamsg')},visto?'Vista':'Dúvida')),h('span',{},d.titulo),
+      h('div',{class:'prev'},'Aberta em '+fmtD(d.quando)+' · atualizada em '+fmtD(d.atualizado)+' · '+d.comentarios+' comentário(s) ',h('a',{href:d.url,target:'_blank',rel:'noopener'},'Abrir no GitHub'),' · ',
+        h('button',{class:'btn sec',type:'button',onclick:()=>{const v=vistos();if(visto)delete v[chave];else v[chave]=1;ls.set('liga_corr_visto',JSON.stringify(v));alvo.textContent='';telaCorr(alvo)}},visto?'Marcar como não vista':'Marcar como vista'))))}
+  alvo.append(dd);
+  clearTimeout(telaCorr.t);telaCorr.t=setTimeout(()=>{if(ABA==='corr'&&!document.hidden&&document.body.contains(alvo)&&!alvo.dataset.sujo){alvo.textContent='';telaCorr(alvo)}},120000);
+  function rot2(k){return ((CTX.nomes||{})[k])||k}}
 function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba());
-  if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='ent')c.append(telaEntregas());else if(ABA==='ativ'){const d=h('div');c.append(d);telaAtiv(d)}else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
+  if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='ent')c.append(telaEntregas());else if(ABA==='ativ'){const d=h('div');c.append(d);telaAtiv(d)}else if(ABA==='corr'){const d=h('div');c.append(d);telaCorr(d)}else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
 (async()=>{
   const r=await fetch('/api/presenca?acao=contexto');
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}
   if(r.status===403){$('corpo').innerHTML='<p>Você não tem permissão para fazer chamadas. Peça a um owner a permissão <b>Presença</b> (equipe) ou a liberação da sua aula (monitor).</p>';return}
   CTX=await r.json();CTX.roster=ord(CTX.roster);if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;{const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA))TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0]}
-  {const hs=location.hash.slice(1);if(['chamada','part','ent','ativ','rank','hist'].includes(hs))ABA=hs}
+  {const hs=location.hash.slice(1);if(['chamada','part','ent','ativ','corr','rank','hist'].includes(hs))ABA=hs}
   // aba reaproveitada pelo Painel (Aulas e materiais): atualiza turma, aula e aba sem recarregar
   addEventListener('storage',e=>{if(e.key==='liga_turma'||e.key==='liga_aula'){TURMA=ls.get('liga_turma',TURMA);CHAVE=ls.get('liga_aula',CHAVE);N=1;carregarSessao().then(desenhar)}});
-  addEventListener('hashchange',()=>{const hs=location.hash.slice(1);if(['chamada','part','ent','ativ','rank','hist'].includes(hs)){ABA=hs;desenhar()}});
-  await carregarSessao();desenhar()})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
+  addEventListener('hashchange',()=>{const hs=location.hash.slice(1);if(['chamada','part','ent','ativ','corr','rank','hist'].includes(hs)){ABA=hs;desenhar()}});
+  await carregarSessao();desenhar();checaCorr(true);setInterval(()=>{if(!document.hidden)checaCorr(false)},120000)})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 <script src="/voltar.js"></script></body></html>

@@ -67,6 +67,12 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
+      if (q.acao === 'correcao_resumo') { // aviso na plataforma: quantas respostas dos alunos esperam correção, por turma
+        const out = []; let falhou = false;
+        for (const [id, t] of Object.entries(turmasVisiveis)) { if (t.status === 'arquivada') continue;
+          try { const p = await A.painel(id, alunosDe(id)); if (p.atividades.length) out.push({ turma: id, nome: t.nome, ...p.resumo }); } catch { falhou = true; } }
+        return u.json(res, 200, { turmas: out, acorrigir: out.reduce((n, x) => n + x.acorrigir + x.novas, 0), duvidas: out.reduce((n, x) => n + x.duvidas, 0), falhou });
+      }
       if (q.acao === 'atividades') {
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         return u.json(res, 200, { turma: q.turma, roster: alunosDe(q.turma), atividades: await A.listar(q.turma) });

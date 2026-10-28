@@ -461,4 +461,11 @@ async function carregar(){
   const pm=D.permissoes||[],ver=(id,ok)=>{const e=$(id);if(e)e.hidden=!ok};
   const soFerr=!D.dono&&!pm.includes('pessoas')&&!pm.includes('aulas');ver('f-site',!soFerr&&(D.dono||pm.includes('site')));ver('f-pres',!soFerr&&(D.dono||pm.includes('presenca')||D.papel==='monitor'));ver('f-ed',!soFerr&&!!D.editor);ver('f-wiki',!soFerr&&!D.dono&&['owner','monitor','equipe'].includes(D.papel));
   mostrar(ABA||location.hash.slice(1)||(()=>{try{return localStorage.getItem('liga_admin_aba')}catch{return ''}})()||'pessoas')}
-carregar();
+// aviso: respostas dos alunos no GitHub esperando correção (só para quem usa a Presença)
+async function avisoCorrecao(){
+  if(typeof D==='undefined'||!D||!(D.dono||(D.permissoes||[]).includes('presenca')||D.papel==='monitor'))return;
+  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();const n=c.acorrigir+c.duvidas;if(n<=0)return;
+    const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
+    const b=h('a',{href:'/presenca#corr',target:'liga-presenca',id:'aviso-corr',style:'display:block;text-decoration:none;color:inherit;background:#f5b83d22;border:1px solid var(--ouro);border-left:6px solid var(--ouro);border-radius:12px;padding:12px 16px;margin:12px 0'},h('b',{},'Alunos responderam no GitHub: '+n+' item(ns) esperando você'),h('div',{class:'sub'},t+'. Abrir a Correção →'));
+    $('abas').before(b);const f=$('f-pres');if(f&&!f.hidden)f.textContent='Presença e atividades ('+n+')'}catch{}}
+carregar().then(avisoCorrecao);
