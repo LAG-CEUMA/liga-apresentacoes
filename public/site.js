@@ -10,3 +10,13 @@ window.LIGA_SITE.then(d=>{
   for(const r of d.redes||[]){const a=document.createElement('a');a.className='rede';a.href=r.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=r.nome;f.append(a)}
   main.append(f);
 });
+
+// Contador da cota do GitHub (só aparece para owners): saldo da hora, quando renova, e cores de alerta.
+window.ligaCota=function(onde){
+  if(!onde||onde.dataset.cota)return;onde.dataset.cota='1';
+  const c=document.createElement('span');c.className='cota';c.title='Consultas ao GitHub restantes nesta hora (limite de 5.000 para o portal inteiro). O portal economiza sozinho quando a cota está baixa.';c.textContent='GitHub: …';onde.append(c);
+  async function ler(){if(document.hidden)return;try{const r=await fetch('/api/presenca?acao=cota');if(!r.ok){c.hidden=true;return}const d=await r.json();if(d.restante===null){c.textContent='GitHub: sem leitura ainda';return}
+    const pc=d.restante/d.limite;const h=d.renova?new Date(d.renova).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    c.textContent='GitHub: '+d.restante.toLocaleString('pt-BR')+' / '+d.limite.toLocaleString('pt-BR')+' restantes'+(h?' · renova '+h:'');
+    c.style.cssText='display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;border:1px solid;'+(pc<0.1?'color:#ff8a8a;border-color:#ff5d5d;background:#ff5d5d22':pc<0.3?'color:#f7b93e;border-color:#f7b93e;background:#f7b93e22':'color:#7fe0a0;border-color:#2ecc7188')}catch{c.hidden=true}}
+  ler();setInterval(ler,90000)};

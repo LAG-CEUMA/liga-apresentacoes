@@ -67,7 +67,12 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
-      if (q.acao === 'correcao_resumo') { // aviso na plataforma: quantas respostas dos alunos esperam correção, por turma
+      if (q.acao === 'cota') { // contador de consultas do GitHub: só owners
+        if (u.papel(cfg, usuario) !== 'owner') return u.json(res, 403, { erro: 'Só owners veem a cota.' });
+        return u.json(res, 200, await u.cotaGitHub());
+      }
+      if (q.acao === 'correcao_resumo') {
+        if (u.cotaBaixa(800)) return u.json(res, 200, { turmas: [], acorrigir: 0, revisadas: 0, duvidas: 0, falhou: false, economia: true }); // aviso na plataforma: quantas respostas dos alunos esperam correção, por turma
         const out = []; let falhou = false;
         for (const [id, t] of Object.entries(turmasVisiveis)) { if (t.status === 'arquivada') continue;
           try { const p = await A.painel(id, alunosDe(id)); if (p.atividades.length) out.push({ turma: id, nome: t.nome, ...p.resumo, duv: p.duvidas.map((x) => ({ usuario: x.usuario, numero: x.numero, atualizado: x.atualizado })) }); } catch { falhou = true; } }

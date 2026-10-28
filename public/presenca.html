@@ -32,7 +32,7 @@ table.acomp td.cel,table.acomp th.col{text-align:center}table.acomp th.col small
 </style>
 </head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag" data-site="tag">CHAMADA E PRESENÇA</p><h1>Presença</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a></div></div>
+<div class="topo"><div><p class="tag" data-site="tag">CHAMADA E PRESENÇA</p><h1>Presença</h1></div><div class="acoes"><span id="cota-host"></span><a class="btn sec" href="/">&larr; Início</a></div></div>
 <p>Faça a chamada em <b>2 momentos</b> da aula: <b>Início</b> e <b>Fim</b>. O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.</p>
 <div id="corpo"><p>Carregando…</p></div>
 </main><div id="msg" class="msg" hidden></div>
@@ -321,7 +321,7 @@ async function telaAcomp(alvo){
     tb.append(row,ficha)}
   if(!vis.length)tb.append(h('tr',{},h('td',{colspan:String(2+ativs.length),class:'sub'},'Nenhum aluno neste filtro.')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela acomp'},h('thead',{},th),tb)),h('p',{class:'sub'},'Sumido: tem atividade vencida e nunca respondeu, ou está há '+DIAS_ALERTA+' dias ou mais sem responder nada. Dica: passe o mouse sobre uma bolinha para ver o detalhe.'));
-  clearTimeout(telaAcomp.t);telaAcomp.t=setTimeout(()=>{if(ABA==='acomp'&&!document.hidden&&document.body.contains(alvo)&&!document.querySelector('tr.ficha:not([hidden])')){alvo.textContent='';telaAcomp(alvo)}},120000)}
+  clearTimeout(telaAcomp.t);telaAcomp.t=setTimeout(()=>{if(ABA==='acomp'&&!document.hidden&&document.body.contains(alvo)&&!document.querySelector('tr.ficha:not([hidden])')){alvo.textContent='';telaAcomp(alvo)}},300000)}
 function fichaAcomp(k,I,ativs,R,P){
   const box=h('div',{class:'fichabox'});
   box.append(h('div',{class:'barra'},h('b',{},'Ficha de '),quem(k),ajuda('acomp_ficha'),h('span',{class:'sub'},I.ultima?'Última resposta: '+fmtD(I.ultima)+' ('+(I.dias===0?'hoje':I.dias+' dia(s) atrás')+')':'Ainda não respondeu nada no GitHub')));
@@ -413,7 +413,7 @@ async function telaCorr(alvo){
       h('div',{class:'prev'},'Aberta em '+fmtD(d.quando)+' · atualizada em '+fmtD(d.atualizado)+' · '+d.comentarios+' comentário(s) ',h('a',{href:d.url,target:'_blank',rel:'noopener'},'Abrir no GitHub'),' · ',
         h('button',{class:'btn sec',type:'button',onclick:()=>{const v=vistos();if(visto)delete v[chave];else v[chave]=1;ls.set('liga_corr_visto',JSON.stringify(v));alvo.textContent='';telaCorr(alvo)}},visto?'Marcar como não vista':'Marcar como vista'))))}
   alvo.append(dd);
-  clearTimeout(telaCorr.t);telaCorr.t=setTimeout(()=>{if(ABA==='corr'&&!document.hidden&&document.body.contains(alvo)&&!alvo.dataset.sujo){alvo.textContent='';telaCorr(alvo)}},120000);
+  clearTimeout(telaCorr.t);telaCorr.t=setTimeout(()=>{if(ABA==='corr'&&!document.hidden&&document.body.contains(alvo)&&!alvo.dataset.sujo){alvo.textContent='';telaCorr(alvo)}},300000);
   function rot2(k){return ((CTX.nomes||{})[k])||k}}
 function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba());
   if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='acomp'){const d=h('div');c.append(d);telaAcomp(d)}else if(ABA==='ativ'){const d=h('div');c.append(d);telaAtiv(d)}else if(ABA==='corr'){const d=h('div');c.append(d);telaCorr(d)}else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
@@ -426,6 +426,6 @@ function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba
   // aba reaproveitada pelo Painel (Aulas e materiais): atualiza turma, aula e aba sem recarregar
   addEventListener('storage',e=>{if(e.key==='liga_turma'||e.key==='liga_aula'){TURMA=ls.get('liga_turma',TURMA);CHAVE=ls.get('liga_aula',CHAVE);N=1;carregarSessao().then(desenhar)}});
   addEventListener('hashchange',()=>{const hs=location.hash.slice(1);if(['chamada','part','ativ','corr','acomp','rank','hist'].includes(hs)){ABA=hs;desenhar()}});
-  await carregarSessao();desenhar();checaCorr(true);setInterval(()=>{if(!document.hidden)checaCorr(false)},120000)})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
+  await carregarSessao();desenhar();if(CTX&&CTX.dono&&window.ligaCota)ligaCota($('cota-host'));checaCorr(true);setInterval(()=>{if(!document.hidden)checaCorr(false)},300000)})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 <script src="/voltar.js"></script></body></html>
