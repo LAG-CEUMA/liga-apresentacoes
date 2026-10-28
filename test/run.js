@@ -310,7 +310,8 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await getp({ acao: 'contexto' }, null)).status, 401);
   assert.equal((await getp({ acao: 'contexto' }, 'alu1')).status, 403);
   assert.equal((await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 1, estados: {} }, 'alu1')).status, 403);
-  r = JSON.parse((await getp({ acao: 'contexto' }, 'dono')).body); assert.equal(r.aulas.length, 3); assert.deepEqual(r.roster, ['alu1', 'alu2', 'alu3']);
+  r = JSON.parse((await getp({ acao: 'contexto' }, 'dono')).body); assert.equal(r.aulas.length, 3); assert.deepEqual(r.roster, ['alu1', 'alu2', 'alu3']); assert.equal(r.dono, true);
+  assert.equal(JSON.parse((await getp({ acao: 'contexto' }, 'pres')).body).dono, false); // permissão de Presença não é owner: não vê o botão do Claude
   await require('../lib/pendentes').salvar({ usuario: 'alu1', nome: 'Aluno Um da Silva', email: 'a1@ceuma.com.br' }, 'teste'); { const cx = await getp({ acao: 'contexto' }, 'dono'); assert.equal(JSON.parse(cx.body).nomes.alu1, 'Aluno Um da Silva'); assert(!cx.body.includes('a1@ceuma.com.br'), 'o e-mail não pode sair no contexto da Presença'); assert.equal(JSON.parse(cx.body).nomes.alu2, undefined); } // nome completo na Presença, sem e-mail
   r = JSON.parse((await getp({ acao: 'contexto' }, 'mon2')).body); assert.deepEqual(r.aulas.map((a) => a.chave), [CH(3)]); // monitor só da aula concedida
   assert.equal((await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 1, estados: {} }, 'mon2')).status, 400);
