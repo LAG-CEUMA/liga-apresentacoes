@@ -40,6 +40,8 @@ table.acomp th{position:sticky;top:0;z-index:4}table.acomp th:first-child{z-inde
 <script src="/site.js"></script><script src="/ajuda.js"></script>
 <script>
 window.AJUDA={
+acomp_extras:{t:'Ordem, lembrete e planilha',l:['Ordem: muda a ordem dos alunos (alfabética, mais pendências, mais entregas ou maior média). Fica salva neste navegador.','Copiar lembrete dos pendentes: monta um texto pronto com as atividades vencidas e os nomes de quem falta, para você colar no grupo. O portal não envia nada sozinho.','Planilha (Excel): baixa um arquivo CSV com todos os alunos e o estado de cada atividade.','Média: soma das notas já dadas dividida pela soma das notas máximas dessas atividades. Atividades ainda sem nota não entram.','Novo: o aluno respondeu nas últimas 24 horas.']},
+acomp_imagem:{t:'Imagem para o WhatsApp',l:['Cria uma imagem do quadro de entregas da turma, pronta para colar no grupo e estimular os alunos.','Motivacional: mostra o progresso da turma, os destaques e quem entregou, sem usar vermelho. Quem ainda não entregou aparece com um círculo vazio (dá tempo!). Completo: mostra também as atividades vencidas em vermelho e quantas faltam.','Por padrão aparece só o primeiro nome e a inicial do sobrenome. Marque Nome completo se quiser o nome todo.','Copiar imagem coloca a figura na área de transferência: abra o WhatsApp Web e cole com Ctrl+V. Se o navegador não permitir, use Baixar PNG e envie o arquivo.','Os números são os de agora, vindos do GitHub. Clique em Atualizar agora antes, se quiser o dado mais recente.']},
 aba_acomp:{t:'Acompanhamento',l:['Quadro para acompanhar a turma inteira: uma linha por aluno e uma coluna por atividade. É só leitura: aqui você olha, e para dar nota usa a aba Correção.','Os dados vêm sozinhos das Atividades e do GitHub, então não há nada para digitar nem botão de salvar. A tela se atualiza sozinha.','Clique no nome de um aluno para abrir a ficha dele (pontos, situação em cada atividade e lembrete pronto). Clique numa bolinha para abrir um menu: ver a resposta no GitHub, ir corrigir aquela atividade ou abrir a ficha do aluno. Clique no código de uma atividade (cabeçalho da coluna) para abrir essa atividade na aba Correção.','Os números coloridos no alto são atalhos: clique para filtrar só aquele grupo.']},
 acomp_legenda:{t:'Legenda das cores',l:['Verde ✓: entregou no prazo (ou adiantado) e já está corrigido.','Azul …: entregou e aguarda a sua correção. Nunca é vermelho: se a correção demora, o aluno não é prejudicado.','Amarelo !: entregou e foi corrigido, mas depois do prazo (vale 50%).','Vermelho ✕: o prazo já passou e não há resposta.','Cinza ·: ainda está dentro do prazo, sem resposta.','Traço –: dispensado ou a atividade não é para este aluno.','O símbolo ✉ pequeno na bolinha significa que o aluno escreveu de novo depois da correção.']},
 acomp_filtro:{t:'Filtros e alertas',l:['Com pendência: tem ao menos uma atividade com prazo vencido e sem entrega (opcionais não contam).','Entregas atrasadas: respondeu depois do prazo em alguma atividade.','Aguardando correção: entregou e você ainda não deu a nota.','Sumido (alerta): tem atividade vencida e nunca respondeu nada, ou está há 14 dias ou mais sem responder qualquer coisa. Serve para você procurar o aluno antes que ele desista.']},
@@ -295,34 +297,40 @@ async function telaAcomp(alvo){
       if(!a.opcional)I.tot++;if(['verde','amar','azul'].includes(c.c)&&!a.opcional)I.ent++;if(c.c==='verm'&&!a.opcional)I.verm++;if(c.c==='amar'||c.atraso)I.atr++;if(c.c==='azul')I.agu++;
       const u2=l.ultima||l.quando;if(u2&&(!I.ultima||u2>I.ultima))I.ultima=u2}
     for(const d of P.duvidas)if(d.usuario===k&&d.atualizado&&(!I.ultima||d.atualizado>I.ultima))I.ultima=d.atualizado;
+    {let sn=0,sm=0;for(const a of ativs){const e=a.entregas[k]||{};if(a.opcional||typeof e.nota!=='number'||!a.notaMax)continue;sn+=e.nota;sm+=a.notaMax}I.media=sm?Math.round(100*sn/sm):null}
     I.dias=I.ultima?Math.floor((Date.now()-new Date(I.ultima).getTime())/864e5):null;
-    I.sumido=I.verm>0&&(I.ent===0||(I.dias!==null&&I.dias>=DIAS_ALERTA));I.pend=I.verm>0;info[k]=I}
-  const lista=ord([...alunos]);
+    I.novo=I.ultima&&Date.now()-new Date(I.ultima).getTime()<864e5;I.sumido=I.verm>0&&(I.ent===0||(I.dias!==null&&I.dias>=DIAS_ALERTA));I.pend=I.verm>0;info[k]=I}
+  let lista=ord([...alunos].filter(k=>!RK||!RK.ranking||!RK.ranking.length||rk[k]));
+  const ordens={nome:['Ordem alfabética',null],pend:['Mais pendências primeiro',(a,b)=>info[b].verm-info[a].verm],ent:['Mais entregas primeiro',(a,b)=>info[b].ent-info[a].ent],med:['Maior média primeiro',(a,b)=>(info[b].media??-1)-(info[a].media??-1)]};
+  const osel=h('select',{title:'Ordem dos alunos na tabela'},...Object.entries(ordens).map(([v,[t]])=>h('option',{value:v},t)));osel.value=ls.get('liga_acomp_o','nome');if(!ordens[osel.value])osel.value='nome';
+  if(ordens[osel.value][1])lista=[...lista].sort(ordens[osel.value][1]);
   const cont=f=>lista.filter(k=>f(info[k])).length;
   const filtros={todos:['Todos os alunos',()=>true],pend:['Com pendência (prazo vencido)',i=>i.pend],atr:['Com entrega atrasada',i=>i.atr>0],agu:['Aguardando minha correção',i=>i.agu>0],sumido:['Sumidos (alerta)',i=>i.sumido],ok:['Em dia',i=>!i.pend]};
   const fsel=h('select',{},...Object.entries(filtros).map(([v,[t]])=>h('option',{value:v},t)));fsel.value=ls.get('liga_acomp_f','todos');if(!filtros[fsel.value])fsel.value='todos';
-  const refaz=()=>{ls.set('liga_acomp_f',fsel.value);alvo.textContent='';telaAcomp(alvo)};fsel.addEventListener('change',refaz);
+  const refaz=()=>{ls.set('liga_acomp_f',fsel.value);alvo.textContent='';telaAcomp(alvo)};fsel.addEventListener('change',refaz);osel.addEventListener('change',()=>{ls.set('liga_acomp_o',osel.value);refaz()});
   const chip=(n,t,f)=>h('div',{class:'clic',role:'button',tabindex:'0',title:'Clique para filtrar',onclick:()=>{fsel.value=f;refaz()}},h('b',{},String(n)),h('span',{},t));
   alvo.append(h('p',{class:'sub'},'Quadro de acompanhamento da turma: uma linha por aluno, uma coluna por atividade. Aqui você só olha; para dar nota, use a aba Correção. Clique no nome do aluno para abrir a ficha dele.'),
     h('div',{class:'chips'},chip(cont(i=>!i.pend),'Em dia','ok'),chip(cont(i=>i.pend),'Com pendência','pend'),chip(cont(i=>i.atr>0),'Entregas atrasadas','atr'),chip(cont(i=>i.agu>0),'Aguardando correção','agu'),chip(cont(i=>i.sumido),'Sumidos (alerta)','sumido')),
     legendaAcomp(),
-    h('div',{class:'barra livre'},h('button',{class:'btn sec',type:'button',onclick:()=>{ACOMP_FORCAR=true;refaz()}},'Atualizar agora'),fsel,ajuda('acomp_filtro'),h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm))));
+    h('div',{class:'barra livre'},h('button',{class:'btn sec',type:'button',onclick:()=>{ACOMP_FORCAR=true;refaz()}},'Atualizar agora'),fsel,ajuda('acomp_filtro'),h('button',{class:'btn',type:'button',title:'Cria uma imagem do quadro da turma para copiar e colar no WhatsApp',onclick:()=>janelaImagem({lista,info,ativs,rk,P})},'📸 Imagem para o WhatsApp'),ajuda('acomp_imagem'),h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm))),
+    h('div',{class:'barra livre'},h('span',{class:'sub'},'Ordem:'),osel,h('button',{class:'btn sec',type:'button',title:'Copia um texto pronto, com os nomes de quem tem atividade vencida, para colar no grupo. O portal não envia nada sozinho.',onclick:async()=>{const pe=lista.filter(k=>info[k].pend);if(!pe.length){aviso('Ninguém com pendência agora. 🎉');return}const ok=await copiarTexto(lembreteTurma(pe,info,ativs));aviso(ok?'Lembrete copiado. Cole (Ctrl+V) no grupo do WhatsApp.':'Não consegui copiar.',!ok)}},'📝 Copiar lembrete dos pendentes'),h('button',{class:'btn sec',type:'button',title:'Baixa uma planilha (CSV) que abre no Excel',onclick:()=>baixaCSV(lista,info,ativs)},'⬇ Planilha (Excel)'),ajuda('acomp_extras')));
   if(!ativs.length){alvo.append(h('p',{},'Nenhuma atividade liberada nesta turma ainda. Libere uma na aba Atividades.'));return}
   const f=filtros[fsel.value][1];const vis=lista.filter(k=>f(info[k]));
-  const th=h('tr',{},h('th',{},'Aluno'),h('th',{title:'Entregues / total (sem contar as opcionais)'},'Entregas'),...ativs.map(a=>h('th',{class:'col',style:'cursor:pointer',title:(a.codigo?a.codigo+' · ':'')+a.titulo+' · prazo '+fmtD(a.prazo)+' — clique para abrir esta atividade na Correção',onclick:()=>irCorrecao(a.id)},(a.codigo||a.titulo).slice(0,10),h('small',{},a.prazo?new Date(a.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''))));
+  const th=h('tr',{},h('th',{},'Aluno'),h('th',{title:'Entregues / total (sem contar as opcionais)'},'Entregas'),h('th',{title:'Média das notas já dadas (nota recebida ÷ nota máxima)'},'Média'),...ativs.map(a=>h('th',{class:'col',style:'cursor:pointer',title:(a.codigo?a.codigo+' · ':'')+a.titulo+' · prazo '+fmtD(a.prazo)+' — clique para abrir esta atividade na Correção',onclick:()=>irCorrecao(a.id)},(a.codigo||a.titulo).slice(0,10),h('small',{},a.prazo?new Date(a.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''))));
   const tb=h('tbody',{});
   for(const k of vis){const I=info[k];
-    const ficha=h('tr',{class:'ficha',hidden:true},h('td',{colspan:String(2+ativs.length)},fichaAcomp(k,I,ativs,rk[k],P)));
+    const ficha=h('tr',{class:'ficha',hidden:true},h('td',{colspan:String(3+ativs.length)},fichaAcomp(k,I,ativs,rk[k],P)));
     const nome=h('a',{href:'#',class:'nm',title:'Abrir a ficha do aluno',onclick:ev=>{ev.preventDefault();ficha.hidden=!ficha.hidden}},quem(k));
-    const marcas=h('span',{class:'mk'},I.sumido?h('span',{class:'st verm',title:'Pendências e sem responder há '+(I.ent===0?'nenhuma resposta nunca':I.dias+' dias')},'sumido'):'',I.agu?h('span',{class:'st azul',title:I.agu+' aguardando sua correção'},I.agu+' a corrigir'):'');
-    const row=h('tr',{},h('td',{class:'sticky'},nome,marcas),h('td',{class:'nent'},I.ent+'/'+I.tot+(I.verm?' · '+I.verm+' venc.':'')),...ativs.map(a=>{const l=a.linhas[k];if(!l)return h('td',{class:'cel'},h('i',{class:'dot traco',title:'Não é para este aluno'},'–'));const c=I.cels[a.id];
+    const marcas=h('span',{class:'mk'},I.sumido?h('span',{class:'st verm',title:'Pendências e sem responder há '+(I.ent===0?'nenhuma resposta nunca':I.dias+' dias')},'sumido'):'',I.novo?h('span',{class:'st verde',title:'Respondeu nas últimas 24 horas'},'novo'):'',I.agu?h('span',{class:'st azul',title:I.agu+' aguardando sua correção'},I.agu+' a corrigir'):'');
+    const row=h('tr',{},h('td',{class:'sticky'},nome,marcas),h('td',{class:'nent'},I.ent+'/'+I.tot+(I.verm?' · '+I.verm+' venc.':'')),h('td',{class:'nent',title:'Média das notas já dadas'},I.media===null?'–':I.media+'%'),...ativs.map(a=>{const l=a.linhas[k];if(!l)return h('td',{class:'cel'},h('i',{class:'dot traco',title:'Não é para este aluno'},'–'));const c=I.cels[a.id];
       const tip=(a.codigo?a.codigo+' · ':'')+a.titulo+' — '+CEL[c.c][1]+(c.atraso?' (respondeu depois do prazo)':'')+(c.msg?' · tem mensagem nova do aluno':'')+(l.quando?' · respondeu em '+fmtD(l.quando):'');
       const d=h('i',{class:'dot '+c.c,title:tip},CEL[c.c][0],c.msg?h('sup',{},'✉'):'');
       d.style.cursor='pointer';d.addEventListener('click',ev=>{ev.stopPropagation();menuBolinha(ev,a,k,l,c,()=>{const f=row.nextSibling;if(f)f.hidden=false})});
       return h('td',{class:'cel'},d)}));
     tb.append(row,ficha)}
-  if(!vis.length)tb.append(h('tr',{},h('td',{colspan:String(2+ativs.length),class:'sub'},'Nenhum aluno neste filtro.')));
-  alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela acomp'},h('thead',{},th),tb)),h('p',{class:'sub'},'Sumido: tem atividade vencida e nunca respondeu, ou está há '+DIAS_ALERTA+' dias ou mais sem responder nada. Dica: passe o mouse sobre uma bolinha para ver o detalhe.'));
+  if(!vis.length)tb.append(h('tr',{},h('td',{colspan:String(3+ativs.length),class:'sub'},'Nenhum aluno neste filtro.')));
+  alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela acomp'},h('thead',{},th),tb)),h('p',{class:'sub'},'Sumido: tem atividade vencida e nunca respondeu, ou está há '+DIAS_ALERTA+' dias ou mais sem responder nada. Dica: passe o mouse sobre uma bolinha para ver o detalhe.'),
+    h('div',{class:'legenda'},h('b',{},'Lembrete de uso: '),'clique no nome = ficha do aluno · clique na bolinha = abrir resposta ou corrigir · clique no título da coluna = ir para a atividade na Correção · 📸 gera a imagem para o WhatsApp · "novo" = respondeu nas últimas 24 h · Média = só das notas já dadas.'));
   clearTimeout(telaAcomp.t);telaAcomp.t=setTimeout(()=>{if(ABA==='acomp'&&!document.hidden&&document.body.contains(alvo)&&!document.querySelector('tr.ficha:not([hidden])')){alvo.textContent='';telaAcomp(alvo)}},300000)}
 function irCorrecao(id){window.ATV_OPEN=window.ATV_OPEN||new Set();ATV_OPEN.add('c:'+id);ATV_OPEN.delete('x:c:'+id);ABA='corr';try{history.replaceState(null,'','#corr')}catch{}desenhar();setTimeout(()=>{const d=[...document.querySelectorAll('details.ag')].find(x=>x.dataset.id===id);if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}},400)}
 function menuBolinha(ev,a,k,l,c,abrirFicha){
@@ -333,6 +341,83 @@ function menuBolinha(ev,a,k,l,c,abrirFicha){
   m.append(h('button',{class:'btn sec',type:'button',onclick:()=>{m.remove();abrirFicha()}},'Abrir a ficha do aluno'));
   document.body.append(m);const r=ev.currentTarget.getBoundingClientRect();m.style.left=Math.min(innerWidth-250,Math.max(8,r.left-100))+'px';m.style.top=Math.min(innerHeight-170,r.bottom+6)+'px';
   setTimeout(()=>document.addEventListener('click',function f(e){if(!m.contains(e.target)){m.remove()}document.removeEventListener('click',f)},{once:false}),0)}
+
+
+function lembreteTurma(pe,info,ativs){const venc=ativs.filter(a=>!a.opcional&&a.prazo&&Date.now()>new Date(a.prazo).getTime());
+  return 'Oi, pessoal da Liga! 👋 Um lembrete rápido: ainda dá tempo de entregar as atividades abaixo. É só comentar na Issue da atividade, no seu repositório aluno-<usuário>.\n\n'+venc.map(a=>'• '+(a.codigo?a.codigo+' · ':'')+a.titulo+' (prazo '+new Date(a.prazo).toLocaleDateString('pt-BR')+')').join('\n')+'\n\nFaltam entregas de: '+pe.map(k=>nomeCurto(k,false)).join(', ')+'.\nQualquer dúvida, escrevam lá na Issue que eu ajudo. Bora! 🚀'}
+function baixaCSV(lista,info,ativs){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const nm=k=>((CTX&&CTX.nomes)||{})[k]||k;const nomes={verde:'Entregue e corrigida',amar:'Corrigida com atraso',azul:'Aguardando correção',verm:'Sem entrega (vencida)',cinza:'No prazo',traco:'Dispensado'};
+  const l=[['Aluno','Usuário GitHub','Entregas','Total','Média %',...ativs.map(a=>a.codigo||a.titulo)].map(q).join(';')];
+  for(const k of lista){const I=info[k];l.push([nm(k),k,I.ent,I.tot,I.media??'',...ativs.map(a=>I.cels[a.id]?nomes[I.cels[a.id].c]:'')].map(q).join(';'))}
+  const b=new Blob(['﻿'+l.join('\r\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='acompanhamento-'+TURMA+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.append(a);a.click();a.remove()}
+// ---------- Imagem do quadro (para colar no WhatsApp) ----------
+function nomeCurto(k,completo){const n=((CTX&&CTX.nomes)||{})[k];if(!n)return '@'+k;if(completo)return n;const p=n.trim().split(/\s+/);const pri=p[0];const ult=p.length>1?p[p.length-1]:'';return ult&&ult.length>2&&!/^(de|da|do|dos|das|e)$/i.test(ult)?pri+' '+ult[0]+'.':pri}
+function desenhaQuadro(D,op){
+  const {lista,info,ativs,rk}=D;const W=1080,pad=48,linha=46,topo=330;
+  const alvos=ativs.filter(a=>!a.opcional);const cols=ativs;const cw=Math.min(74,Math.floor((W-pad*2-300)/Math.max(1,cols.length)));
+  const motiv=op.modo==='motiv';
+  const alunos=lista.filter(k=>info[k]);
+  const feitas=alunos.reduce((n,k)=>n+info[k].ent,0),total=alunos.reduce((n,k)=>n+info[k].tot,0);
+  const venc=alunos.reduce((n,k)=>n+(info[k].ent+info[k].verm),0);// entregas possíveis até agora
+  const pct=total?Math.round(100*feitas/total):0;
+  const completos=alunos.filter(k=>info[k].tot>0&&info[k].ent===info[k].tot);
+  const destaques=[...alunos].filter(k=>info[k].ent>0).sort((x,y)=>info[y].ent-info[x].ent||((rk[y]&&rk[y].total)||0)-((rk[x]&&rk[x].total)||0)).slice(0,5);
+  const H=topo+alunos.length*linha+170+(destaques.length?60:0);
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  g.fillStyle='#12141c';g.fillRect(0,0,W,H);
+  const grad=g.createLinearGradient(0,0,W,0);grad.addColorStop(0,'#f5b83d');grad.addColorStop(1,'#ff7a45');g.fillStyle=grad;g.fillRect(0,0,W,10);
+  const F=(w,t)=>`${w} ${t}px "DM Sans",system-ui,sans-serif`;
+  g.fillStyle='#f5b83d';g.font=F(700,20);g.fillText('LIGA ACADÊMICA DE GAMES · CEUMA',pad,56);
+  g.fillStyle='#fff';g.font=F(800,44);g.fillText('Quadro de entregas',pad,108);
+  const turmaNome=(CTX&&CTX.turmas&&CTX.turmas[TURMA]&&CTX.turmas[TURMA].nome)||TURMA;
+  g.fillStyle='#aab';g.font=F(500,22);g.fillText(turmaNome+' · '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}),pad,142);
+  // progresso da turma
+  g.fillStyle='#fff';g.font=F(700,26);g.fillText(pct+'% das atividades já foram entregues pela turma',pad,200);
+  g.fillStyle='#262a3a';g.beginPath();g.roundRect(pad,218,W-pad*2,22,11);g.fill();
+  g.fillStyle=grad;g.beginPath();g.roundRect(pad,218,Math.max(22,(W-pad*2)*pct/100),22,11);g.fill();
+  g.fillStyle='#cfd3e6';g.font=F(500,20);
+  g.fillText(feitas+' entregas feitas'+(completos.length?' · '+completos.length+' aluno(s) com tudo em dia':'')+' · cada entrega conta!',pad,274);
+  // cabeçalho das colunas
+  const x0=pad+250;let y=topo-24;
+  g.fillStyle='#8a90a8';g.font=F(700,15);g.textAlign='center';
+  cols.forEach((a,i)=>{g.fillText((a.codigo||a.titulo).replace(/^N0\./,'').slice(0,9),x0+i*cw+cw/2,y);});
+  g.textAlign='left';g.fillText('ALUNO',pad,y);g.textAlign='right';g.fillText('ENTREGAS',W-pad,y);g.textAlign='left';
+  g.strokeStyle='#ffffff22';g.beginPath();g.moveTo(pad,y+10);g.lineTo(W-pad,y+10);g.stroke();
+  const COR={verde:'#2ecc71',amar:'#f7b93e',azul:'#4aa3ff',verm:'#ff5d5d',cinza:'#6b7285'};
+  alunos.forEach((k,r)=>{
+    const yy=topo+r*linha;if(r%2===0){g.fillStyle='#ffffff08';g.fillRect(pad-12,yy-12,W-pad*2+24,linha)}
+    g.fillStyle='#fff';g.font=F(600,22);g.fillText(nomeCurto(k,op.completo),pad,yy+14);
+    cols.forEach((a,i)=>{const c=info[k].cels[a.id];if(!c)return;const cx=x0+i*cw+cw/2,cy=yy+6;let cor=c.c;
+      if(cor==='traco')return;
+      const rotulo={verde:'✓',amar:'!',azul:'…',verm:'✕',cinza:''}[cor];
+      if(cor==='cinza'||(cor==='verm'&&motiv)){g.strokeStyle='#8a90a8';g.lineWidth=2;g.beginPath();g.arc(cx,cy,13,0,7);g.stroke();return}// sem vermelho: só um círculo vazio ("dá tempo")
+      g.fillStyle=COR[cor]||'#6b7285';g.beginPath();g.arc(cx,cy,14,0,7);g.fill();
+      g.fillStyle='#10121a';g.font=F(800,17);g.textAlign='center';g.fillText(rotulo,cx,cy+6);g.textAlign='left'});
+    const I=info[k];g.textAlign='right';g.fillStyle=I.ent===I.tot&&I.tot?'#2ecc71':'#fff';g.font=F(700,22);g.fillText(I.ent+'/'+I.tot,W-pad,yy+14);
+    if(!motiv&&I.verm){g.fillStyle='#ff8a8a';g.font=F(500,14);g.fillText(I.verm+' vencida(s)',W-pad,yy+32)}g.textAlign='left'});
+  // destaques e rodapé
+  let yb=topo+alunos.length*linha+30;
+  if(destaques.length){g.fillStyle='#f5b83d';g.font=F(800,24);g.fillText('⭐ Destaques: '+destaques.map(k=>nomeCurto(k,false)).join(' · '),pad,yb);yb+=48}
+  g.fillStyle='#cfd3e6';g.font=F(500,20);
+  g.fillText(motiv?'Quem ainda não entregou: dá tempo! É só comentar na Issue da atividade no seu repositório.':'Entregue comentando na Issue da atividade, no seu repositório aluno-<usuário>.',pad,yb);
+  g.fillStyle='#8a90a8';g.font=F(500,16);g.fillText('✓ entregue e corrigido   … entregue, aguardando correção   ! entregue com atraso   ○ ainda a entregar',pad,yb+34);
+  return cv}
+function janelaImagem(D){
+  document.querySelectorAll('.pop,.imgjan').forEach(x=>x.remove());
+  const op={modo:ls.get('liga_img_modo','motiv'),completo:ls.get('liga_img_nome','')==='1'};
+  const bg=h('div',{class:'imgjan',style:'position:fixed;inset:0;background:#000c;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px'});
+  const cx=h('div',{style:'background:#171a26;border:1px solid var(--ouro);border-radius:16px;max-width:760px;width:100%;max-height:94vh;overflow:auto;padding:16px'});
+  const prev=h('img',{style:'width:100%;border-radius:10px;border:1px solid #fff2'});
+  const modo=h('select',{},h('option',{value:'motiv'},'Motivacional (sem vermelho, só progresso)'),h('option',{value:'completo'},'Completo (mostra vencidas em vermelho)'));modo.value=op.modo;
+  const nome=h('input',{type:'checkbox'});nome.checked=op.completo;
+  let blob=null;
+  const gera=()=>{op.modo=modo.value;op.completo=nome.checked;ls.set('liga_img_modo',op.modo);ls.set('liga_img_nome',op.completo?'1':'0');const cv=desenhaQuadro(D,op);prev.src=cv.toDataURL('image/png');cv.toBlob(b=>{blob=b},'image/png')};
+  modo.addEventListener('change',gera);nome.addEventListener('change',gera);
+  const copiar=h('button',{class:'btn',type:'button',onclick:async()=>{try{if(!blob)throw 0;await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);aviso('Imagem copiada. Agora é só colar (Ctrl+V) no WhatsApp.')}catch{aviso('Seu navegador não deixou copiar. Use o botão Baixar PNG e envie o arquivo.',1)}}},'📋 Copiar imagem');
+  const baixa=h('a',{class:'btn sec',href:'#',onclick:ev=>{if(!blob){ev.preventDefault();return}baixa.href=URL.createObjectURL(blob);baixa.download='quadro-de-entregas-'+new Date().toISOString().slice(0,10)+'.png'}},'⬇ Baixar PNG');
+  const fecha=h('button',{class:'btn sec',type:'button',onclick:()=>bg.remove()},'Fechar');
+  cx.append(h('div',{class:'barra livre'},h('b',{},'Imagem do quadro de entregas'),h('span',{style:'flex:1'}),fecha),h('p',{class:'sub'},'A imagem usa os dados de agora. No modo Motivacional, quem ainda não entregou aparece com um círculo vazio, nunca em vermelho. Donos do portal e equipe não entram.'),
+    h('div',{class:'barra livre'},modo,h('label',{style:'display:flex;gap:6px;align-items:center'},nome,'Nome completo'),ajuda('acomp_imagem')),prev,h('div',{class:'barra livre'},copiar,baixa));
+  bg.append(cx);bg.addEventListener('click',e=>{if(e.target===bg)bg.remove()});document.body.append(bg);gera()}
 function fichaAcomp(k,I,ativs,R,P){
   const box=h('div',{class:'fichabox'});
   box.append(h('div',{class:'barra'},h('b',{},'Ficha de '),quem(k),ajuda('acomp_ficha'),h('span',{class:'sub'},I.ultima?'Última resposta: '+fmtD(I.ultima)+' ('+(I.dias===0?'hoje':I.dias+' dia(s) atrás')+')':'Ainda não respondeu nada no GitHub')));
