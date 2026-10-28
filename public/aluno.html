@@ -80,10 +80,11 @@ function faixaRepo(C){
 }
 
 // ---------- Copa da Liga (camada divertida; nunca altera o ranking oficial nem as notas) ----------
-let COPA=null;
+let COPA=null,PREV=null,PREVT='';
 async function postCopa(c){const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});let b={};try{b=await r.json()}catch{}return{ok:r.ok,...b}}
 function ateData(c){if(!c.inicio||!c.semana)return '';const d=new Date(new Date(c.inicio+'T00:00:00-03:00').getTime()+7*c.semana*864e5-1);return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}
 function tabCopa(C){
+  if(PREV&&!COPA)return previa(C,'copa');
   const c=COPA,m=c.meu;
   if(!m){C.append(el('p','sub','🏁 A Copa da Liga é o jogo de itens por cima do ranking: você ganha itens por presença, participação e entregas no prazo, joga o dado e atrapalha ou ajuda colegas. Ela só muda pontos da Copa, nunca a sua nota nem o ranking oficial.'));C.append(el('p','',c.foraDoRanking?'Você ainda não está no ranking desta turma.':'🔒 A Copa ainda não foi aberta pela sua turma. Assim que o professor abrir, ela aparece aqui.'));return}const turma=PONT.turmas.find(x=>x.turma===c.turma)||{};const max=turma.pesos?(turma.pesos.presenca+turma.pesos.participacao+turma.pesos.exercicios):100;
   C.append(el('p','sub','A Copa da Liga é a parte divertida: itens ganhos por presença, participação e entregas no prazo mexem só nos pontos da Copa. Seu ranking oficial e suas notas nunca mudam por causa dela.'));
@@ -121,8 +122,29 @@ function tabCopa(C){
   if(c.dado){const tb=el('p','sub','');const nm=(k)=>((c.itens[k]||{}).ic||'')+' '+((c.itens[k]||{}).nome||k);tb.innerHTML='';for(const [k,t] of Object.entries(c.dado)){const f=(a,b)=>a>b?'—':(a===b?a:a+'–'+b);tb.append(document.createTextNode(`${nm(k)}: falha crítica ${f(1,t[0])} · falha ${f(t[0]+1,t[1])} · fraco ${f(t[1]+1,t[2])} · normal ${f(t[2]+1,t[3])} · crítico 10`),document.createElement('br'))}reg.append(tb)}
   reg.append(el('p','sub',`Efeitos duram ${c.diasEfeito} dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
 }
+// Prévia para professor/owner: eles ficam fora do ranking (não são alunos), então não jogam; aqui só enxergam o que o aluno vê.
+async function previa(C,qual){
+  C.append(el('p','sub','👀 Prévia do professor: você não está no ranking de nenhuma turma como aluno, então não joga nem tem kart. Aqui você vê o que os alunos veem. Para jogar de verdade, entre com uma conta de aluno de teste.'));
+  const sel=el('select','');for(const [k,t] of Object.entries(PREV.turmas)){const o=el('option','',t.nome+' ('+k+')');o.value=k;sel.append(o)}sel.value=PREVT;sel.onchange=()=>{PREVT=sel.value;desenhar()};
+  const bar=el('div','');bar.style.cssText='margin:8px 0';bar.append(el('label','','Turma: '),sel);C.append(bar);
+  const corpo=el('div','');C.append(corpo);corpo.append(el('p','sub','Carregando…'));
+  const nome=k=>((PREV.nomes||{})[k])||('@'+k);
+  if(qual==='ranking'){const r=await j('/api/presenca?acao=ranking&turma='+encodeURIComponent(PREVT));corpo.textContent='';
+    if(!r||!r.ranking){corpo.append(el('p','sub','Não consegui carregar o ranking desta turma.'));return}
+    const lista=r.ranking.filter(x=>x.total>0).map(x=>({usuario:x.usuario,pontos:x.total,posicao:x.posicao}));
+    const pod=Corrida.podioPlaces(lista,u=>nome(u));if(pod)corpo.append(pod);else corpo.append(el('p','sub','Ainda ninguém pontuou nesta turma.'));
+    const ol=el('div','pont-top');for(const x of r.ranking.filter(x=>x.posicao>3)){const l=el('div','pont-lin');l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome',nome(x.usuario)),el('span','pont-pts',x.total+' pts'));ol.append(l)}corpo.append(ol);return}
+  const c=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(PREVT));corpo.textContent='';
+  if(!c||c.erro){corpo.append(el('p','sub','Não consegui carregar a Copa desta turma.'));return}
+  if(!c.ativa)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
+  else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio kart',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
+  if(c.placar&&c.placar.length){const nomeP=k=>nome(k);const linhas=c.placar.map(x=>({usuario:x.usuario,pontos:x.copa,posicao:x.posCopa,icones:x.escudo?[{ic:'🛡️',tx:'escudo ativo'}]:[]}));
+    const max=Math.max(100,...c.placar.map(x=>x.copa));corpo.append(Corrida.pista({linhas,max,inicio:c.inicio,fim:c.fim,nome:nomeP,titulo:'COPA DA LIGA'}));
+    const tb=el('div','');for(const x of c.placar){const inv=(c.inventario[x.usuario]||[]).map(i=>(c.itens[i.tipo]||{}).ic||'').join(' ');tb.append(el('p','sub',`${x.posCopa}º ${nome(x.usuario)} · ${x.copa} pts na Copa (oficial ${x.oficial})${x.efeito?` · efeito ${x.efeito>0?'+':''}${x.efeito}`:''} · itens: ${inv||'–'}${x.escudo?' 🛡️':''}`))}corpo.append(tb)}
+}
 function tabRanking(C){
-  const m=PONT;if(!m||!m.turmas.length){C.append(el('p','sub','Você ainda não está em uma turma.'));return}
+  const m=PONT;if(PREV&&(!m||!m.turmas.length))return previa(C,'ranking');
+  if(!m||!m.turmas.length){C.append(el('p','sub','Você ainda não está em uma turma.'));return}
   C.append(el('p','sub','🏆 Ranking oficial da turma: presença + participação + exercícios. Ele não muda com os itens da Copa. Cada degrau do pódio é um lugar; empatados ficam juntos.'));
   for(const t of m.turmas){const s=secao(t.nome+(t.status==='arquivada'?' (encerrada)':''),t.total>0?`você: ${t.posicao}º de ${t.de} · ${t.total} pts`:'ainda sem pontos');s.open=true;
     const lista=(t.top5||[]).map(x=>({usuario:x.usuario,pontos:x.total,posicao:x.posicao}));
@@ -135,7 +157,7 @@ function tabRanking(C){
 function desenhar(){
   const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
   const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
-  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);abas.push(['ranking','🏆 Ranking']);if(COPA)abas.push(['copa','🏁 Copa']);abas.push(['perfil','Meus dados'])}
+  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);abas.push(['ranking','🏆 Ranking']);if(COPA||PREV)abas.push(['copa','🏁 Copa']);abas.push(['perfil','Meus dados'])}
   if(!abas.some(a=>a[0]===ABA))ABA='aulas';
   for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
     if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
@@ -151,7 +173,8 @@ function desenhar(){
   U=AULAS.usuario||null;
   if(U)[ATIV,PONT,PRES,PERF,REPO]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil'),j('/api/presenca?acao=meurepo')]);
   if(U&&PONT&&PONT.turmas){const t=PONT.turmas.find(x=>x.status==='andamento')||PONT.turmas[0];if(t){COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(t.turma));if(COPA&&COPA.erro)COPA=null}}
-  const h=location.hash.slice(1);if(['aulas','atividades','progresso','perfil','copa'].includes(h))ABA=h;
+  if(U&&!(PONT&&PONT.turmas&&PONT.turmas.length)){const cx=await j('/api/presenca?acao=contexto');if(cx&&cx.turmas&&Object.keys(cx.turmas).length){PREV=cx;PREVT=Object.keys(cx.turmas).find(k=>cx.turmas[k].status==='andamento')||Object.keys(cx.turmas)[0]}}
+  const h=location.hash.slice(1);if(['aulas','atividades','progresso','ranking','perfil','copa'].includes(h))ABA=h;
   desenhar();
 })();
 </script><script src="/como.js"></script>
