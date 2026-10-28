@@ -24,6 +24,7 @@
 .legenda{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}.legenda .lg{display:inline-flex;align-items:center;gap:6px;color:var(--mut)}.legenda .dot{width:20px;height:20px;font-size:11px}
 table.acomp td.cel,table.acomp th.col{text-align:center}table.acomp th.col small{display:block;font-weight:400;color:var(--mut)}table.acomp td.sticky{position:sticky;left:0;background:#171a26;z-index:1;min-width:210px}table.acomp .mk{margin-left:6px}table.acomp td.nent{white-space:nowrap;font-size:14px;text-align:center}table.acomp a.nm{text-decoration:none;color:inherit}table.acomp tr.ficha td{background:#10131d;padding:10px}.st.verm{background:#ff5d5d33;color:#ff8a8a}.st.azul{background:#4aa3ff33;color:#8cc4ff}
 .aviso-fora{display:inline-block;background:#ff9f4322;border:1px solid #ff9f43;border-radius:8px;padding:2px 8px;margin:2px 4px;font-size:12px}
+table.acomp th{position:sticky;top:0;z-index:4}table.acomp th:first-child{z-index:6;left:0}table.acomp td.sticky{z-index:2}table.acomp .dot{z-index:0}.barra.livre{position:static;margin-top:10px}.pop{position:fixed;z-index:50;background:#1b1f2d;border:1px solid var(--ouro);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:230px;box-shadow:0 8px 30px #000a}.pop b{font-size:13px;padding:2px 6px}.pop .btn{text-align:left}
 .aviso-nota{background:#ff9f4322;border:1px solid #ff9f43;border-left:6px solid #ff9f43;border-radius:12px;padding:12px 16px;margin:12px 0}.st.novamsg{background:#6aa7ff;color:#12141c}.st.corrigida{background:#3ec9b033;color:var(--ver)}.st.semresposta{background:#fff1;color:var(--mut)}.st.dispensado{background:#fff1;color:var(--mut)}.st.erro{background:#ff6b5b33;color:#ff8f82}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.chips div{flex:1 1 150px;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px}.chips b{display:block;font-size:28px;font-family:'Space Grotesk',sans-serif}.chips span{color:var(--mut);font-size:13px}
 .bdg{display:inline-block;background:#ff6b5b;color:#fff;border-radius:99px;min-width:22px;padding:0 7px;margin-left:8px;font-size:13px;font-weight:800;line-height:22px;text-align:center}
@@ -39,7 +40,7 @@ table.acomp td.cel,table.acomp th.col{text-align:center}table.acomp th.col small
 <script src="/site.js"></script><script src="/ajuda.js"></script>
 <script>
 window.AJUDA={
-aba_acomp:{t:'Acompanhamento',l:['Quadro para acompanhar a turma inteira: uma linha por aluno e uma coluna por atividade. É só leitura: aqui você olha, e para dar nota usa a aba Correção.','Os dados vêm sozinhos das Atividades e do GitHub, então não há nada para digitar nem botão de salvar. A tela se atualiza sozinha.','Clique no nome de um aluno para abrir a ficha dele (pontos, situação em cada atividade e lembrete pronto). Clique numa bolinha para abrir a resposta dele no GitHub.','Os números coloridos no alto são atalhos: clique para filtrar só aquele grupo.']},
+aba_acomp:{t:'Acompanhamento',l:['Quadro para acompanhar a turma inteira: uma linha por aluno e uma coluna por atividade. É só leitura: aqui você olha, e para dar nota usa a aba Correção.','Os dados vêm sozinhos das Atividades e do GitHub, então não há nada para digitar nem botão de salvar. A tela se atualiza sozinha.','Clique no nome de um aluno para abrir a ficha dele (pontos, situação em cada atividade e lembrete pronto). Clique numa bolinha para abrir um menu: ver a resposta no GitHub, ir corrigir aquela atividade ou abrir a ficha do aluno. Clique no código de uma atividade (cabeçalho da coluna) para abrir essa atividade na aba Correção.','Os números coloridos no alto são atalhos: clique para filtrar só aquele grupo.']},
 acomp_legenda:{t:'Legenda das cores',l:['Verde ✓: entregou no prazo (ou adiantado) e já está corrigido.','Azul …: entregou e aguarda a sua correção. Nunca é vermelho: se a correção demora, o aluno não é prejudicado.','Amarelo !: entregou e foi corrigido, mas depois do prazo (vale 50%).','Vermelho ✕: o prazo já passou e não há resposta.','Cinza ·: ainda está dentro do prazo, sem resposta.','Traço –: dispensado ou a atividade não é para este aluno.','O símbolo ✉ pequeno na bolinha significa que o aluno escreveu de novo depois da correção.']},
 acomp_filtro:{t:'Filtros e alertas',l:['Com pendência: tem ao menos uma atividade com prazo vencido e sem entrega (opcionais não contam).','Entregas atrasadas: respondeu depois do prazo em alguma atividade.','Aguardando correção: entregou e você ainda não deu a nota.','Sumido (alerta): tem atividade vencida e nunca respondeu nada, ou está há 14 dias ou mais sem responder qualquer coisa. Serve para você procurar o aluno antes que ele desista.']},
 acomp_ficha:{t:'Ficha do aluno',l:['Mostra a posição e os pontos dele no ranking e a situação em cada atividade, com nota, prazo e a hora em que ele respondeu.','O botão Copiar lembrete monta uma mensagem pronta com as atividades pendentes. Você cola onde quiser; o portal não envia nada sozinho.']},
@@ -305,10 +306,10 @@ async function telaAcomp(alvo){
   alvo.append(h('p',{class:'sub'},'Quadro de acompanhamento da turma: uma linha por aluno, uma coluna por atividade. Aqui você só olha; para dar nota, use a aba Correção. Clique no nome do aluno para abrir a ficha dele.'),
     h('div',{class:'chips'},chip(cont(i=>!i.pend),'Em dia','ok'),chip(cont(i=>i.pend),'Com pendência','pend'),chip(cont(i=>i.atr>0),'Entregas atrasadas','atr'),chip(cont(i=>i.agu>0),'Aguardando correção','agu'),chip(cont(i=>i.sumido),'Sumidos (alerta)','sumido')),
     legendaAcomp(),
-    h('div',{class:'barra'},h('button',{class:'btn sec',type:'button',onclick:()=>{ACOMP_FORCAR=true;refaz()}},'Atualizar agora'),fsel,ajuda('acomp_filtro'),h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm))));
+    h('div',{class:'barra livre'},h('button',{class:'btn sec',type:'button',onclick:()=>{ACOMP_FORCAR=true;refaz()}},'Atualizar agora'),fsel,ajuda('acomp_filtro'),h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm))));
   if(!ativs.length){alvo.append(h('p',{},'Nenhuma atividade liberada nesta turma ainda. Libere uma na aba Atividades.'));return}
   const f=filtros[fsel.value][1];const vis=lista.filter(k=>f(info[k]));
-  const th=h('tr',{},h('th',{},'Aluno'),h('th',{title:'Entregues / total (sem contar as opcionais)'},'Entregas'),...ativs.map(a=>h('th',{class:'col',title:(a.codigo?a.codigo+' · ':'')+a.titulo+' · prazo '+fmtD(a.prazo)},(a.codigo||a.titulo).slice(0,10),h('small',{},a.prazo?new Date(a.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''))));
+  const th=h('tr',{},h('th',{},'Aluno'),h('th',{title:'Entregues / total (sem contar as opcionais)'},'Entregas'),...ativs.map(a=>h('th',{class:'col',style:'cursor:pointer',title:(a.codigo?a.codigo+' · ':'')+a.titulo+' · prazo '+fmtD(a.prazo)+' — clique para abrir esta atividade na Correção',onclick:()=>irCorrecao(a.id)},(a.codigo||a.titulo).slice(0,10),h('small',{},a.prazo?new Date(a.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):''))));
   const tb=h('tbody',{});
   for(const k of vis){const I=info[k];
     const ficha=h('tr',{class:'ficha',hidden:true},h('td',{colspan:String(2+ativs.length)},fichaAcomp(k,I,ativs,rk[k],P)));
@@ -317,11 +318,21 @@ async function telaAcomp(alvo){
     const row=h('tr',{},h('td',{class:'sticky'},nome,marcas),h('td',{class:'nent'},I.ent+'/'+I.tot+(I.verm?' · '+I.verm+' venc.':'')),...ativs.map(a=>{const l=a.linhas[k];if(!l)return h('td',{class:'cel'},h('i',{class:'dot traco',title:'Não é para este aluno'},'–'));const c=I.cels[a.id];
       const tip=(a.codigo?a.codigo+' · ':'')+a.titulo+' — '+CEL[c.c][1]+(c.atraso?' (respondeu depois do prazo)':'')+(c.msg?' · tem mensagem nova do aluno':'')+(l.quando?' · respondeu em '+fmtD(l.quando):'');
       const d=h('i',{class:'dot '+c.c,title:tip},CEL[c.c][0],c.msg?h('sup',{},'✉'):'');
-      return h('td',{class:'cel'},l.respondeu&&l.url?h('a',{href:l.url,target:'_blank',rel:'noopener',title:tip},d):d)}));
+      d.style.cursor='pointer';d.addEventListener('click',ev=>{ev.stopPropagation();menuBolinha(ev,a,k,l,c,()=>{const f=row.nextSibling;if(f)f.hidden=false})});
+      return h('td',{class:'cel'},d)}));
     tb.append(row,ficha)}
   if(!vis.length)tb.append(h('tr',{},h('td',{colspan:String(2+ativs.length),class:'sub'},'Nenhum aluno neste filtro.')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela acomp'},h('thead',{},th),tb)),h('p',{class:'sub'},'Sumido: tem atividade vencida e nunca respondeu, ou está há '+DIAS_ALERTA+' dias ou mais sem responder nada. Dica: passe o mouse sobre uma bolinha para ver o detalhe.'));
   clearTimeout(telaAcomp.t);telaAcomp.t=setTimeout(()=>{if(ABA==='acomp'&&!document.hidden&&document.body.contains(alvo)&&!document.querySelector('tr.ficha:not([hidden])')){alvo.textContent='';telaAcomp(alvo)}},300000)}
+function irCorrecao(id){window.ATV_OPEN=window.ATV_OPEN||new Set();ATV_OPEN.add('c:'+id);ATV_OPEN.delete('x:c:'+id);ABA='corr';try{history.replaceState(null,'','#corr')}catch{}desenhar();setTimeout(()=>{const d=[...document.querySelectorAll('details.ag')].find(x=>x.dataset.id===id);if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}},400)}
+function menuBolinha(ev,a,k,l,c,abrirFicha){
+  document.querySelectorAll('.pop').forEach(x=>x.remove());
+  const nome=((CTX&&CTX.nomes)||{})[k]||k;const m=h('div',{class:'pop'},h('b',{},nome+' · '+(a.codigo||a.titulo)),h('span',{class:'sub',style:'padding:0 6px'},CEL[c.c][1]));
+  if(l.url)m.append(h('a',{class:'btn sec',href:l.url,target:'_blank',rel:'noopener'},l.respondeu?'Abrir a resposta no GitHub':'Abrir a Issue no GitHub'));
+  m.append(h('button',{class:'btn sec',type:'button',onclick:()=>{m.remove();irCorrecao(a.id)}},c.c==='azul'?'Corrigir / dar a nota':'Ver na Correção'));
+  m.append(h('button',{class:'btn sec',type:'button',onclick:()=>{m.remove();abrirFicha()}},'Abrir a ficha do aluno'));
+  document.body.append(m);const r=ev.currentTarget.getBoundingClientRect();m.style.left=Math.min(innerWidth-250,Math.max(8,r.left-100))+'px';m.style.top=Math.min(innerHeight-170,r.bottom+6)+'px';
+  setTimeout(()=>document.addEventListener('click',function f(e){if(!m.contains(e.target)){m.remove()}document.removeEventListener('click',f)},{once:false}),0)}
 function fichaAcomp(k,I,ativs,R,P){
   const box=h('div',{class:'fichabox'});
   box.append(h('div',{class:'barra'},h('b',{},'Ficha de '),quem(k),ajuda('acomp_ficha'),h('span',{class:'sub'},I.ultima?'Última resposta: '+fmtD(I.ultima)+' ('+(I.dias===0?'hoje':I.dias+' dia(s) atrás')+')':'Ainda não respondeu nada no GitHub')));
@@ -372,7 +383,7 @@ async function telaCorr(alvo){
   const ordem={acorrigir:0,novamsg:1,revisada:2,semresposta:3,corrigida:4,dispensado:5,semissue:6,erro:7};
   for(const a of [...P.atividades].sort((x,y)=>(x.prazo||'').localeCompare(y.prazo||''))){
     const cont=st=>Object.values(a.linhas).filter(l=>l.status===st).length;
-    const det=h('details',{class:'ag'});det.dataset.st=[...new Set(Object.values(a.linhas).map(l=>l.status))].join(' ');const key='c:'+a.id;
+    const det=h('details',{class:'ag'});det.dataset.id=a.id;det.dataset.st=[...new Set(Object.values(a.linhas).map(l=>l.status))].join(' ');const key='c:'+a.id;
     const mx=a.notaMax,pas=mx>10?1:0.5;
     det.append(h('summary',{},h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),cont('acorrigir')?h('span',{class:'st acorrigir'},cont('acorrigir')+' a corrigir'):'',cont('revisada')?h('span',{class:'st revisada'},cont('revisada')+' falta(m) nota'):'',cont('novamsg')?h('span',{class:'st novamsg'},cont('novamsg')+' nova(s) msg'):'',h('span',{class:'cnt'},'prazo '+fmtD(a.prazo)+' · '+cont('corrigida')+' corrigida(s) · '+cont('semresposta')+' sem resposta')));
     det.open=ATV_OPEN.has(key)||(cont('acorrigir')+cont('novamsg')+cont('revisada')>0&&!ATV_OPEN.has('x:'+key));
