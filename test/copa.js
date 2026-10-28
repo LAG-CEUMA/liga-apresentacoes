@@ -98,4 +98,27 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   const comRec = { ...base, recuperacoes: [{ data: '2026-11-07', ministrante: 'ana', estados: { bia: 'p', novato: 'p' } }] };
   const rs = d.resumoSessao(comRec); assert.equal(rs.bia.status, 'presente'); assert(rs.bia.recuperou); assert.equal(rs.caio.status, 'ausente'); assert.equal(rs.novato.status, 'presente'); // quem perdeu ou entrou depois recupera a presença
 }
+// ---------- Chefão (professor/owner joga) ----------
+{ const mk = () => C.normalizar({ ativa: true }); const FIM = '2999-01-01';
+  const tipo = C.itemChefao('prof', 3); assert(C.BOSS[tipo]); assert.equal(C.itemChefao('prof', 3), tipo); // determinístico
+  // acha um semana/professor em que o item seja de alvo escolhido, para testar com alvo
+  let e = mk(); let alvo = rank.find((x) => x.posicao > 1 && x.posicao < Math.max(...rank.map((y) => y.posicao))).usuario;
+  assert(C.chefaoInfo(e, 'prof', INI, AG, FIM).def); assert.equal(C.chefaoInfo(e, 'prof', INI, AG, FIM).usado, false);
+  let r = C.usarChefao(e, 'prof', alvo, rank, INI, AG, FIM); assert(r.ok, JSON.stringify(r)); assert.equal(r.faixa, 'normal'); // dado fixo 8
+  assert(e.efeitos.some((x) => x.de === 'chefao' && x.delta !== 0)); assert(C.usarChefao(e, 'prof', alvo, rank, INI, AG, FIM).erro); // 1 por semana
+  assert(C.usarChefao(mk(), 'prof', alvo, rank, INI, AG, '2026-10-29').erro); // trégua
+  assert(C.usarChefao(mk(), 'prof', 'nao-existe', rank, INI, AG, FIM).erro || C.BOSS[tipo].alvo === 'lider');
+  // oficial nunca muda: placar com efeito do chefão difere só na Copa
+  const pl = C.placar(e, rank, AG, FIM); assert(pl.some((x) => x.copa !== x.oficial));
+  // falha crítica: a magia vira ao contrário (ou tesouro, no trovão)
+  C.setDado(() => 1); e = mk(); r = C.usarChefao(e, 'prof', alvo, rank, INI, AG, FIM); assert.equal(r.faixa, 'falha_critica'); assert(r.ok);
+  C.setDado(() => 2); e = mk(); r = C.usarChefao(e, 'prof', alvo, rank, INI, AG, FIM); assert.equal(r.faixa, 'falha'); assert.equal(e.efeitos.length, 0);
+  C.setDado(() => 8);
+  // paz bloqueia ataque do chefão, mas não a bênção
+  e = mk(); C.definirEvento(e, rank, INI, AG, 'paz', FIM); const t2 = C.chefaoInfo(e, 'prof', INI, AG, FIM).tipo; r = C.usarChefao(e, 'prof', alvo, rank, INI, AG, FIM); assert(t2 === 'bencao' ? r.ok : r.erro);
+  // vida do chefão: entregas no prazo da semana
+  const us = rank.map((x) => x.usuario); const at = [{ turma: 'T', liberada: true, prazo: '2026-11-01T12:00:00-03:00', entregas: { [us[0]]: { estado: 'prazo' } } }];
+  const mi = C.missaoInfo(C.normalizar({}), 'T', INI, AG, us, at); assert.equal(mi.vida, Math.round((1 - 1 / us.length) * 100));
+  assert(C.narracao(C.normalizar({ log: [{ em: new Date(AG).toISOString(), de: 'chefao', item: 'maldicao', faixa: 'falha_critica', dado: 1, vit: 'ana' }] }), AG, (k) => k, 3).includes('O Chefão'));
+}
 console.log('Copa: todos os testes passaram.');

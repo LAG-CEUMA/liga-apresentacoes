@@ -90,6 +90,7 @@ function tabCopa(C){
   C.append(el('p','sub','A Copa da Liga é a parte divertida: itens ganhos por presença, participação e entregas no prazo mexem só nos pontos da Copa. Seu ranking oficial e suas notas nunca mudam por causa dela.'));
   const nev=!!(c.evento&&c.evento.tipo==='nevoeiro');
   if(c.evento)C.append(el('p','',`${c.evento.ic} Evento da semana: ${c.evento.nome}. ${c.evento.txt}`));
+  if(c.missao&&c.missao.vida!=null)C.append(vidaChefao(c.missao));
   if(c.missao&&c.missao.sem>0)C.append(el('p','sub','🎯 Missão da turma: '+(c.missao.cumprida?'cumprida! Choveu item para todo mundo.':!c.missao.atividades?'quando todos entregarem no prazo as atividades da semana, a turma inteira ganha 1 item extra.':c.missao.faltam?`faltam ${c.missao.faltam} colega(s) entregarem no prazo para a turma ganhar itens. Entregue a sua e ajude os outros!`:'todos no prazo, os itens estão a caminho.')));
   if(c.trofeus&&c.trofeus.length&&c.visibilidade!=='oculta')C.append(el('p','sub','🏅 '+c.trofeus.filter(t=>t.periodo==='semana').map(t=>`${t.ic} ${t.titulo}: ${t.quem.join(', ')}`).join(' · ')));
   if(c.tregua)C.append(el('p','','🏁 Trégua final: nos últimos dias da turma os itens ficam guardados e a Copa vale só o ranking oficial. Boa sorte na reta final!'));
@@ -101,7 +102,7 @@ function tabCopa(C){
   // meu cartão
   const card=el('div','item');card.append(el('b','',nev?`🌫️ Nevoeiro: sua posição está escondida · ${m.copa} pontos na Copa`:`Você está em ${m.posCopa}º de ${m.de} na Copa · ${m.copa} pontos`),el('br'),
     el('small','',`Ranking oficial: ${m.oficial} pontos${m.efeito?` · efeito de itens: ${m.efeito>0?'+':''}${m.efeito}`:''}${m.gapAcima?` · falta ${m.gapAcima} para o colega à sua frente`:''}${m.escudo?' · 🛡️ escudo ativo':''}`));
-  for(const r of m.recebidos){card.append(el('br'),el('small','',`${(c.itens[r.tipo]||{}).ic||''} Alguém te acertou com ${((c.itens[r.tipo]||{}).nome||r.tipo).toLowerCase()}: ${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`))}
+  for(const r of m.recebidos){const bo=(c.itensChefao||{})[r.tipo];card.append(el('br'),el('small','',bo?`${bo.ic} O Chefão da Liga te pegou com ${bo.nome.toLowerCase()}: ${r.delta>0?'+':''}${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`:`${(c.itens[r.tipo]||{}).ic||''} Alguém te acertou com ${((c.itens[r.tipo]||{}).nome||r.tipo).toLowerCase()}: ${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`))}
   C.append(card);
   // meus itens
   const inv=secao('Meus itens',m.inventario.length+' item(ns) · valem só até '+(ateData(c)||'o fim da semana'));inv.open=true;
@@ -122,6 +123,9 @@ function tabCopa(C){
   if(c.dado){const tb=el('p','sub','');const nm=(k)=>((c.itens[k]||{}).ic||'')+' '+((c.itens[k]||{}).nome||k);tb.innerHTML='';for(const [k,t] of Object.entries(c.dado)){const f=(a,b)=>a>b?'—':(a===b?a:a+'–'+b);tb.append(document.createTextNode(`${nm(k)}: falha crítica ${f(1,t[0])} · falha ${f(t[0]+1,t[1])} · fraco ${f(t[1]+1,t[2])} · normal ${f(t[2]+1,t[3])} · crítico 10`),document.createElement('br'))}reg.append(tb)}
   reg.append(el('p','sub',`Efeitos duram ${c.diasEfeito} dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
 }
+function vidaChefao(m){const w=el('div','');w.style.cssText='margin:8px 0';const v=Math.max(0,Math.min(100,m.vida));
+  const barra=el('div','');barra.style.cssText='height:14px;border-radius:8px;background:#ffffff22;overflow:hidden;max-width:420px';const f=el('div','');f.style.cssText='height:100%;width:'+v+'%;background:linear-gradient(90deg,#e4572e,#f5b83d)';barra.append(f);
+  w.append(el('b','',`👹 Chefão da semana · vida ${v}%`),barra,el('small','',v===0||m.cumprida?'Derrotado! A turma toda ganhou itens.':'Cada entrega no prazo da turma tira vida dele. Se todos entregarem no prazo, ele cai e todo mundo ganha 1 item.'));return w}
 // Prévia para professor/owner: eles ficam fora do ranking (não são alunos), então não jogam; aqui só enxergam o que o aluno vê.
 async function previa(C,qual){
   C.append(el('p','sub','👀 Prévia do professor: você não está no ranking de nenhuma turma como aluno, então não joga nem tem kart. Aqui você vê o que os alunos veem. Para jogar de verdade, entre com uma conta de aluno de teste.'));
@@ -136,6 +140,15 @@ async function previa(C,qual){
     const ol=el('div','pont-top');for(const x of r.ranking.filter(x=>x.posicao>3)){const l=el('div','pont-lin');l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome',nome(x.usuario)),el('span','pont-pts',x.total+' pts'));ol.append(l)}corpo.append(ol);return}
   const c=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(PREVT));corpo.textContent='';
   if(!c||c.erro){corpo.append(el('p','sub','Não consegui carregar a Copa desta turma.'));return}
+  if(c.chefao&&c.chefao.def&&c.ativa){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 1 ataque por dia, trégua).'));
+    const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
+    let sel=null;if(d.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o aluno…');o0.value='';sel.append(o0);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
+    const b=el('button','btn','🎲 Jogar o dado');b.type='button';if(ch.usado||ch.tregua){b.disabled=true}
+    b.onclick=async()=>{if(sel&&!sel.value){alert('Escolha o aluno primeiro.');return}b.disabled=true;const giro=setInterval(()=>{b.textContent='🎲 '+(1+Math.floor(Math.random()*10))},80);
+      const [r]=await Promise.all([postCopa({acao:'copa_chefao',turma:PREVT,alvo:sel?sel.value:''}),new Promise(z=>setTimeout(z,900))]);clearInterval(giro);
+      if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent='🎲 Jogar o dado';b.disabled=false;return}alert(r.resultado||'Pronto!');desenhar()};
+    if(sel)caixa.append(sel);caixa.append(b);if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);corpo.append(bx)}
+  if(c.missao&&c.missao.vida!=null&&c.ativa)corpo.append(vidaChefao(c.missao));
   if(!c.ativa)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
   else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio kart',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
   if(c.placar&&c.placar.length){const nomeP=k=>nome(k);const linhas=c.placar.map(x=>({usuario:x.usuario,pontos:x.copa,posicao:x.posCopa,icones:x.escudo?[{ic:'🛡️',tx:'escudo ativo'}]:[]}));
