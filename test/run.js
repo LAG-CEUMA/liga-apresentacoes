@@ -552,6 +552,14 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
       pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
       assert.equal(pa.linhas.alu2.status, 'acorrigir');
       delete issueInfo['alu2#1'];
+      // várias correções de uma vez (tudo ou nada)
+      assert.equal((await ap({ acao: 'ativ_notas_lote', id: id1, itens: [] })).status, 400);
+      assert.equal((await ap({ acao: 'ativ_notas_lote', id: id1, itens: [{ aluno: 'alu2', estado: 'prazo', nota: 8 }, { aluno: 'alu3', estado: 'prazo', nota: 99 }] })).status, 400); // uma nota inválida: nada é salvo
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); assert.equal(pn.atividades.find((x) => x.id === id1).entregas.alu2, undefined);
+      assert.equal((await ap({ acao: 'ativ_notas_lote', id: id1, itens: [{ aluno: 'alu2', estado: 'atraso', nota: 7 }, { aluno: 'alu3', estado: 'dispensado' }] }, 'alu1')).status, 403);
+      r = JSON.parse((await ap({ acao: 'ativ_notas_lote', id: id1, itens: [{ aluno: 'alu2', estado: 'atraso', nota: 7 }, { aluno: 'alu3', estado: 'dispensado' }] })).body); assert.equal(r.salvos, 2);
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.entregas.alu2.nota, 7); assert.equal(pa.entregas.alu2.estado, 'atraso'); assert.equal(pa.entregas.alu3.estado, 'dispensado'); assert.equal(pa.entregas.alu1.nota, 9); // quem não estava no lote continua igual
       // o aluno escreve de novo depois da correção: aparece como nova mensagem (e a pergunta é sinalizada)
       comentarios['alu1#1'].push({ user: { login: 'alu1' }, created_at: '2099-01-01T00:00:00Z', body: 'professor, posso refazer?', html_url: 'u1b' });
       pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);

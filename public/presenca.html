@@ -37,6 +37,7 @@ window.AJUDA={
 aba_chamada:{t:'Chamada',l:['Aqui você marca quem está na aula, em 2 momentos: Início e Fim.','Marque Presente, Falta ou Justificado. O que você marca fica como rascunho neste aparelho até clicar em Salvar chamada.','O aluno conta como presente se esteve em pelo menos metade das chamadas salvas. Com 2 chamadas, basta uma.','Quem ficar sem marca é salvo como Falta (o site pergunta antes).']},
 aba_part:{t:'Participações',l:['Pontos extras ou descontos dados a um aluno durante a aula (ajuda, apresentação, penalidade).','Eles somam ou tiram pontos no ranking e no Meu progresso do aluno.']},
 aba_corr:{t:'Correção',l:['Todas as respostas que os alunos devolveram no GitHub, numa tela só, sem precisar abrir atividade por atividade.','A corrigir: o aluno respondeu e você ainda não deu nota. Nova mensagem: o aluno escreveu de novo depois da sua correção (pode ser dúvida). Sem resposta: ainda não respondeu. Dúvidas avulsas: Issues que o próprio aluno abriu no repositório dele.','Ao lado de cada nome aparece o prazo: adiantado (entregou com dias de folga), no prazo, atrasado, ou quanto falta.','O número vermelho na aba é a quantidade de respostas esperando você. A tela se atualiza sozinha enquanto está aberta.']},
+corr_lote:{t:'Corrigir vários de uma vez',l:['Mude o estado ou a nota de quantos alunos quiser. Cada mudança conta no botão Salvar alterações, e só então tudo é gravado junto.','Aplicar a todos os pendentes: escolha uma nota e clique. Ela é colocada em todos que estão A corrigir, Nova mensagem ou Fechada sem nota, mas só vale depois de Salvar alterações. Você ainda pode ajustar um por um antes de salvar.','Se alguma nota estiver errada, nada é salvo e a tela diz qual aluno corrigir.']},
 corr_estado:{t:'Estado e nota',l:['Já vem sugerido: No prazo ou Atrasada, conforme a hora do comentário do aluno. Mude se quiser.','A nota (opcional) multiplica os pontos. Salvar corrige só este aluno, sem mexer nos outros.']},
 aba_ent:{t:'Entregas (aba antiga)',l:['Marcação manual de uma tarefa única por aula. Não lê o GitHub.','Para exercícios e tarefas use a aba Atividades.']},
 aba_ativ:{t:'Atividades',l:['Cada atividade tem peso, prazo e uma Issue por aluno no GitHub.','Liberar cria a Issue no repositório de cada aluno. O aluno responde comentando na Issue.','Depois use Respostas e notas para ver quem respondeu e dar a nota.']},
@@ -282,7 +283,13 @@ async function telaCorr(alvo){
     det.open=ATV_OPEN.has(key)||(cont('acorrigir')+cont('novamsg')+cont('revisada')>0&&!ATV_OPEN.has('x:'+key));
     det.addEventListener('toggle',()=>{if(det.open)ATV_OPEN.add(key);else{ATV_OPEN.delete(key);ATV_OPEN.add('x:'+key)}});
     const ks=ord(Object.keys(a.linhas)).sort((x,y)=>(ordem[a.linhas[x].status]-ordem[a.linhas[y].status]));
-    let mostrou=0;
+    let mostrou=0;const linhas={},sujos=new Set(),statusDe={};
+    const salvarTodos=h('button',{class:'btn',type:'button',disabled:true,onclick:async()=>{if(!sujos.size)return;salvarTodos.disabled=true;try{const r=await postA({acao:'ativ_notas_lote',id:a.id,itens:[...sujos].map(k=>({aluno:k,estado:linhas[k].est.value,nota:linhas[k].nota.value}))});aviso(r.salvos+' correção(ões) salva(s) de uma vez.');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);salvarTodos.disabled=false}}},'Salvar alterações (0)');
+    const atBtn=()=>{salvarTodos.disabled=!sujos.size;salvarTodos.textContent='Salvar alterações ('+sujos.size+')';alvo.dataset.sujo='1'};
+    const opsLote=[['','Sem nota (vale 100%)']];for(let v=mx;v>=0;v-=pas)opsLote.push([String(v),v+' de '+mx]);
+    const selLote=h('select',{style:'width:170px'},...opsLote.map(([v,t])=>h('option',{value:v},t)));selLote.value=String(mx);
+    const aplicar=h('button',{class:'btn sec',type:'button',title:'Coloca esta nota em todos os pendentes. Só vale depois de Salvar alterações.',onclick:()=>{let n=0;for(const k of Object.keys(linhas))if(['acorrigir','novamsg','revisada'].includes(statusDe[k])){linhas[k].nota.value=selLote.value;if(linhas[k].est.value==='nao')linhas[k].est.value='prazo';sujos.add(k);n++}atBtn();aviso(n?'Nota aplicada a '+n+' aluno(s). Revise e clique em Salvar alterações.':'Não há alunos pendentes nesta atividade.')}},'Aplicar a todos os pendentes');
+    const lote=h('div',{class:'barra',style:'padding:8px 6px'},h('span',{class:'sub'},'Corrigir vários de uma vez:'),selLote,aplicar,salvarTodos,ajuda('corr_lote'));
     for(const k of ks){const l=a.linhas[k];if(ver.value==='at'&&!['acorrigir','novamsg','revisada','semresposta','erro'].includes(l.status))continue;mostrou++;
       const e=a.entregas[k]||{};
       const rot={acorrigir:'A corrigir',revisada:'Fechada no GitHub · falta a nota',novamsg:'Nova mensagem',corrigida:'Corrigida'+(e.nota!==undefined?' · '+e.nota+'/'+mx:''),semresposta:'Sem resposta',dispensado:'Dispensado',semissue:'Sem Issue',erro:'Não consegui ler o GitHub'}[l.status];
@@ -291,12 +298,13 @@ async function telaCorr(alvo){
         const sug=a.prazo&&new Date(l.quando).getTime()>new Date(a.prazo).getTime()?'atraso':'prazo';
         const est=h('select',{},...[['prazo','No prazo'],['atraso','Atrasada'],['nao','Não entregou'],['dispensado','Dispensado']].map(([v,t])=>h('option',{value:v},t)));est.value=(e.estado&&e.estado!=='nao')?e.estado:sug;
         const ops=[['','Sem nota (vale 100%)']];for(let v=mx;v>=0;v-=pas)ops.push([String(v),v+' de '+mx]);
-        const nota=h('select',{style:'width:170px'},...ops.map(([v,t])=>h('option',{value:v},t)));nota.value=e.nota===undefined||e.nota===null?'':String(e.nota);
+        const nota=h('select',{style:'width:170px'},...ops.map(([v,t])=>h('option',{value:v},t)));nota.value=e.nota===undefined||e.nota===null?'':String(e.nota);linhas[k]={est,nota};statusDe[k]=l.status;est.addEventListener('change',()=>{sujos.add(k);atBtn()});nota.addEventListener('change',()=>{sujos.add(k);atBtn()});
         const sv=h('button',{class:'btn',type:'button',onclick:async()=>{sv.disabled=true;try{await postA({acao:'ativ_nota',id:a.id,aluno:k,estado:est.value,nota:nota.value});aviso('Salvo: '+rot2(k)+'.');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);sv.disabled=false}}},l.status==='acorrigir'?'Salvar correção':l.status==='revisada'?'Lançar nota':'Salvar');
         linha.append(est,nota,sv,ajuda('corr_estado'));
         linha.append(h('div',{class:'prev'},'Respondeu em '+fmtD(l.quando)+(l.comentarios>1?' · '+l.comentarios+' comentários (última em '+fmtD(l.ultima)+')':'')+(l.fechada?(l.fechadaPeloAluno?' · Issue fechada pelo próprio aluno':' · Issue fechada por @'+l.fechadaPor+' em '+fmtD(l.fechadaEm)):'')+(l.pergunta?' · ❓ tem pergunta':'')+': “'+l.previa+'” ',h('a',{href:l.status==='novamsg'?l.urlUltima:l.url,target:'_blank',rel:'noopener'},l.status==='novamsg'?'Abrir a nova mensagem':'Abrir resposta no GitHub')))}
       else if(l.issue&&l.url)linha.append(h('div',{class:'prev'},h('a',{href:l.url,target:'_blank',rel:'noopener'},'Abrir Issue'),l.erro?' · ⚠ '+l.erro:''));
       det.append(linha)}
+    if(Object.keys(linhas).length>1)det.children[0].after(lote);
     if(!mostrou)det.append(h('p',{class:'sub',style:'padding:10px 6px'},ver.value==='at'?'Nada pendente nesta atividade. Mude o filtro para ver todos.':'Nenhum aluno nesta atividade.'));
     alvo.append(det)}
   // dúvidas avulsas: Issues que o próprio aluno abriu no repositório dele
