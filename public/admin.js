@@ -465,7 +465,7 @@ async function carregar(){
 async function avisoCorrecao(){
   if(typeof D==='undefined'||!D||!(D.dono||(D.permissoes||[]).includes('presenca')||D.papel==='monitor'))return;
   try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();const n=c.acorrigir+c.duvidas;if(n<=0)return;
-    const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
+    const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.revisadas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.revisadas?x.revisadas+' fechada(s) no GitHub sem nota':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
     const b=h('a',{href:'/presenca#corr',target:'liga-presenca',id:'aviso-corr',style:'display:block;text-decoration:none;color:inherit;background:#f5b83d22;border:1px solid var(--ouro);border-left:6px solid var(--ouro);border-radius:12px;padding:12px 16px;margin:12px 0'},h('b',{},'Alunos responderam no GitHub: '+n+' item(ns) esperando você'),h('div',{class:'sub'},t+'. Abrir a Correção →'));
     $('abas').before(b);const f=$('f-pres');if(f&&!f.hidden)f.textContent='Presença e atividades ('+n+')'}catch{}}
 carregar().then(avisoCorrecao);

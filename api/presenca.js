@@ -71,7 +71,7 @@ module.exports = async (req, res) => {
         const out = []; let falhou = false;
         for (const [id, t] of Object.entries(turmasVisiveis)) { if (t.status === 'arquivada') continue;
           try { const p = await A.painel(id, alunosDe(id)); if (p.atividades.length) out.push({ turma: id, nome: t.nome, ...p.resumo }); } catch { falhou = true; } }
-        return u.json(res, 200, { turmas: out, acorrigir: out.reduce((n, x) => n + x.acorrigir + x.novas, 0), duvidas: out.reduce((n, x) => n + x.duvidas, 0), falhou });
+        return u.json(res, 200, { turmas: out, acorrigir: out.reduce((n, x) => n + x.acorrigir + x.novas + x.revisadas, 0), revisadas: out.reduce((n, x) => n + x.revisadas, 0), duvidas: out.reduce((n, x) => n + x.duvidas, 0), falhou });
       }
       if (q.acao === 'atividades') {
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });

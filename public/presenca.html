@@ -19,9 +19,10 @@
 .pz{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
 .pz.adi{background:#3ec9b033;color:var(--ver)}.pz.ok{background:#3ec9b022;color:#9be6d8}.pz.atr{background:#ff6b5b33;color:#ff8f82}.pz.perto{background:#f5b83d33;color:var(--ouro)}.pz.sem{background:#fff1;color:var(--mut)}
 .st{display:inline-block;border-radius:8px;padding:2px 10px;font-size:12px;font-weight:800;margin-left:6px;vertical-align:middle}
-.st.acorrigir{background:var(--ouro);color:#12141c}.st.novamsg{background:#6aa7ff;color:#12141c}.st.corrigida{background:#3ec9b033;color:var(--ver)}.st.semresposta{background:#fff1;color:var(--mut)}.st.dispensado{background:#fff1;color:var(--mut)}.st.erro{background:#ff6b5b33;color:#ff8f82}
+.st.acorrigir{background:var(--ouro);color:#12141c}.st.revisada{background:#ff9f43;color:#12141c}.aviso-nota{background:#ff9f4322;border:1px solid #ff9f43;border-left:6px solid #ff9f43;border-radius:12px;padding:12px 16px;margin:12px 0}.st.novamsg{background:#6aa7ff;color:#12141c}.st.corrigida{background:#3ec9b033;color:var(--ver)}.st.semresposta{background:#fff1;color:var(--mut)}.st.dispensado{background:#fff1;color:var(--mut)}.st.erro{background:#ff6b5b33;color:#ff8f82}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.chips div{flex:1 1 150px;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px}.chips b{display:block;font-size:28px;font-family:'Space Grotesk',sans-serif}.chips span{color:var(--mut);font-size:13px}
 .bdg{display:inline-block;background:#ff6b5b;color:#fff;border-radius:99px;min-width:22px;padding:0 7px;margin-left:8px;font-size:13px;font-weight:800;line-height:22px;text-align:center}
+.ag>summary{flex-wrap:wrap}.ag>summary>span:first-of-type{flex:1 1 240px}
 .cr{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 6px;border-top:1px solid #fff1}.cr .prev{flex-basis:100%;color:var(--mut);font-size:14px}
 </style>
 </head>
@@ -257,42 +258,43 @@ const vistos=()=>{try{return JSON.parse(ls.get('liga_corr_visto','{}'))}catch{re
 async function checaCorr(inicial){
   try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const d=await r.json();const n=d.acorrigir+d.duvidas;let antes=0;try{antes=Number(sessionStorage.getItem('liga_corr_n')||0)}catch{}
     atualizaBadge(n);try{sessionStorage.setItem('liga_corr_n',String(n))}catch{}
-    if(n>0&&(inicial||n>antes)){const t=d.turmas.filter(x=>x.acorrigir+x.novas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');aviso('Alunos responderam no GitHub. '+t+'. Abra a aba Correção.')}}catch{}}
+    if(n>0&&(inicial||n>antes)){const t=d.turmas.filter(x=>x.acorrigir+x.novas+x.revisadas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.revisadas?x.revisadas+' fechada(s) sem nota':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');aviso('Alunos responderam no GitHub. '+t+'. Abra a aba Correção.')}}catch{}}
 async function telaCorr(alvo){
   alvo.append(h('p',{},'Buscando as respostas dos alunos no GitHub…'));delete alvo.dataset.sujo;alvo.onchange=()=>{alvo.dataset.sujo='1'};
   let P;try{P=await postA({acao:'ativ_painel',atualizar:CORR_FORCAR});CORR_FORCAR=false}catch(e){alvo.textContent='';alvo.append(h('p',{class:'sub'},'Não consegui buscar agora: '+e.message));return}
   alvo.textContent='';const R=P.resumo;const V=vistos();const visiveis=P.duvidas.filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]);
-  atualizaBadge(R.acorrigir+R.novas+visiveis.length);try{sessionStorage.setItem('liga_corr_n',String(BADGE))}catch{}
+  atualizaBadge(R.acorrigir+R.novas+R.revisadas+visiveis.length);try{sessionStorage.setItem('liga_corr_n',String(BADGE))}catch{}
   const chip=(n,t)=>h('div',{},h('b',{},String(n)),h('span',{},t));
   alvo.append(h('p',{class:'sub'},'Tudo o que os alunos devolveram no GitHub, por atividade. Ao lado do nome: o estado e o prazo (adiantado, no prazo, atrasado). A tela se atualiza sozinha.'),
-    h('div',{class:'chips'},chip(R.acorrigir,'A corrigir'),chip(R.novas,'Novas mensagens'),chip(R.semresposta,'Sem resposta'),chip(visiveis.length,'Dúvidas avulsas')));
+    h('div',{class:'chips'},chip(R.acorrigir,'A corrigir'),chip(R.revisadas,'Fechadas, falta a nota'),chip(R.novas,'Novas mensagens'),chip(R.semresposta,'Sem resposta'),chip(visiveis.length,'Dúvidas avulsas')));
+  if(R.revisadas>0)alvo.append(h('div',{class:'aviso-nota'},h('b',{},'⚠ '+R.revisadas+' já fechada(s) no GitHub, mas sem nota lançada. '),'Sem lançar a nota aqui, o aluno fica com 0 pontos nessa atividade. Procure o selo laranja “Fechada no GitHub · falta a nota” e clique em Lançar nota.'));
   const ver=h('select',{},h('option',{value:'at'},'Só o que precisa de atenção'),h('option',{value:'tudo'},'Mostrar todos os alunos'));ver.value=ls.get('liga_corr_ver','at');ver.addEventListener('change',()=>{ls.set('liga_corr_ver',ver.value);alvo.textContent='';telaCorr(alvo)});
   const atu=h('button',{class:'btn sec',type:'button',onclick:()=>{CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}},'Atualizar agora');
   alvo.append(h('div',{class:'barra'},atu,ver,h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm)),ajuda('aba_corr')));
   window.ATV_OPEN=window.ATV_OPEN||new Set();
   if(!P.atividades.length)alvo.append(h('p',{},'Nenhuma atividade liberada nesta turma ainda. Libere uma na aba Atividades.'));
-  const ordem={acorrigir:0,novamsg:1,semresposta:2,corrigida:3,dispensado:4,semissue:5,erro:6};
+  const ordem={acorrigir:0,novamsg:1,revisada:2,semresposta:3,corrigida:4,dispensado:5,semissue:6,erro:7};
   for(const a of [...P.atividades].sort((x,y)=>(x.prazo||'').localeCompare(y.prazo||''))){
     const cont=st=>Object.values(a.linhas).filter(l=>l.status===st).length;
     const det=h('details',{class:'ag'});const key='c:'+a.id;
     const mx=a.notaMax,pas=mx>10?1:0.5;
-    det.append(h('summary',{},h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),cont('acorrigir')?h('span',{class:'st acorrigir'},cont('acorrigir')+' a corrigir'):'',cont('novamsg')?h('span',{class:'st novamsg'},cont('novamsg')+' nova(s) msg'):'',h('span',{class:'cnt'},'prazo '+fmtD(a.prazo)+' · '+cont('corrigida')+' corrigida(s) · '+cont('semresposta')+' sem resposta')));
-    det.open=ATV_OPEN.has(key)||(cont('acorrigir')+cont('novamsg')>0&&!ATV_OPEN.has('x:'+key));
+    det.append(h('summary',{},h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),cont('acorrigir')?h('span',{class:'st acorrigir'},cont('acorrigir')+' a corrigir'):'',cont('revisada')?h('span',{class:'st revisada'},cont('revisada')+' falta(m) nota'):'',cont('novamsg')?h('span',{class:'st novamsg'},cont('novamsg')+' nova(s) msg'):'',h('span',{class:'cnt'},'prazo '+fmtD(a.prazo)+' · '+cont('corrigida')+' corrigida(s) · '+cont('semresposta')+' sem resposta')));
+    det.open=ATV_OPEN.has(key)||(cont('acorrigir')+cont('novamsg')+cont('revisada')>0&&!ATV_OPEN.has('x:'+key));
     det.addEventListener('toggle',()=>{if(det.open)ATV_OPEN.add(key);else{ATV_OPEN.delete(key);ATV_OPEN.add('x:'+key)}});
     const ks=ord(Object.keys(a.linhas)).sort((x,y)=>(ordem[a.linhas[x].status]-ordem[a.linhas[y].status]));
     let mostrou=0;
-    for(const k of ks){const l=a.linhas[k];if(ver.value==='at'&&!['acorrigir','novamsg','semresposta','erro'].includes(l.status))continue;mostrou++;
+    for(const k of ks){const l=a.linhas[k];if(ver.value==='at'&&!['acorrigir','novamsg','revisada','semresposta','erro'].includes(l.status))continue;mostrou++;
       const e=a.entregas[k]||{};
-      const rot={acorrigir:'A corrigir',novamsg:'Nova mensagem',corrigida:'Corrigida'+(e.nota!==undefined?' · '+e.nota+'/'+mx:''),semresposta:'Sem resposta',dispensado:'Dispensado',semissue:'Sem Issue',erro:'Não consegui ler o GitHub'}[l.status];
+      const rot={acorrigir:'A corrigir',revisada:'Fechada no GitHub · falta a nota',novamsg:'Nova mensagem',corrigida:'Corrigida'+(e.nota!==undefined?' · '+e.nota+'/'+mx:''),semresposta:'Sem resposta',dispensado:'Dispensado',semissue:'Sem Issue',erro:'Não consegui ler o GitHub'}[l.status];
       const linha=h('div',{class:'cr'},h('div',{class:'t',style:'min-width:200px'},quem(k),h('span',{class:'st '+l.status},rot),a.prazo&&l.status!=='dispensado'&&l.status!=='semissue'?pz(a.prazo,l.respondeu?l.quando:null):''));
       if(l.respondeu){
         const sug=a.prazo&&new Date(l.quando).getTime()>new Date(a.prazo).getTime()?'atraso':'prazo';
         const est=h('select',{},...[['prazo','No prazo'],['atraso','Atrasada'],['nao','Não entregou'],['dispensado','Dispensado']].map(([v,t])=>h('option',{value:v},t)));est.value=(e.estado&&e.estado!=='nao')?e.estado:sug;
         const ops=[['','Sem nota (vale 100%)']];for(let v=mx;v>=0;v-=pas)ops.push([String(v),v+' de '+mx]);
         const nota=h('select',{style:'width:170px'},...ops.map(([v,t])=>h('option',{value:v},t)));nota.value=e.nota===undefined||e.nota===null?'':String(e.nota);
-        const sv=h('button',{class:'btn',type:'button',onclick:async()=>{sv.disabled=true;try{await postA({acao:'ativ_nota',id:a.id,aluno:k,estado:est.value,nota:nota.value});aviso('Salvo: '+rot2(k)+'.');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);sv.disabled=false}}},l.status==='acorrigir'?'Salvar correção':'Salvar');
+        const sv=h('button',{class:'btn',type:'button',onclick:async()=>{sv.disabled=true;try{await postA({acao:'ativ_nota',id:a.id,aluno:k,estado:est.value,nota:nota.value});aviso('Salvo: '+rot2(k)+'.');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);sv.disabled=false}}},l.status==='acorrigir'?'Salvar correção':l.status==='revisada'?'Lançar nota':'Salvar');
         linha.append(est,nota,sv,ajuda('corr_estado'));
-        linha.append(h('div',{class:'prev'},'Respondeu em '+fmtD(l.quando)+(l.comentarios>1?' · '+l.comentarios+' comentários (última em '+fmtD(l.ultima)+')':'')+(l.pergunta?' · ❓ tem pergunta':'')+': “'+l.previa+'” ',h('a',{href:l.status==='novamsg'?l.urlUltima:l.url,target:'_blank',rel:'noopener'},l.status==='novamsg'?'Abrir a nova mensagem':'Abrir resposta no GitHub')))}
+        linha.append(h('div',{class:'prev'},'Respondeu em '+fmtD(l.quando)+(l.comentarios>1?' · '+l.comentarios+' comentários (última em '+fmtD(l.ultima)+')':'')+(l.fechada?(l.fechadaPeloAluno?' · Issue fechada pelo próprio aluno':' · Issue fechada por @'+l.fechadaPor+' em '+fmtD(l.fechadaEm)):'')+(l.pergunta?' · ❓ tem pergunta':'')+': “'+l.previa+'” ',h('a',{href:l.status==='novamsg'?l.urlUltima:l.url,target:'_blank',rel:'noopener'},l.status==='novamsg'?'Abrir a nova mensagem':'Abrir resposta no GitHub')))}
       else if(l.issue&&l.url)linha.append(h('div',{class:'prev'},h('a',{href:l.url,target:'_blank',rel:'noopener'},'Abrir Issue'),l.erro?' · ⚠ '+l.erro:''));
       det.append(linha)}
     if(!mostrou)det.append(h('p',{class:'sub',style:'padding:10px 6px'},ver.value==='at'?'Nada pendente nesta atividade. Mude o filtro para ver todos.':'Nenhum aluno nesta atividade.'));

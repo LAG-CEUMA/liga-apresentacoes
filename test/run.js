@@ -21,7 +21,7 @@ const arquivos = {
 const resp = (status, corpo) => ({ status, ok: status < 300, json: async () => corpo, text: async () => (typeof corpo === 'string' ? corpo : JSON.stringify(corpo)) });
 const reservados = {}; let nRes = 0;
 const reposAl = { 'aluno-pronto': { colab: true } };
-const issues = {}, issuesCriadas = [], comentarios = {};
+const issues = {}, issuesCriadas = [], comentarios = {}, issueInfo = {};
 global.fetch = async (url, op = {}) => {
   const p = new URL(url).pathname;
   if (/\/orgs\/LAG-CEUMA\/repos$/.test(p)) return resp(200, [...Object.keys(reposAl).map((name) => ({ name })), { name: 'aluno-orfao-teste' }, { name: 'aluno-modelo' }, { name: 'site' }]);
@@ -34,6 +34,7 @@ global.fetch = async (url, op = {}) => {
       if (rp[4]) return resp(200, []);
       if (rp[2]) { if (!r) return resp(404, {}); if (op.method === 'PUT') { if (rp[3] === 'fantasma') return resp(404, {}); r.colab = true; return resp(201, {}); } return resp(r.colab ? 204 : 404, {}); }
       if (!op.method || op.method === 'GET') return r ? resp(200, {}) : resp(404, {}); } }
+  { const mg = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues\/(\d+)$/.exec(p); if (mg && (!op.method || op.method === 'GET')) return resp(200, issueInfo[mg[1] + '#' + mg[2]] || { state: 'open' }); }
   { const mi = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues(?:\/(\d+)\/comments)?$/.exec(p);
     if (mi) { if (op.method === 'POST') { if (mi[1] === 'semrepo') return resp(404, {}); const n = (issues[mi[1]] = (issues[mi[1]] || 0) + 1); issuesCriadas.push({ aluno: mi[1], n, ...JSON.parse(op.body) }); return resp(201, { number: n, html_url: `https://github.com/LAG-CEUMA/aluno-${mi[1]}/issues/${n}` }); }
       return resp(200, comentarios[mi[1] + '#' + mi[2]] || []); } }
@@ -539,6 +540,18 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
       assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu2', estado: 'prazo', nota: 5 }, 'alu1')).status, 403);
       pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
       assert.equal(pa.linhas.alu1.status, 'corrigida'); assert.equal(pa.entregas.alu1.nota, 9); assert.equal(pa.linhas.alu2.status, 'acorrigir');
+      // Issue fechada pelo professor depois da resposta: fica "revisada" (falta lançar a nota); fechada pelo próprio aluno ou reaberta por nova mensagem, não
+      issueInfo['alu2#1'] = { state: 'closed', closed_at: '2026-11-12T10:00:00Z', closed_by: { login: 'monitor' } };
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu2.status, 'revisada'); assert.equal(pa.linhas.alu2.fechadaPor, 'monitor'); assert(pn.resumo.revisadas >= 1);
+      let rs2 = JSON.parse((await getp({ acao: 'correcao_resumo' })).body); assert(rs2.revisadas >= 1 && rs2.acorrigir >= 1); // o aviso também conta as fechadas sem nota
+      issueInfo['alu2#1'] = { state: 'closed', closed_at: '2026-11-12T10:00:00Z', closed_by: { login: 'alu2' } };
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu2.status, 'acorrigir'); assert.equal(pa.linhas.alu2.fechadaPeloAluno, true); // quem fechou foi o próprio aluno
+      issueInfo['alu2#1'] = { state: 'closed', closed_at: '2026-11-11T11:00:00Z', closed_by: { login: 'monitor' } }; // fechada ANTES da última mensagem do aluno (12:00)
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu2.status, 'acorrigir');
+      delete issueInfo['alu2#1'];
       // o aluno escreve de novo depois da correção: aparece como nova mensagem (e a pergunta é sinalizada)
       comentarios['alu1#1'].push({ user: { login: 'alu1' }, created_at: '2099-01-01T00:00:00Z', body: 'professor, posso refazer?', html_url: 'u1b' });
       pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
