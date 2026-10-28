@@ -1,6 +1,7 @@
 'use strict';
 // Testes das regras da Copa da Liga (puras, sem rede).
 const assert = require('assert'); const C = require('../lib/copa'); const d = require('../lib/dados');
+C.setDado(() => 8); // d10 fixo: efeito normal (o d10 é testado no final)
 const AG = new Date('2026-10-28T15:00:00-03:00').getTime(); const INI = '2026-10-12'; // semana 3
 assert.equal(C.semanaDe(INI, AG), 3); assert.equal(C.semanaDe('', AG), 0); assert.equal(C.semanaDe('2027-01-01', AG), 0);
 // ganhos: presença na semana 1, participação na 2, entrega no prazo na semana 3 e outra no futuro (não conta)
@@ -55,4 +56,19 @@ assert(E7.inventario.ana.length === 1 && E7.inventario.ana[0].bonus && E7.invent
 const gift = E7.inventario.bia[0]; assert(C.ITENS[gift.tipo].alvo !== 'auto' && gift.tipo !== 'chuva');
 const E8 = C.normalizar({}); r = C.chuvaProfessor(E8, rank, INI, AG); assert(r.ok && ['ana', 'bia', 'caio', 'davi'].every((k) => E8.inventario[k].length === 1 && E8.inventario[k][0].bonus));
 assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.normalizar({}), rank, INI, AG, FIM).erro.includes('Trégua'));
+// ---------- d10 ----------
+{ const mk = () => C.normalizar({ inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }], caio: [{ id: 'k1', tipo: 'turbo', semana: 3 }] } });
+  const ef = (e, k) => e.efeitos.filter((x) => x.para === k && !x.bloqueado);
+  assert.equal(C.faixaDe('banana', 1), 'falha_critica'); assert.equal(C.faixaDe('banana', 2), 'falha'); assert.equal(C.faixaDe('banana', 5), 'fraco'); assert.equal(C.faixaDe('banana', 6), 'normal'); assert.equal(C.faixaDe('banana', 10), 'critico');
+  assert(C.faixaDe('turbo', 7) === 'normal' && C.faixaDe('turbo', 6) === 'fraco'); // item forte pede mais do dado
+  C.setDado(() => 10); let e = mk(); let r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert(r.ok && r.faixa === 'critico'); assert.equal(ef(e, 'ana')[0].delta, -4.5); // 150%
+  C.setDado(() => 5); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'fraco'); assert.equal(ef(e, 'ana')[0].delta, -1.5); // metade
+  C.setDado(() => 2); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'falha'); assert.equal(e.efeitos.length, 0); assert.equal(e.inventario.bia.length, 0); // gasta e nada acontece
+  C.setDado(() => 1); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'falha_critica'); assert.equal(e.efeitos.length, 1); assert(['bia', 'caio'].includes(e.efeitos[0].para) && e.efeitos[0].para !== 'ana'); assert(e.efeitos[0].para !== 'davi'); // cai em você ou em outro, nunca no alvo nem no último
+  r = C.usar(mk(), 'caio', 'k1', null, rank, INI, AG); assert.equal(r.faixa, 'falha_critica'); // turbo com 1 vira penalidade em si
+  { const e3 = mk(); C.usar(e3, 'caio', 'k1', null, rank, INI, AG); assert.equal(ef(e3, 'caio')[0].delta, -2); }
+  // consolo: 3 falhas críticas seguidas dão um escudo
+  { const e4 = C.normalizar({ inventario: { bia: [] } }); for (let n = 0; n < 3; n++) { e4.inventario.bia.push({ id: 'x' + n, tipo: 'turbo', semana: 3, bonus: true }); const rr = C.usar(e4, 'bia', 'x' + n, null, rank, INI, AG); assert.equal(rr.faixa, 'falha_critica'); }
+    assert(e4.inventario.bia.some((x) => x.tipo === 'escudo'), 'escudo de consolo'); assert.equal(e4.azar.bia, 0); }
+  C.setDado(() => 8); }
 console.log('Copa: todos os testes passaram.');

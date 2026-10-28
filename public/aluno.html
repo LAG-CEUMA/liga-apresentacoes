@@ -105,13 +105,15 @@ function tabCopa(C){
     w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
     const bloqueado=c.tregua||(m.jaUsouNaSemana&&!it.bonus);
     let sel=null;if(def.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o colega…');o0.value='';sel.append(o0);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
-    const b=el('button','btn',def.alvo==='outro'?'Lançar':def.alvo==='todos'?'Fazer chover':'Usar');b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
-    b.onclick=async()=>{if(def.alvo==='outro'&&!sel.value){alert('Escolha o colega primeiro.');return}b.disabled=true;const r=await postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''});
-      if(!r.ok){alert(r.erro||'Não deu certo.');b.disabled=false;return}alert(r.resultado||'Pronto!');COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
+    const b=el('button','btn','🎲 Jogar o dado');b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
+    b.onclick=async()=>{if(def.alvo==='outro'&&!sel.value){alert('Escolha o colega primeiro.');return}b.disabled=true;let n=0;const giro=setInterval(()=>{b.textContent='🎲 '+(1+Math.floor(Math.random()*10))},80);const [r]=await Promise.all([postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''}),new Promise(z=>setTimeout(z,900))]);clearInterval(giro);
+      if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent='🎲 Jogar o dado';b.disabled=false;return}alert(r.resultado||'Pronto!');COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
     if(sel)caixa.append(sel);caixa.append(b);if(bloqueado)caixa.append(el('small','',c.tregua?'Trégua final.':'Já usado esta semana.'));w.append(caixa);inv.append(w)}
   C.append(inv);
   const reg=secao('Como funciona','regras rápidas');reg.append(el('p','sub','Ganha item na semana: presença na aula, participação e entrega no prazo (até 3 por semana). O tipo é sorteado.'));
   for(const [k,d] of Object.entries(c.itens))reg.append(el('p','',`${d.ic} ${d.nome}: ${d.txt}`));
+  reg.append(el('p','sub','🎲 Todo item é decidido no dado (d10): você aperta o botão e o resultado vem da sorte. Quanto mais forte o item, mais difícil acertar em cheio. 1 = falha crítica (pode virar contra você ou cair em outro colega) · falha = nada acontece · fraco = metade do efeito · normal = efeito inteiro · 10 = crítico (50% a mais). Três falhas críticas seguidas dão um Escudo de consolo.'));
+  if(c.dado){const tb=el('p','sub','');const nm=(k)=>((c.itens[k]||{}).ic||'')+' '+((c.itens[k]||{}).nome||k);tb.innerHTML='';for(const [k,t] of Object.entries(c.dado)){const f=(a,b)=>a>b?'—':(a===b?a:a+'–'+b);tb.append(document.createTextNode(`${nm(k)}: falha crítica ${f(1,t[0])} · falha ${f(t[0]+1,t[1])} · fraco ${f(t[1]+1,t[2])} · normal ${f(t[2]+1,t[3])} · crítico 10`),document.createElement('br'))}reg.append(tb)}
   reg.append(el('p','sub',`Efeitos duram ${c.diasEfeito} dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
 }
 function desenhar(){
