@@ -84,8 +84,8 @@ let COPA=null,PREV=null,PREVT='';
 async function postCopa(c){const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});let b={};try{b=await r.json()}catch{}return{ok:r.ok,...b}}
 function ateData(c){if(!c.inicio||!c.semana)return '';const d=new Date(new Date(c.inicio+'T00:00:00-03:00').getTime()+7*c.semana*864e5-1);return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}
 // Animação do resultado: o servidor já decidiu (d10); dado ou roleta é só a forma de mostrar. O aluno escolhe a que preferir.
-const modoJogo=()=>{try{return localStorage.getItem('liga_modo_jogo')==='roleta'?'roleta':'dado'}catch{return'dado'}};
-const rotuloJogo=()=>modoJogo()==='roleta'?'🎰 Girar a roleta':'🎲 Jogar o dado';
+const modoJogo=()=>'dado';
+const rotuloJogo=()=>'🎲 Jogar';
 const FCOR=['#7a0f1d','#d64545','#f0b429','#3fb36b','#ffd54a'];
 function faixaIdx(n,t){return n<=t[0]?0:n<=t[1]?1:n<=t[2]?2:n<=t[3]?3:4}
 function girarRoleta(dado,t){return new Promise(fim=>{
@@ -146,7 +146,6 @@ function tabCopa(C){
   // meus itens
   const inv=secao('Meus itens',m.inventario.length+' item(ns) · valem só até '+(ateData(c)||'o fim da semana'));inv.open=true;
   inv.append(el('p','sub','Item não passa de uma semana para a outra: use ou perca. Você pode usar 1 item por semana (os itens extras de uma chuva não contam). Quem está em último lugar fica protegido de ataques.'));
-  inv.append(seletorModo());
   if(!m.inventario.length)inv.append(el('p','sub','Você ainda não tem item nesta semana. Vá às aulas, participe e entregue no prazo para ganhar.'));
   for(const it of m.inventario){const def=c.itens[it.tipo]||{ic:'❔',nome:it.tipo,txt:'',alvo:'si'};const w=el('div','item');
     w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
@@ -186,7 +185,6 @@ async function previa(C,qual){
     b.onclick=async()=>{const r=await jogar(b,()=>postCopa({acao:'copa_chefao',turma:PREVT,alvo:sel?sel.value:''}),(c.dadoChefao||{})[ch.tipo]);if(!r)return;desenhar()};
     if(sel)caixa.append(sel);caixa.append(b);if(ch.aleatorio&&d.alvo==='outro')caixa.append(el('small','','Monitor: o alvo é sorteado.'));if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);{const ex=explicaDado((c.dadoChefao||{})[ch.tipo]);if(ex&&!ch.usado)bx.append(ex)}corpo.append(bx)}
   if(c.missao&&c.missao.vida!=null&&c.ativa)corpo.append(vidaChefao(c.missao));
-  corpo.append(seletorModo());
   if(c.monitor)corpo.append(el('p','sub','Você entra como monitor: joga como Chefão com alvo sorteado, e só o dono vê o placar completo e configura a Copa.'));
   if(!c.ativa&&!c.monitor)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
   else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio kart',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
