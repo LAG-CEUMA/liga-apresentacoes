@@ -24,7 +24,7 @@ assert(C.usar(C.normalizar({ inventario: { ana: [{ id: 'old', tipo: 'banana', se
 const rank = [{ usuario: 'ana', total: 80, posicao: 1 }, { usuario: 'bia', total: 70, posicao: 2 }, { usuario: 'caio', total: 60, posicao: 3 }, { usuario: 'davi', total: 50, posicao: 4 }];
 const E = C.normalizar({ inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }, { id: 'b2', tipo: 'banana', semana: 3 }, { id: 'c1', tipo: 'casco', semana: 3 }, { id: 'e1', tipo: 'escudo', semana: 3 }, { id: 't1', tipo: 'turbo', semana: 3 }], caio: [{ id: 'k1', tipo: 'casco', semana: 3 }, { id: 'k2', tipo: 'banana', semana: 3 }] }, ativa: true });
 assert(C.usar(E, 'bia', 'zzz', 'ana', rank, INI, AG).erro); // não tem
-assert(C.usar(E, 'bia', 'b1', 'bia', rank, INI, AG).erro); // em si mesmo
+assert(C.usar(E, 'bia', 'b1', 'ninguem', rank, INI, AG).erro); // em si mesmo
 assert(C.usar(E, 'bia', 'b1', 'davi', rank, INI, AG).erro); // último colocado protegido
 assert(C.usar(E, 'bia', 'c1', 'caio', rank, INI, AG).erro); // casco só acerta quem está à frente
 let r = C.usar(E, 'bia', 'c1', 'ana', rank, INI, AG); assert(r.ok, JSON.stringify(r)); // casco no líder
@@ -125,7 +125,8 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   assert(C.narracao(C.normalizar({ log: [{ em: new Date(AG).toISOString(), de: 'chefao', item: 'maldicao', faixa: 'falha_critica', dado: 1, vit: 'ana' }] }), AG, (k) => k, 3).includes('O Chefão'));
 }
 // ---------- sorteio de alvo ----------
+{ const e = C.normalizar({ ativa: true, inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }] } }); const r = C.usar(e, 'bia', 'b1', '__eu', rank, INI, AG); assert(r.ok, JSON.stringify(r)); assert(e.efeitos.some((x) => x.para === 'bia' && x.delta < 0), 'eu mesmo'); }
 { const e = C.normalizar({ ativa: true, inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }] } }); const r = C.usar(e, 'bia', 'b1', '__sorteio', rank, INI, AG);
-  assert(r.ok, JSON.stringify(r)); const alvo = e.efeitos[0].para; assert(alvo !== 'bia' && alvo !== 'davi'); // nunca em si mesmo nem no último colocado
+  assert(r.ok, JSON.stringify(r)); const alvo = e.efeitos[0].para; assert(alvo !== 'davi'); // nunca no último colocado (você mesmo pode)
   const e2 = C.normalizar({ ativa: true }); const r2 = C.usarChefao(e2, 'prof', '__sorteio', rank, INI, AG, '2999-01-01'); assert(r2.ok, JSON.stringify(r2)); assert(e2.efeitos.length === 1); }
 console.log('Copa: todos os testes passaram.');
