@@ -208,7 +208,7 @@ async function telaCopaProf(alvo){
     const m=c.missao||{};alvo.append(h('p',{class:'sub'},'🎯 Missão da turma: '+(m.cumprida?'cumprida nesta semana, a turma ganhou itens.':!m.atividades?'ainda sem atividade vencida nesta semana.':m.faltam?`faltam ${m.faltam} aluno(s) entregarem no prazo para a turma ganhar itens.`:'todos no prazo, os itens saem em instantes.')));
     if((c.trofeus||[]).length)alvo.append(h('p',{class:'sub'},'🏅 Troféus (sem pontos): '+c.trofeus.map(t=>`${t.ic} ${t.titulo} da ${t.periodo}: ${t.quem.join(', ')} (${t.qtd}x)`).join(' · ')));
     const ta=h('textarea',{rows:6,readonly:true,style:'width:100%;max-width:640px'});ta.value=c.narracao||'';
-    const det=h('details',{class:'ag'},h('summary',{},'📣 Texto da semana para o WhatsApp'),ta,h('div',{class:'barra livre'},h('button',{class:'btn',type:'button',onclick:async()=>{aviso(await copiarTexto(ta.value)?'Texto copiado. É só colar no grupo.':'Não consegui copiar; selecione o texto.',0)}},'Copiar texto'),h('span',{class:'sub'},'Quem acerta um colega não é citado; só as falhas engraçadas citam o nome.')));alvo.append(det)}
+    const det=h('details',{class:'ag'},h('summary',{},'📣 Texto da semana para o WhatsApp'),ta,h('div',{class:'barra livre'},h('button',{class:'btn',type:'button',onclick:async()=>{aviso(await copiarTexto(ta.value)?'Texto copiado. É só colar no grupo.':'Não consegui copiar; selecione o texto.',0)}},'Copiar texto'),h('button',{class:'btn sec',type:'button',title:'Cria uma imagem do placar da Copa para copiar e colar no WhatsApp',onclick:()=>imagemCopa(c,nome,TURMA)},'🖼️ Imagem do placar'),h('span',{class:'sub'},'Quem acerta um colega não é citado; só as falhas engraçadas citam o nome.')));alvo.append(det)}
   const tb=h('tbody',{});
   for(const x of c.placar){const inv=(c.inventario[x.usuario]||[]).map(i=>(c.itens[i.tipo]||{}).ic+(i.bonus?'✨':'')).join(' ');
     tb.append(h('tr',{},h('td',{},x.posCopa+'º'),h('td',{},quem(x.usuario)),h('td',{},String(x.oficial)),h('td',{},h('b',{},String(x.copa))),h('td',{style:x.efeito<0?'color:var(--err)':''},x.efeito?(x.efeito>0?'+':'')+x.efeito:'–'),h('td',{},(x.escudo?'🛡️ ':'')+(inv||'–'))))}
@@ -535,6 +535,27 @@ function textoIncentivo(D,op,v){
   else L.push('','Turma inteira em dia. Que orgulho! 🎉');
   L.push('','Como entregar: comente na Issue da atividade, no seu repositório aluno-<seu usuário>. Travou? Escreva lá mesmo que eu ajudo. Bora subir no quadro! 🚀');
   return L.join('\n')}
+
+function imagemCopa(c,nome,turma){
+  const pl=(c.placar||[]).slice(0,12),nev=c.evento&&/nevoeiro/i.test(c.evento.nome||'');const W=900,H=200+pl.length*58+60;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#1b1f3a');gr.addColorStop(1,'#0e1020');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.fillStyle='#ffd34d';g.font='800 44px sans-serif';g.fillText('🏆 Copa da Liga',40,70);
+  g.fillStyle='#fff';g.font='24px sans-serif';g.fillText('Turma '+turma+(c.evento?' · '+c.evento.ic+' '+c.evento.nome:''),40,110);
+  g.fillStyle='#fff9';g.font='20px sans-serif';g.fillText(nev?'Nevoeiro: pontos escondidos esta semana':'Pontos da Copa (oficial + efeitos dos itens)',40,145);
+  const med=['🥇','🥈','🥉'],max=Math.max(1,...pl.map(x=>x.copa));
+  pl.forEach((x,i)=>{const y=180+i*58;g.fillStyle='#ffffff14';g.fillRect(40,y,W-80,46);
+    if(!nev){g.fillStyle='#7b2ff7';g.fillRect(40,y,Math.max(8,(W-80)*x.copa/max),46);g.globalAlpha=.55;g.fillStyle='#0e1020';g.fillRect(40,y,0,0);g.globalAlpha=1}
+    g.fillStyle='#fff';g.font='700 24px sans-serif';g.fillText((med[(x.posCopa||i+1)-1]||(x.posCopa||i+1)+'º')+'  '+String(nome(x.usuario)).split(' ').slice(0,2).join(' '),56,y+32);
+    if(!nev){g.textAlign='right';g.fillText(String(x.copa),W-56,y+32);if(x.efeito){g.font='18px sans-serif';g.fillStyle=x.efeito<0?'#ff8a80':'#a5f3b0';g.fillText((x.efeito>0?'+':'')+x.efeito,W-130,y+31)}g.textAlign='left'}});
+  g.fillStyle='#fff7';g.font='18px sans-serif';g.fillText('Liga de Games · Ceuma',40,H-24);
+  document.querySelectorAll('.imgjan').forEach(x=>x.remove());
+  const bg=h('div',{class:'imgjan',style:'position:fixed;inset:0;background:#000c;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px'});
+  const cx=h('div',{style:'background:#171a26;border:1px solid var(--ouro);border-radius:16px;max-width:760px;width:100%;max-height:94vh;overflow:auto;padding:16px'});
+  const prev=h('img',{src:cv.toDataURL('image/png'),style:'width:100%;border-radius:10px'});let blob=null;cv.toBlob(b=>{blob=b},'image/png');
+  const copiar=h('button',{class:'btn',type:'button',onclick:async()=>{try{if(!blob)throw 0;await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);aviso('Imagem copiada. Cole (Ctrl+V) no WhatsApp.')}catch{aviso('Seu navegador não copiou a imagem; use Baixar.',1)}}},'📋 Copiar imagem');
+  const baixa=h('a',{class:'btn sec',href:cv.toDataURL('image/png'),download:'copa-'+turma+'.png'},'⬇️ Baixar');
+  cx.append(h('b',{},'Placar da Copa'),prev,h('div',{class:'barra livre'},copiar,baixa,h('button',{class:'btn sec',type:'button',onclick:()=>bg.remove()},'Fechar')));bg.append(cx);bg.onclick=e=>{if(e.target===bg)bg.remove()};document.body.append(bg)}
 function janelaImagem(D){
   document.querySelectorAll('.pop,.imgjan').forEach(x=>x.remove());
   const op={modo:ls.get('liga_img_modo','motiv'),completo:ls.get('liga_img_nome','')==='1'};
