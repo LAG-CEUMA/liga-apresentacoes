@@ -19,7 +19,8 @@
 .pz{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
 .pz.adi{background:#3ec9b033;color:var(--ver)}.pz.ok{background:#3ec9b022;color:#9be6d8}.pz.atr{background:#ff6b5b33;color:#ff8f82}.pz.perto{background:#f5b83d33;color:var(--ouro)}.pz.sem{background:#fff1;color:var(--mut)}
 .st{display:inline-block;border-radius:8px;padding:2px 10px;font-size:12px;font-weight:800;margin-left:6px;vertical-align:middle}
-.st.acorrigir{background:var(--ouro);color:#12141c}.st.revisada{background:#ff9f43;color:#12141c}.aviso-nota{background:#ff9f4322;border:1px solid #ff9f43;border-left:6px solid #ff9f43;border-radius:12px;padding:12px 16px;margin:12px 0}.st.novamsg{background:#6aa7ff;color:#12141c}.st.corrigida{background:#3ec9b033;color:var(--ver)}.st.semresposta{background:#fff1;color:var(--mut)}.st.dispensado{background:#fff1;color:var(--mut)}.st.erro{background:#ff6b5b33;color:#ff8f82}
+.st.acorrigir{background:var(--ouro);color:#12141c}.st.revisada{background:#ff9f43;color:#12141c}.chips .clic{cursor:pointer;transition:transform .12s,border-color .12s}.chips .clic:hover{border-color:#f7b93e;transform:translateY(-1px)}.chips .clic span::after{content:' ›'}.pisca{animation:pisca 1.6s ease}@keyframes pisca{0%,60%{box-shadow:0 0 0 3px #f7b93e}100%{box-shadow:none}}
+.aviso-nota{background:#ff9f4322;border:1px solid #ff9f43;border-left:6px solid #ff9f43;border-radius:12px;padding:12px 16px;margin:12px 0}.st.novamsg{background:#6aa7ff;color:#12141c}.st.corrigida{background:#3ec9b033;color:var(--ver)}.st.semresposta{background:#fff1;color:var(--mut)}.st.dispensado{background:#fff1;color:var(--mut)}.st.erro{background:#ff6b5b33;color:#ff8f82}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.chips div{flex:1 1 150px;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px}.chips b{display:block;font-size:28px;font-family:'Space Grotesk',sans-serif}.chips span{color:var(--mut);font-size:13px}
 .bdg{display:inline-block;background:#ff6b5b;color:#fff;border-radius:99px;min-width:22px;padding:0 7px;margin-left:8px;font-size:13px;font-weight:800;line-height:22px;text-align:center}
 .ag>summary{flex-wrap:wrap}.ag>summary>span:first-of-type{flex:1 1 240px}
@@ -272,19 +273,37 @@ async function telaCorr(alvo){
   let P;try{P=await postA({acao:'ativ_painel',atualizar:CORR_FORCAR});CORR_FORCAR=false}catch(e){alvo.textContent='';alvo.append(h('p',{class:'sub'},'Não consegui buscar agora: '+e.message));return}
   alvo.textContent='';const R=P.resumo;const V=vistos();const visiveis=P.duvidas.filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]);
   atualizaBadge(R.acorrigir+R.novas+R.revisadas+visiveis.length);try{sessionStorage.setItem('liga_corr_n',String(BADGE))}catch{}
-  const chip=(n,t)=>h('div',{},h('b',{},String(n)),h('span',{},t));
+  const irPara=el=>{if(!el)return;el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.add('pisca');setTimeout(()=>el.classList.remove('pisca'),1800)};
+  const primeira=sts=>[...alvo.querySelectorAll('details.ag[data-st]')].find(d=>sts.some(x=>(d.dataset.st||'').split(' ').includes(x)));
+  const chip=(n,t,ir)=>{const c=h('div',ir?{class:'clic',role:'button',tabindex:'0',title:'Clique para ir direto',onclick:ir}:{},h('b',{},String(n)),h('span',{},t));if(ir)c.addEventListener('keydown',e=>{if(e.key==='Enter')ir()});return c};
   alvo.append(h('p',{class:'sub'},'Tudo o que os alunos devolveram no GitHub, por atividade. Ao lado do nome: o estado e o prazo (adiantado, no prazo, atrasado). O prazo é medido pela hora em que o aluno respondeu, nunca pela hora em que você corrige: corrigir depois do prazo não prejudica o aluno. A tela se atualiza sozinha.'),
-    h('div',{class:'chips'},chip(R.acorrigir,'A corrigir'),chip(R.revisadas,'Fechadas, falta a nota'),chip(R.novas,'Novas mensagens'),chip(R.semresposta,'Sem resposta'),chip(visiveis.length,'Dúvidas avulsas')));
+    h('div',{class:'chips'},chip(R.acorrigir,'A corrigir',R.acorrigir?()=>irPara(primeira(['acorrigir'])):0),chip(R.revisadas,'Fechadas, falta a nota',R.revisadas?()=>irPara(document.getElementById('painel-atrib')):0),chip(R.novas,'Novas mensagens',R.novas?()=>irPara(primeira(['novamsg'])):0),chip(R.semresposta,'Sem resposta',R.semresposta?()=>irPara(primeira(['semresposta'])):0),chip(visiveis.length,'Dúvidas avulsas',visiveis.length?()=>irPara(dd):0)));
   if(R.revisadas>0)alvo.append(h('div',{class:'aviso-nota'},h('b',{},'⚠ '+R.revisadas+' já fechada(s) no GitHub, mas sem nota lançada. '),'Sem lançar a nota aqui, o aluno fica com 0 pontos nessa atividade. Procure o selo laranja “Fechada no GitHub · falta a nota” e clique em Lançar nota.'));
   const ver=h('select',{},h('option',{value:'at'},'Só o que precisa de atenção'),h('option',{value:'tudo'},'Mostrar todos os alunos'));ver.value=ls.get('liga_corr_ver','at');ver.addEventListener('change',()=>{ls.set('liga_corr_ver',ver.value);alvo.textContent='';telaCorr(alvo)});
   const atu=h('button',{class:'btn sec',type:'button',onclick:()=>{CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}},'Atualizar agora');
   alvo.append(h('div',{class:'barra'},atu,ver,h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm)),ajuda('aba_corr')));
   window.ATV_OPEN=window.ATV_OPEN||new Set();
+  if(R.revisadas>0){
+    const pend=[];for(const a of P.atividades)for(const k of Object.keys(a.linhas))if(a.linhas[k].status==='revisada')pend.push({a,k});
+    const pa=h('details',{class:'ag',id:'painel-atrib'});pa.open=true;
+    pa.append(h('summary',{},h('span',{},'Atribuir notas · fechadas no GitHub sem nota'),h('span',{class:'st revisada'},pend.length+' falta(m) nota')));
+    pa.append(h('p',{class:'sub',style:'padding:6px'},'Estas Issues já foram fechadas por você no GitHub, mas ainda não têm nota aqui. Escolha a nota de cada uma (ou aplique uma nota a todas) e salve tudo de uma vez. O prazo continua sendo o da hora em que o aluno respondeu.'));
+    const sels={};
+    const nopts=mx=>{const o=[['','Escolher…']];for(let v=mx;v>=0;v-=(mx>10?1:0.5))o.push([String(v),v+' de '+mx]);return o};
+    const mxs=[...new Set(pend.map(x=>x.a.notaMax))];
+    const todas=h('select',{style:'width:150px'},...nopts(mxs[0]||10).map(([v,t])=>h('option',{value:v},t)));
+    const ap=h('button',{class:'btn sec',type:'button',onclick:()=>{if(!todas.value)return aviso('Escolha primeiro a nota a aplicar.',1);let n=0;for(const {a,k} of pend){const o=sels[a.id+'|'+k];if(o&&Number(todas.value)<=a.notaMax){o.value=todas.value;n++}}aviso('Nota aplicada a '+n+'. Revise e clique em Salvar notas.')}},'Aplicar a todas');
+    const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{const por={};for(const {a,k} of pend){const o=sels[a.id+'|'+k];if(o&&o.value!==''){const l=a.linhas[k];const sug=a.prazo&&new Date(l.quando).getTime()>new Date(a.prazo).getTime()?'atraso':'prazo';(por[a.id]=por[a.id]||[]).push({aluno:k,estado:sug,nota:o.value})}}
+      const ids=Object.keys(por);if(!ids.length)return aviso('Escolha ao menos uma nota.',1);salvar.disabled=true;try{let t=0;for(const id of ids){const r=await postA({acao:'ativ_notas_lote',id,itens:por[id]});t+=r.salvos}aviso(t+' nota(s) atribuída(s).');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);salvar.disabled=false}}},'Salvar notas');
+    pa.append(h('div',{class:'barra',style:'padding:8px 6px'},h('span',{class:'sub'},'Mesma nota para todas:'),todas,ap,salvar));
+    for(const {a,k} of pend){const l=a.linhas[k];const o=h('select',{style:'width:150px'},...nopts(a.notaMax).map(([v,t])=>h('option',{value:v},t)));sels[a.id+'|'+k]=o;
+      pa.append(h('div',{class:'cr'},h('div',{class:'t',style:'min-width:200px'},quem(k),a.prazo?pz(a.prazo,l.quando):''),h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),o,h('div',{class:'prev'},'Respondeu em '+fmtD(l.quando)+': “'+(l.previa||'')+'” ',h('a',{href:l.url,target:'_blank',rel:'noopener'},'Abrir resposta'))))}
+    alvo.append(pa)}
   if(!P.atividades.length)alvo.append(h('p',{},'Nenhuma atividade liberada nesta turma ainda. Libere uma na aba Atividades.'));
   const ordem={acorrigir:0,novamsg:1,revisada:2,semresposta:3,corrigida:4,dispensado:5,semissue:6,erro:7};
   for(const a of [...P.atividades].sort((x,y)=>(x.prazo||'').localeCompare(y.prazo||''))){
     const cont=st=>Object.values(a.linhas).filter(l=>l.status===st).length;
-    const det=h('details',{class:'ag'});const key='c:'+a.id;
+    const det=h('details',{class:'ag'});det.dataset.st=[...new Set(Object.values(a.linhas).map(l=>l.status))].join(' ');const key='c:'+a.id;
     const mx=a.notaMax,pas=mx>10?1:0.5;
     det.append(h('summary',{},h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),cont('acorrigir')?h('span',{class:'st acorrigir'},cont('acorrigir')+' a corrigir'):'',cont('revisada')?h('span',{class:'st revisada'},cont('revisada')+' falta(m) nota'):'',cont('novamsg')?h('span',{class:'st novamsg'},cont('novamsg')+' nova(s) msg'):'',h('span',{class:'cnt'},'prazo '+fmtD(a.prazo)+' · '+cont('corrigida')+' corrigida(s) · '+cont('semresposta')+' sem resposta')));
     det.open=ATV_OPEN.has(key)||(cont('acorrigir')+cont('novamsg')+cont('revisada')>0&&!ATV_OPEN.has('x:'+key));
