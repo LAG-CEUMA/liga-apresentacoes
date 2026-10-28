@@ -536,6 +536,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
         assert.equal(lf.respondeu, true); assert.equal(lf.fora, 'issue'); assert.equal(lf.status, 'acorrigir'); assert.equal(pf.duvidas.length, 1);
         comentarios['alu3#undefined'].pop(); await ap({ acao: 'ativ_painel', atualizar: true });
         assert.equal((await ap({ acao: 'ativ_avisar', id: id1, aluno: 'alu3', ref: 11 })).status, 200);
+        { const rl = await ap({ acao: 'ativ_avisar_lote', itens: [{ id: id1, aluno: 'alu3', ref: 11 }, { id: id1, aluno: 'alu1', ref: 12 }] }); assert.equal(rl.status, 200); assert.equal(JSON.parse(rl.body).enviados, 1); }
       }
       assert.equal((await ap({ acao: 'ativ_painel' }, 'alu1')).status, 403); // aluno não vê a correção
       let rs = JSON.parse((await getp({ acao: 'correcao_resumo' })).body); assert(rs.acorrigir >= 2 && rs.duvidas === 1 && rs.turmas.some((x) => x.turma === T));
