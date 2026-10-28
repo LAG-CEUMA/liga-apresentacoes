@@ -22,6 +22,19 @@
 .st.acorrigir{background:var(--ouro);color:#12141c}.st.revisada{background:#ff9f43;color:#12141c}.chips .clic{cursor:pointer;transition:transform .12s,border-color .12s}.chips .clic:hover{border-color:#f7b93e;transform:translateY(-1px)}.chips .clic span::after{content:' ›'}.pisca{animation:pisca 1.6s ease}@keyframes pisca{0%,60%{box-shadow:0 0 0 3px #f7b93e}100%{box-shadow:none}}
 .dot{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-style:normal;font-weight:700;font-size:13px;color:#0b0d14;position:relative}.dot sup{position:absolute;top:-6px;right:-6px;font-size:10px;color:#fff}.dot.verde{background:#2ecc71}.dot.azul{background:#4aa3ff}.dot.amar{background:#f7b93e}.dot.verm{background:#ff5d5d}.dot.cinza{background:#6b7285;color:#fff}.dot.traco{background:transparent;border:1px dashed #fff4;color:var(--mut)}
 .legenda{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}.legenda .lg{display:inline-flex;align-items:center;gap:6px;color:var(--mut)}.legenda .dot{width:20px;height:20px;font-size:11px}
+.corr-pista{position:relative;background:linear-gradient(#1b1f2d,#151826);border:1px solid #fff2;border-radius:14px;padding:10px 12px 10px 12px;overflow:hidden}
+.corr-pista .faixa{position:absolute;top:0;bottom:0;right:0;width:22px;background:repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/11px 11px;opacity:.85}
+.corr-pista .larg{position:absolute;top:0;bottom:0;left:56px;border-left:2px dashed #ffffff40}
+.corr-via{position:relative;height:44px;border-bottom:1px dashed #ffffff18;margin-right:26px}
+.corr-via:last-of-type{border-bottom:0}
+.corr-kart{position:absolute;top:3px;display:flex;align-items:center;gap:6px;transition:left .6s;white-space:nowrap}
+.corr-kart img,.corr-kart .ini{width:36px;height:36px;border-radius:50%;border:2px solid var(--ouro);object-fit:cover;background:#2a2e42;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:none}
+.corr-kart .rt{font-size:12px;color:#cfd3e6;background:#0008;border-radius:8px;padding:2px 7px}
+.corr-pos{position:absolute;left:0;top:11px;width:44px;text-align:right;font-weight:800;font-size:13px;color:var(--mut)}
+.corr-pod{display:flex;justify-content:center;align-items:flex-end;gap:10px;margin:8px 0 14px}
+.corr-pod>div{display:flex;flex-direction:column;align-items:center;text-align:center;font-size:13px;font-weight:700;max-width:150px}
+.corr-pod img,.corr-pod .ini{width:56px;height:56px;border-radius:50%;border:3px solid var(--ouro);object-fit:cover;background:#2a2e42;display:flex;align-items:center;justify-content:center;font-weight:800}
+.corr-pod .bloco{width:100px;border-radius:8px 8px 0 0;background:linear-gradient(#f5b83d,#c9871a);color:#10121a;display:flex;align-items:center;justify-content:center;font-size:22px;margin-top:6px}
 table.acomp td.cel,table.acomp th.col{text-align:center}table.acomp th.col small{display:block;font-weight:400;color:var(--mut)}table.acomp td.sticky{position:sticky;left:0;background:#171a26;z-index:1;min-width:210px}table.acomp .mk{margin-left:6px}table.acomp td.nent{white-space:nowrap;font-size:14px;text-align:center}table.acomp a.nm{text-decoration:none;color:inherit}table.acomp tr.ficha td{background:#10131d;padding:10px}.st.verm{background:#ff5d5d33;color:#ff8a8a}.st.azul{background:#4aa3ff33;color:#8cc4ff}
 .aviso-fora{display:inline-block;background:#ff9f4322;border:1px solid #ff9f43;border-radius:8px;padding:2px 8px;margin:2px 4px;font-size:12px}
 table.acomp>thead>tr>th{position:sticky;top:0;z-index:4}table.acomp>thead>tr>th:first-child{z-index:6;left:0}.fichabox .barra{position:static}.fichabox th{position:static}table.acomp td.sticky{z-index:2}table.acomp .dot{z-index:0}.barra.livre{position:static;margin-top:10px}.pop{position:fixed;z-index:50;background:#1b1f2d;border:1px solid var(--ouro);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:230px;box-shadow:0 8px 30px #000a}.pop b{font-size:13px;padding:2px 6px}.pop .btn{text-align:left}
@@ -40,6 +53,7 @@ table.acomp>thead>tr>th{position:sticky;top:0;z-index:4}table.acomp>thead>tr>th:
 <script src="/site.js"></script><script src="/ajuda.js"></script>
 <script>
 window.AJUDA={
+rank_corrida:{t:'Corrida da Liga',l:['Cada aluno é um kart com a foto do GitHub dele. Quanto mais pontos no ranking (presença, participação e atividades), mais perto da bandeira quadriculada.','Os 3 primeiros aparecem no pódio. A pista é só para você por enquanto; depois você poderá escolher se os alunos veem.','Se a foto do GitHub não carregar, aparece a inicial do nome.','Em breve: turbo por entregar no prazo e troféus de constância.','Use a Tabela para ver o detalhe de cada parte da pontuação.']},
 acomp_extras:{t:'Ordem, lembrete e planilha',l:['Ordem: muda a ordem dos alunos (alfabética, mais pendências, mais entregas ou maior média). Fica salva neste navegador.','Copiar lembrete dos pendentes: monta um texto pronto com as atividades vencidas e os nomes de quem falta, para você colar no grupo. O portal não envia nada sozinho.','Planilha (Excel): baixa um arquivo CSV com todos os alunos e o estado de cada atividade.','Média: soma das notas já dadas dividida pela soma das notas máximas dessas atividades. Atividades ainda sem nota não entram.','Novo: o aluno respondeu nas últimas 24 horas.']},
 acomp_imagem:{t:'Imagem para o WhatsApp',l:['Cria uma imagem do quadro de entregas da turma, pronta para colar no grupo e estimular os alunos.','Motivacional: mostra o progresso da turma, os destaques e quem entregou, sem usar vermelho. Quem ainda não entregou aparece com um círculo vazio (dá tempo!). Completo: mostra também as atividades vencidas em vermelho e quantas faltam.','Por padrão aparece só o primeiro nome e a inicial do sobrenome. Marque Nome completo se quiser o nome todo.','Copiar imagem coloca a figura na área de transferência: abra o WhatsApp Web e cole com Ctrl+V. Se o navegador não permitir, use Baixar PNG e envie o arquivo.','Os números são os de agora, vindos do GitHub. Clique em Atualizar agora antes, se quiser o dado mais recente.']},
 aba_acomp:{t:'Acompanhamento',l:['Quadro para acompanhar a turma inteira: uma linha por aluno e uma coluna por atividade. É só leitura: aqui você olha, e para dar nota usa a aba Correção.','Os dados vêm sozinhos das Atividades e do GitHub, então não há nada para digitar nem botão de salvar. A tela se atualiza sozinha.','Clique no nome de um aluno para abrir a ficha dele (pontos, situação em cada atividade e lembrete pronto). Clique numa bolinha para abrir um menu: ver a resposta no GitHub, ir corrigir aquela atividade ou abrir a ficha do aluno. Clique no código de uma atividade (cabeçalho da coluna) para abrir essa atividade na aba Correção.','Os números coloridos no alto são atalhos: clique para filtrar só aquele grupo.']},
@@ -133,11 +147,31 @@ function telaPart(){
     h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Remover esta participação?'))return;try{await api({acao:'remover_participacao',turma:TURMA,chave:CHAVE,id:p.id});await carregarSessao();desenhar()}catch(e){aviso(e.message,1)}}},'Remover')));
   return h('div',{},h('div',{class:'linha'},aluno,tipo,h('label',{},'Pontos (se for penalidade, são os perdidos) ',pts),nota,h('button',{class:'btn',type:'button',onclick:async()=>{try{await api({acao:'participacao',turma:TURMA,chave:CHAVE,usuario:aluno.value,tipo:tipo.value,nota:nota.value,pontos:pts.value});aviso('Participação registrada');await carregarSessao();desenhar()}catch(e){aviso(e.message,1)}}},'Registrar')),
     h('p',{class:'sub'},'Os pontos entram no ranking da turma (aba Ranking). "Atrapalhou a aula" tira pontos do total do aluno.'),lista)}
+
+function avatarGH(u,cls){const ini=h('span',{class:'ini'},(u||'?')[0].toUpperCase());const im=h('img',{src:'https://github.com/'+encodeURIComponent(u)+'.png?size=96',alt:u,loading:'lazy',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.replaceWith(ini));return im}
+function corridaRank(R){
+  const max=(R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios)||100;
+  const lista=R.ranking.filter(x=>x.total>0||true);const w=h('div',{});
+  const top=lista.filter(x=>x.total>0).slice(0,3);
+  if(top.length){const ordem=[top[1],top[0],top[2]].filter(Boolean);const alt={1:70,2:48,3:34};
+    w.append(h('div',{class:'corr-pod'},...ordem.map(x=>{const pos=top.indexOf(x)+1;return h('div',{},avatarGH(x.usuario),h('span',{style:'margin-top:4px'},((CTX.nomes||{})[x.usuario]||x.usuario).split(' ').slice(0,2).join(' ')),h('span',{class:'sub'},x.total+' pts'),h('div',{class:'bloco',style:'height:'+alt[pos]+'px'},['🥇','🥈','🥉'][pos-1]))})))}
+  const pista=h('div',{class:'corr-pista'},h('div',{class:'faixa',title:'Linha de chegada'}),h('div',{class:'larg',title:'Largada'}));
+  lista.forEach((x,i)=>{const pct=Math.max(0,Math.min(1,x.total/max));
+    const kart=h('div',{class:'corr-kart',title:quemTxt(x.usuario)+' · '+x.total+' de '+max+' pontos'},avatarGH(x.usuario),h('span',{class:'rt'},'🏎️ '+x.total));
+    kart.style.left='calc(56px + (100% - 56px - 150px) * '+pct+')';
+    pista.append(h('div',{class:'corr-via'},h('span',{class:'corr-pos'},x.posicao+'º'),kart))});
+  w.append(pista,h('p',{class:'sub'},'Quanto mais perto da bandeira quadriculada, mais pontos o aluno tem em relação ao máximo possível ('+max+'). Passe o mouse sobre o kart para ver o nome. A pista é só sua por enquanto: os alunos não veem.'));
+  return w}
+const quemTxt=k=>((CTX.nomes||{})[k]||k);
 async function telaRank(alvo){
   alvo.append(h('p',{},'Carregando…'));
   const r=await fetch('/api/presenca?acao=ranking&turma='+encodeURIComponent(TURMA));
   if(!r.ok){alvo.textContent='Não consegui carregar o ranking desta turma.';return}
   const R=await r.json();alvo.textContent='';const max=R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios;
+  const vis=ls.get('liga_rank_vis','corrida');const abas=h('div',{class:'barra livre'});
+  for(const [v,t] of [['corrida','🏁 Corrida'],['tabela','📋 Tabela']])abas.append(h('button',{class:'btn '+(vis===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_vis',v);alvo.textContent='';telaRank(alvo)}},t));
+  abas.append(ajuda('rank_corrida'));alvo.append(abas);
+  if(vis==='corrida'){alvo.append(corridaRank(R),h('div',{class:'legenda'},h('b',{},'Lembrete: '),'🏁 Corrida = visual para motivar a turma · 📋 Tabela = detalhes de pontos · a pista usa os mesmos pontos do ranking · nesta fase ela é visível só para o professor.'));return}
   alvo.append(h('p',{class:'sub'},`Pontuação máxima ${max}: presença ${R.pesos.presenca} + participação ${R.pesos.participacao} (meta ${R.config.meta} pontos) + exercícios ${R.pesos.exercicios}, menos penalidades. Empate: presença e depois exercícios.`));
   const tb=h('tbody',{});for(const x of R.ranking)tb.append(h('tr',{style:x.posicao<=5?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},quem(x.usuario)),h('td',{},h('b',{},String(x.total))),h('td',{},String(x.partes.presenca)),h('td',{},String(x.partes.participacao)),h('td',{},String(x.partes.exercicios)),h('td',{style:x.partes.penalidades?'color:var(--err)':''},x.partes.penalidades?'−'+x.partes.penalidades:'0')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['#','Aluno','Total','Presença','Particip.','Exercícios','Penal.'].map(t=>h('th',{},t)))),tb)),h('p',{class:'sub'},'As linhas em destaque são o Top 5 da turma.'))}
