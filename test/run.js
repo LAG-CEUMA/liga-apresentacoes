@@ -468,20 +468,21 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     const c = u.normalizar({ alunos: ['a', 'b', 'c'], turmas: { T: { nome: 'T', status: 'andamento', alunos: ['a', 'b', 'c'] } } });
     const mk = (ch, part, ent) => ({ turma: 'T', chave: 'n/aula-01', chamadas: { 1: { estados: ch }, 2: { estados: ch } }, participacoes: part, ...(ent ? { entregas: ent } : {}) });
     const s1 = mk({ a: 'p', b: 'p', c: 'j' }, [{ usuario: 'a', tipo: 'pergunta', pontos: 15 }, { usuario: 'b', tipo: 'penalidade', pontos: 3 }, { usuario: 'a', tipo: 'ajuda', pontos: 15 }], { a: { estado: 'prazo', nota: 10 }, b: { estado: 'atraso' }, c: { estado: 'nao' } });
-    const r = P.ranking(c, 'T', [s1]);
+    const AT = [{ turma: 'T', liberada: true, peso: 10, notaMax: 10, entregas: { a: { estado: 'prazo', nota: 10 }, b: { estado: 'atraso', nota: 10 }, c: { estado: 'nao' } } }];
+    const r = P.ranking(c, 'T', [s1], AT);
     { // owners nunca entram; monitor fica fora só das turmas em que é monitor
       const cx = JSON.parse(JSON.stringify(c)); cx.owners = [...(cx.owners || []), 'a']; cx.monitores = { ...(cx.monitores || {}), b: { aulas: [], roteiros: [], turmas: ['T'] }, c: { aulas: [], roteiros: [], turmas: ['OUTRA'] } };
-      assert.deepEqual(P.ranking(cx, 'T', [s1]).map((x) => x.usuario), ['c']);
-      cx.turmas.T.nivel = 'n'; cx.monitores.c = { aulas: ['n/aula-01'], roteiros: [], turmas: [] }; assert.deepEqual(P.ranking(cx, 'T', [s1]), []);
-      cx.monitores.c = { aulas: ['outro/aula-01'], roteiros: [], turmas: [] }; assert.deepEqual(P.ranking(cx, 'T', [s1]).map((x) => x.usuario), ['c']);
+      assert.deepEqual(P.ranking(cx, 'T', [s1], AT).map((x) => x.usuario), ['c']);
+      cx.turmas.T.nivel = 'n'; cx.monitores.c = { aulas: ['n/aula-01'], roteiros: [], turmas: [] }; assert.deepEqual(P.ranking(cx, 'T', [s1], AT), []);
+      cx.monitores.c = { aulas: ['outro/aula-01'], roteiros: [], turmas: [] }; assert.deepEqual(P.ranking(cx, 'T', [s1], AT).map((x) => x.usuario), ['c']);
     }
     assert.deepEqual(r.map((x) => x.usuario), ['a', 'b', 'c']);
     assert.equal(r[0].total, 100); assert.equal(r[0].partes.participacao, 30); // 30 pts = meta
     assert.equal(r[1].total, 40 + 0 + 15 - 3); // presente + atraso (50%) − penalidade
     assert.equal(r[2].total, 20); // justificado = 50% da presença
-    assert.equal(P.ranking(c, 'T', [s1, { ...s1, chave: 'n/aula-02', participacoes: [{ usuario: 'c', tipo: 'penalidade', pontos: 10 }] }]).find((x) => x.usuario === 'c').total >= 0, true); // nunca negativo
+    assert.equal(P.ranking(c, 'T', [s1, { ...s1, chave: 'n/aula-02', participacoes: [{ usuario: 'c', tipo: 'penalidade', pontos: 10 }] }], AT).find((x) => x.usuario === 'c').total >= 0, true); // nunca negativo
     const c2 = u.normalizar({ ...c, pontuacao: { pesos: { presenca: 100, participacao: 0, exercicios: 0 } }, turmas: { T: { ...c.turmas.T, pesos: { presenca: 10 } } } });
-    assert.equal(P.ranking(c2, 'T', [s1])[0].partes.presenca, 10); // peso da turma vale mais que o padrão
+    assert.equal(P.ranking(c2, 'T', [s1], AT)[0].partes.presenca, 10); // peso da turma vale mais que o padrão
     assert.deepEqual(P.configPontos(u.normalizar({})).pesos, { presenca: 40, participacao: 30, exercicios: 30 });
   }
   assert.equal((await post({ acao: 'pontuacao', pesos: { presenca: 50, participacao: 20, exercicios: 30 }, meta: 25, tipos: { pergunta: 2 } }, {}, 'sec')).status, 403); // só owner
@@ -528,6 +529,14 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
       assert.equal(pa.linhas.alu1.status, 'acorrigir'); assert.equal(pa.linhas.alu1.respondeu, true); assert.equal(pa.linhas.alu2.status, 'acorrigir'); assert.equal(pa.linhas.alu3.status, 'semresposta');
       assert.equal(pn.duvidas.length, 1); assert.equal(pn.duvidas[0].usuario, 'alu3'); assert.equal(pn.duvidas[0].numero, 9); // a Issue da atividade (nº 1) e PRs não contam como dúvida
       assert(pn.resumo.acorrigir >= 2 && pn.resumo.duvidas === 1);
+      { // aluno respondeu abrindo uma Issue nova (fora do lugar): conta como resposta, sem prejuízo, e sai das dúvidas
+        const extra = { number: 11, title: 'Minha primeira cena pronta', body: 'segue a cena', html_url: 'https://github.com/LAG-CEUMA/aluno-alu3/issues/11', created_at: '2026-11-10T12:00:00Z', updated_at: '2026-11-10T12:00:00Z', comments: 0, user: { login: 'alu3' } };
+        comentarios['alu3#undefined'].push(extra);
+        const pf = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); const lf = pf.atividades.find((x) => x.id === id1).linhas.alu3;
+        assert.equal(lf.respondeu, true); assert.equal(lf.fora, 'issue'); assert.equal(lf.status, 'acorrigir'); assert.equal(pf.duvidas.length, 1);
+        comentarios['alu3#undefined'].pop(); await ap({ acao: 'ativ_painel', atualizar: true });
+        assert.equal((await ap({ acao: 'ativ_avisar', id: id1, aluno: 'alu3', ref: 11 })).status, 200);
+      }
       assert.equal((await ap({ acao: 'ativ_painel' }, 'alu1')).status, 403); // aluno não vê a correção
       let rs = JSON.parse((await getp({ acao: 'correcao_resumo' })).body); assert(rs.acorrigir >= 2 && rs.duvidas === 1 && rs.turmas.some((x) => x.turma === T));
       assert.equal((await getp({ acao: 'correcao_resumo' }, 'alu1')).status, 403);
