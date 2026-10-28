@@ -22,7 +22,7 @@
 .st.acorrigir{background:var(--ouro);color:#12141c}.st.revisada{background:#ff9f43;color:#12141c}.chips .clic{cursor:pointer;transition:transform .12s,border-color .12s}.chips .clic:hover{border-color:#f7b93e;transform:translateY(-1px)}.chips .clic span::after{content:' ›'}.pisca{animation:pisca 1.6s ease}@keyframes pisca{0%,60%{box-shadow:0 0 0 3px #f7b93e}100%{box-shadow:none}}
 .dot{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-style:normal;font-weight:700;font-size:13px;color:#0b0d14;position:relative}.dot sup{position:absolute;top:-6px;right:-6px;font-size:10px;color:#fff}.dot.verde{background:#2ecc71}.dot.azul{background:#4aa3ff}.dot.amar{background:#f7b93e}.dot.verm{background:#ff5d5d}.dot.cinza{background:#6b7285;color:#fff}.dot.traco{background:transparent;border:1px dashed #fff4;color:var(--mut)}
 .legenda{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;background:#171a26;border:1px solid #fff2;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:13px}.legenda .lg{display:inline-flex;align-items:center;gap:6px;color:var(--mut)}.legenda .dot{width:20px;height:20px;font-size:11px}
-.corr-pista{position:relative;background:linear-gradient(#1b1f2d,#151826);border:1px solid #fff2;border-radius:14px;padding:10px 12px 10px 12px;overflow:hidden}
+.corr-wrap{border-radius:18px;overflow:hidden;border:1px solid #fff2}.corr-wrap svg{display:block;width:100%;height:auto}.corr-pista{position:relative;background:linear-gradient(#1b1f2d,#151826);border:1px solid #fff2;border-radius:14px;padding:10px 12px 10px 12px;overflow:hidden}
 .corr-pista .faixa{position:absolute;top:0;bottom:0;right:0;width:22px;background:repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/11px 11px;opacity:.85}
 .corr-pista .larg{position:absolute;top:0;bottom:0;left:56px;border-left:2px dashed #ffffff40}
 .corr-via{position:relative;height:44px;border-bottom:1px dashed #ffffff18;margin-right:26px}
@@ -53,7 +53,7 @@ table.acomp>thead>tr>th{position:sticky;top:0;z-index:4}table.acomp>thead>tr>th:
 <script src="/site.js"></script><script src="/ajuda.js"></script>
 <script>
 window.AJUDA={
-rank_corrida:{t:'Corrida da Liga',l:['Cada aluno é um kart com a foto do GitHub dele. Quanto mais pontos no ranking (presença, participação e atividades), mais perto da bandeira quadriculada.','Os 3 primeiros aparecem no pódio. A pista é só para você por enquanto; depois você poderá escolher se os alunos veem.','Se a foto do GitHub não carregar, aparece a inicial do nome.','Em breve: turbo por entregar no prazo e troféus de constância.','Use a Tabela para ver o detalhe de cada parte da pontuação.']},
+rank_corrida:{t:'Corrida da Liga',l:['Cada aluno é um kart com a foto do GitHub dele, num circuito. Cada volta é uma semana da turma (do início ao fim previstos). Quanto mais pontos no ranking (presença, participação e atividades), mais voltas ele já completou. O 🚓 (na linha de largada) é o ritmo ideal da semana atual: os karts à frente dele estão adiantados; os que estão antes da linha estão devendo. A distância na pista mostra o tamanho da diferença.','Os 3 primeiros aparecem no pódio. A pista é só para você por enquanto; depois você poderá escolher se os alunos veem.','Se a foto do GitHub não carregar, aparece a inicial do nome.','Em breve: turbo por entregar no prazo e troféus de constância.','Use a Tabela para ver o detalhe de cada parte da pontuação.']},
 acomp_extras:{t:'Ordem, lembrete e planilha',l:['Ordem: muda a ordem dos alunos (alfabética, mais pendências, mais entregas ou maior média). Fica salva neste navegador.','Copiar lembrete dos pendentes: monta um texto pronto com as atividades vencidas e os nomes de quem falta, para você colar no grupo. O portal não envia nada sozinho.','Planilha (Excel): baixa um arquivo CSV com todos os alunos e o estado de cada atividade.','Média: soma das notas já dadas dividida pela soma das notas máximas dessas atividades. Atividades ainda sem nota não entram.','Novo: o aluno respondeu nas últimas 24 horas.']},
 acomp_imagem:{t:'Imagem para o WhatsApp',l:['Cria uma imagem do quadro de entregas da turma, pronta para colar no grupo e estimular os alunos.','Motivacional: mostra o progresso da turma, os destaques e quem entregou, sem usar vermelho. Quem ainda não entregou aparece com um círculo vazio (dá tempo!). Completo: mostra também as atividades vencidas em vermelho e quantas faltam.','Por padrão aparece só o primeiro nome e a inicial do sobrenome. Marque Nome completo se quiser o nome todo.','Copiar imagem coloca a figura na área de transferência: abra o WhatsApp Web e cole com Ctrl+V. Se o navegador não permitir, use Baixar PNG e envie o arquivo.','Os números são os de agora, vindos do GitHub. Clique em Atualizar agora antes, se quiser o dado mais recente.']},
 aba_acomp:{t:'Acompanhamento',l:['Quadro para acompanhar a turma inteira: uma linha por aluno e uma coluna por atividade. É só leitura: aqui você olha, e para dar nota usa a aba Correção.','Os dados vêm sozinhos das Atividades e do GitHub, então não há nada para digitar nem botão de salvar. A tela se atualiza sozinha.','Clique no nome de um aluno para abrir a ficha dele (pontos, situação em cada atividade e lembrete pronto). Clique numa bolinha para abrir um menu: ver a resposta no GitHub, ir corrigir aquela atividade ou abrir a ficha do aluno. Clique no código de uma atividade (cabeçalho da coluna) para abrir essa atividade na aba Correção.','Os números coloridos no alto são atalhos: clique para filtrar só aquele grupo.']},
@@ -151,16 +151,57 @@ function telaPart(){
 function avatarGH(u,cls){const ini=h('span',{class:'ini'},(u||'?')[0].toUpperCase());const im=h('img',{src:'https://github.com/'+encodeURIComponent(u)+'.png?size=96',alt:u,loading:'lazy',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.replaceWith(ini));return im}
 function corridaRank(R){
   const max=(R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios)||100;
-  const lista=R.ranking.filter(x=>x.total>0||true);const w=h('div',{});
+  const lista=R.ranking;const w=h('div',{});
+  const T=(CTX.turmas||{})[TURMA]||{};const DS=864e5*7;
+  let N=20,dec=null;
+  if(T.inicio&&T.fim){const a=new Date(T.inicio+'T00:00:00').getTime(),b=new Date(T.fim+'T23:59:59').getTime();N=Math.max(1,Math.round((b-a)/DS));dec=Math.max(0,Math.min(N,(Date.now()-a)/DS))}
+  const semAtual=dec===null?null:Math.min(N,Math.floor(dec)+1);
   const top=lista.filter(x=>x.total>0).slice(0,3);
   if(top.length){const ordem=[top[1],top[0],top[2]].filter(Boolean);const alt={1:70,2:48,3:34};
-    w.append(h('div',{class:'corr-pod'},...ordem.map(x=>{const pos=top.indexOf(x)+1;return h('div',{},avatarGH(x.usuario),h('span',{style:'margin-top:4px'},((CTX.nomes||{})[x.usuario]||x.usuario).split(' ').slice(0,2).join(' ')),h('span',{class:'sub'},x.total+' pts'),h('div',{class:'bloco',style:'height:'+alt[pos]+'px'},['🥇','🥈','🥉'][pos-1]))})))}
-  const pista=h('div',{class:'corr-pista'},h('div',{class:'faixa',title:'Linha de chegada'}),h('div',{class:'larg',title:'Largada'}));
-  lista.forEach((x,i)=>{const pct=Math.max(0,Math.min(1,x.total/max));
-    const kart=h('div',{class:'corr-kart',title:quemTxt(x.usuario)+' · '+x.total+' de '+max+' pontos'},avatarGH(x.usuario),h('span',{class:'rt'},'🏎️ '+x.total));
-    kart.style.left='calc(56px + (100% - 56px - 150px) * '+pct+')';
-    pista.append(h('div',{class:'corr-via'},h('span',{class:'corr-pos'},x.posicao+'º'),kart))});
-  w.append(pista,h('p',{class:'sub'},'Quanto mais perto da bandeira quadriculada, mais pontos o aluno tem em relação ao máximo possível ('+max+'). Passe o mouse sobre o kart para ver o nome. A pista é só sua por enquanto: os alunos não veem.'));
+    w.append(h('div',{class:'corr-pod'},...ordem.map(x=>{const pos=top.indexOf(x)+1;return h('div',{},avatarGH(x.usuario),h('span',{style:'margin-top:4px'},quemTxt(x.usuario).split(' ').slice(0,2).join(' ')),h('span',{class:'sub'},x.total+' pts'),h('div',{class:'bloco',style:'height:'+alt[pos]+'px'},['🥇','🥈','🥉'][pos-1]))})))}
+  const NS='http://www.w3.org/2000/svg';const E=(t,at,...f)=>{const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(at||{}))e.setAttribute(k,v);e.append(...f);return e};
+  const svg=E('svg',{viewBox:'0 0 800 470',class:'circ',role:'img','aria-label':'Pista de corrida da turma'});
+  const D='M160,340 C60,340 40,205 140,165 C230,128 300,195 400,152 C500,108 560,66 665,108 C775,154 775,335 650,368 C560,392 480,325 400,356 C320,388 250,368 160,340 Z';
+  const defs=E('defs',{});defs.append(E('radialGradient',{id:'gr',cx:'50%',cy:'50%',r:'70%'},E('stop',{offset:'0','stop-color':'#1f5a35'}),E('stop',{offset:'1','stop-color':'#123a24'})));
+  svg.append(defs,E('rect',{x:0,y:0,width:800,height:470,rx:18,fill:'url(#gr)'}));
+  for(const[x,y,r]of[[90,60,16],[130,90,11],[720,60,14],[60,420,13],[740,420,15],[690,430,10],[300,60,12]])svg.append(E('circle',{cx:x,cy:y,r,fill:'#1d6b3c',opacity:'.6'}));
+  svg.append(E('path',{d:D,fill:'none',stroke:'#fff','stroke-width':'58','stroke-linejoin':'round',opacity:'.9'}));
+  svg.append(E('path',{d:D,fill:'none',stroke:'#e63946','stroke-width':'58','stroke-dasharray':'14 14','stroke-linejoin':'round'}));
+  svg.append(E('path',{d:D,fill:'none',stroke:'#2b2f3d','stroke-width':'48','stroke-linejoin':'round'}));
+  const centro=E('path',{d:D,id:'tr',fill:'none',stroke:'#ffffff55','stroke-width':'2','stroke-dasharray':'10 12'});svg.append(centro);
+  const L=centro.getTotalLength();const pt=f=>{f=((f%1)+1)%1;const a=centro.getPointAtLength(f*L),b=centro.getPointAtLength(((f+.004)%1)*L);const an=Math.atan2(b.y-a.y,b.x-a.x);return{x:a.x,y:a.y,nx:-Math.sin(an),ny:Math.cos(an),an}};
+  const s0=pt(0);svg.append(E('rect',{x:s0.x-4,y:s0.y-26,width:8,height:52,fill:'url(#chk)',stroke:'#fff','stroke-width':'1',transform:'rotate('+(s0.an*180/Math.PI)+' '+s0.x+' '+s0.y+')'}));
+  defs.append(E('pattern',{id:'chk',width:8,height:8,patternUnits:'userSpaceOnUse'},E('rect',{width:8,height:8,fill:'#fff'}),E('rect',{width:4,height:4,fill:'#111'}),E('rect',{x:4,y:4,width:4,height:4,fill:'#111'})));
+  svg.append(E('text',{x:s0.x,y:s0.y+46,'text-anchor':'middle',fill:'#fff','font-size':'12','font-weight':'700'},'LARGADA / CHEGADA'));
+  const hud=E('g',{'text-anchor':'middle',fill:'#fff'});
+  hud.append(E('text',{x:400,y:228,'font-size':'15',fill:'#f5b83d','font-weight':'700','letter-spacing':'2'},'CORRIDA DA LIGA'),
+    E('text',{x:400,y:268,'font-size':'38','font-weight':'800'},semAtual===null?'Volta ? / '+N:'Volta '+semAtual+' / '+N),
+    E('text',{x:400,y:292,'font-size':'15',fill:'#cfd3e6'},dec===null?'Defina início e fim da turma para contar as semanas':(N-semAtual)+' volta'+(N-semAtual===1?'':'s')+' (semanas) restante'+(N-semAtual===1?'':'s')));
+  svg.append(hud);
+  // pace car e karts
+  const karts=[];const lider=lista.find(x=>x.total>0);
+  const mkKart=(u,voltas,eh,pos)=>{const g=E('g',{class:'kart'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':quemTxt(u)+' · '+pos+'º · '+Math.round(voltas*10)/10+' de '+N+' voltas'));
+    if(eh){g.append(E('circle',{r:15,fill:'#f5b83d',stroke:'#fff','stroke-width':2}),E('text',{y:5,'text-anchor':'middle','font-size':'16'},'🚓'));return{g,voltas,eh,off:0,u:null}}
+    const cid='cp'+u.replace(/\W/g,'');defs.append(E('clipPath',{id:cid},E('circle',{r:15})));
+    g.append(E('circle',{r:17,fill:'#2a2e42',stroke:pos===1?'#ffd54a':'#f5b83d','stroke-width':pos===1?4:2.5}),E('text',{y:5,'text-anchor':'middle','font-size':'15',fill:'#fff','font-weight':'800'},u[0].toUpperCase()));
+    const im=E('image',{href:'https://github.com/'+encodeURIComponent(u)+'.png?size=64',x:-15,y:-15,width:30,height:30,'clip-path':'url(#'+cid+')',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.remove());g.append(im);
+    if(pos===1)g.append(E('text',{y:-22,'text-anchor':'middle','font-size':'15'},'👑'));
+    g.append(E('text',{y:32,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'700',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'V'+Math.floor(voltas+1)));
+    return{g,voltas,eh,off:((pos%3)-1)*12,u}};
+  const mov=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if(dec!==null)karts.push(mkKart(null,dec,true,0));
+  lista.forEach(x=>karts.push(mkKart(x.usuario,Math.max(0,Math.min(1,x.total/max))*N,false,x.posicao)));
+  const trail=E('g',{});svg.append(trail);for(const k of karts)svg.append(k.g);
+  const gaps=karts.filter(k=>!k.eh).map(k=>k.voltas-(dec===null?0:dec));const M=Math.max(1,...gaps.map(Math.abs));
+  for(const k of karts)k.f=k.eh?0:(dec===null?Math.max(0,Math.min(1,k.voltas/N))*.9:((k.voltas-dec)/(2*M))*.9);
+  const pose=(t)=>{trail.textContent='';for(const k of karts){const v=k.f*t;const p=pt(v);const x=p.x+p.nx*k.off,y=p.y+p.ny*k.off;k.g.setAttribute('transform','translate('+x+','+y+')');
+      if(mov&&t<1&&!k.eh)for(let i=1;i<=3;i++){const q=pt(v-i*.012*Math.sign(k.f||1));trail.append(E('circle',{cx:q.x+q.nx*k.off,cy:q.y+q.ny*k.off,r:6-i,fill:'#fff',opacity:.28-i*.07}))}}};
+  pose(mov?0:1);
+  w.append(h('div',{class:'corr-wrap'},svg));
+  if(mov){const t0=performance.now(),dur=4200;const passo=n=>{const t=Math.min(1,(n-t0)/dur);pose(1-Math.pow(1-t,3));if(t<1&&document.body.contains(svg))requestAnimationFrame(passo)};requestAnimationFrame(passo)}
+  const rep=h('button',{class:'btn sec',type:'button',onclick:()=>{const a=w.parentNode;a.textContent='';a.append(corridaRank(R))}},'▶ Rever a largada');
+  w.append(h('div',{class:'barra livre'},rep,h('span',{class:'sub'},dec===null?'Sem datas de início e fim da turma, não dá para contar as voltas.':'Cada volta é uma semana. O 🚓 fica na linha de largada e é o ritmo ideal: quem passou da linha está adiantado; quem está antes dela está devendo. Quanto mais longe, maior a diferença.')));
+  w.append(h('p',{class:'sub'},'Cada kart é a foto do GitHub do aluno; o V mostra em que volta ele está (pontos ÷ '+max+' × '+N+' voltas); a posição na pista mostra a diferença para o ritmo ideal. A pista é só sua por enquanto: os alunos não veem.'));
   return w}
 const quemTxt=k=>((CTX.nomes||{})[k]||k);
 async function telaRank(alvo){
