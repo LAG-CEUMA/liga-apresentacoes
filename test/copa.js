@@ -92,4 +92,10 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   const tf = C.trofeus(eg, AG); assert(tf.some((x) => x.id === 'rei' && x.quem[0] === 'bia')); assert(tf.some((x) => x.id === 'azarado' && x.quem[0] === 'caio')); assert(tf.some((x) => x.id === 'escudo' && x.quem[0] === 'ana'));
   const tx = C.narracao(eg, AG, (k) => k.toUpperCase(), 3); assert(/CAIO tirou 1/.test(tx) && /acertou a si mesmo/.test(tx)); assert(!/BIA acertou/.test(tx) && /Crítico! Alguém acertou ANA/.test(tx)); // quem acerta não é citado
 }
+// ---------- recuperação (sábado) ----------
+{ const base = { chamadas: { 1: { estados: { ana: 'p', bia: 'a', caio: 'a' } } }, participacoes: [] };
+  assert.equal(d.resumoSessao(base).bia.status, 'ausente');
+  const comRec = { ...base, recuperacoes: [{ data: '2026-11-07', ministrante: 'ana', estados: { bia: 'p', novato: 'p' } }] };
+  const rs = d.resumoSessao(comRec); assert.equal(rs.bia.status, 'presente'); assert(rs.bia.recuperou); assert.equal(rs.caio.status, 'ausente'); assert.equal(rs.novato.status, 'presente'); // quem perdeu ou entrou depois recupera a presença
+}
 console.log('Copa: todos os testes passaram.');

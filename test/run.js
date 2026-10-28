@@ -319,6 +319,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 1, estados: {} }, 'mon2')).status, 400);
   // três chamadas: início, meio, fim
   r = await pres({ acao: 'chamada', turma: T, chave: CH(1), data: '2026-11-03', n: 1, estados: { alu1: 'p', alu2: 'p', alu3: 'j', intruso: 'p' } }, 'pres'); assert.equal(r.status, 200);
+  assert.equal((await pres({ acao: 'recuperacao', turma: T, chave: CH(1), data: '2026-11-07', estados: { alu2: 'p' } }, 'alu1')).status, 403); // aluno não registra recuperação
   assert.equal(JSON.parse(r.body).presentes, 2);
   assert(!dadosArq['dados/aulas/2026/' + CH(1) + '.json'].texto.includes('intruso')); // só quem é aluno
   await pres({ acao: 'chamada', turma: T, chave: CH(1), n: 2, estados: { alu1: 'p' } }, 'pres'); // alu2 sem marca = ausente

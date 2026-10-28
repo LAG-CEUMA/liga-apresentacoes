@@ -131,6 +131,21 @@ module.exports = async (req, res) => {
     }
     if (!validaSessao(b.turma, b.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida (ou sem permissão para esta aula).' });
     const alunos = new Set(alunosDe(b.turma));
+    if (b.acao === 'recuperacao') {
+      // Sessão de recuperação (sábado, online, opcional): um membro de destaque ministra para quem perdeu a aula. Presença aqui vale como presença na aula perdida.
+      const data = /^\d{4}-\d{2}-\d{2}$/.test(String(b.data || '')) ? b.data : hoje();
+      const min = String(b.ministrante || '').trim().toLowerCase();
+      if (min && !/^[a-z0-9-]{1,39}$/.test(min)) return u.json(res, 400, { erro: 'Usuário do ministrante inválido.' });
+      const estados = {}; for (const k of alunos) if ((b.estados || {})[k] === 'p') estados[k] = 'p';
+      const todas = await d.listarSessoes(); let pontua = !!min;
+      if (min) { const dia = new Date(data + 'T12:00:00Z').getTime(); pontua = !todas.some((x) => x.turma === b.turma && (x.recuperacoes || []).some((r) => r.ministrante === min && r.pontuou && Math.abs(new Date(r.data + 'T12:00:00Z').getTime() - dia) < 7 * 864e5 && !(x.chave === b.chave && r.data === data))); } // no máximo 1 sessão pontuada por semana para o mesmo ministrante
+      const rid = 'rec-' + data;
+      await d.atualizarSessao(b.turma, b.chave, (s) => { s.turma = b.turma; s.chave = b.chave; s.data = s.data || data; s.chamadas = s.chamadas || {}; s.participacoes = (s.participacoes || []).filter((x) => x.recId !== rid);
+        s.recuperacoes = (s.recuperacoes || []).filter((r) => r.data !== data); s.recuperacoes.push({ data, ministrante: min, estados, pontuou: pontua, por: usuario, em: new Date().toISOString() });
+        if (pontua) s.participacoes.push({ id: d.novoId(), usuario: min, tipo: 'apresentacao', nota: 'Ministrou a recuperação de ' + data.split('-').reverse().join('/'), pontos: 2, por: usuario, em: new Date().toISOString(), recId: rid });
+        return s; }, `Portal: ${usuario} salvou a recuperação de ${b.chave} em ${data} (turma ${b.turma}: ${Object.keys(estados).length} presentes)`);
+      return u.json(res, 200, { ok: true, presentes: Object.keys(estados).length, pontuou: pontua });
+    }
     if (b.acao === 'chamada') {
       const n = Number(b.n);
       if (![1, 2, 3].includes(n)) return u.json(res, 400, { erro: 'A chamada deve ser 1, 2 ou 3.' });
