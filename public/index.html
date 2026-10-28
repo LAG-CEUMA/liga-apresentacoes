@@ -57,5 +57,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
   const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);if(d.usuario)conta.append(ajuda('ix_menu'));
 }).catch(()=>{document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.'});
-</script><script src="/como.js"></script>
+</script><script src="/como.js">
+try{if(/[?&]saiu=1/.test(location.search)){history.replaceState(null,'','/');const b=document.createElement('div');b.className='card';b.style.cssText='border-left:6px solid var(--ouro,#f5b83d);margin:12px 0;padding:14px 18px';b.innerHTML='<b>Você saiu da Liga.</b> Nenhum dado seu fica guardado neste computador.<br><span class="sub">Está num computador compartilhado? Saia também do GitHub, para a próxima pessoa não entrar na sua conta: </span>';const a=document.createElement('a');a.href='https://github.com/logout';a.target='_blank';a.rel='noopener';a.className='btn sec';a.textContent='Sair do GitHub';b.append(a);document.querySelector('main').insertBefore(b,document.getElementById('hero'))}}catch{}
+</script>
 </body></html>

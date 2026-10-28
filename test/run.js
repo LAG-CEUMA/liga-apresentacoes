@@ -35,6 +35,8 @@ global.fetch = async (url, op = {}) => {
       if (rp[2]) { if (!r) return resp(404, {}); if (op.method === 'PUT') { if (rp[3] === 'fantasma') return resp(404, {}); r.colab = true; return resp(201, {}); } return resp(r.colab ? 204 : 404, {}); }
       if (!op.method || op.method === 'GET') return r ? resp(200, {}) : resp(404, {}); } }
   { const mg = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues\/(\d+)$/.exec(p); if (mg && (!op.method || op.method === 'GET')) return resp(200, issueInfo[mg[1] + '#' + mg[2]] || { state: 'open' }); }
+  { const mc = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues\/comments$/.exec(p); // todos os comentários do repositório do aluno (uma chamada por aluno)
+    if (mc && (!op.method || op.method === 'GET')) { if (mc[1] === 'semrepo' || /^ficticio-/.test(mc[1])) return resp(404, {}); return resp(200, Object.entries(comentarios).filter(([kk]) => kk.startsWith(mc[1] + '#') && !kk.endsWith('#undefined')).flatMap(([kk, v]) => v.map((x) => ({ ...x, issue_url: `https://api.github.com/repos/LAG-CEUMA/aluno-${mc[1]}/issues/${kk.split('#')[1]}` })))); } }
   { const mi = /\/repos\/LAG-CEUMA\/aluno-([a-z0-9-]+)\/issues(?:\/(\d+)\/comments)?$/.exec(p);
     if (mi) { if (op.method === 'POST') { if (mi[1] === 'semrepo') return resp(404, {}); const n = (issues[mi[1]] = (issues[mi[1]] || 0) + 1); issuesCriadas.push({ aluno: mi[1], n, ...JSON.parse(op.body) }); return resp(201, { number: n, html_url: `https://github.com/LAG-CEUMA/aluno-${mi[1]}/issues/${n}` }); }
       return resp(200, comentarios[mi[1] + '#' + mi[2]] || []); } }
