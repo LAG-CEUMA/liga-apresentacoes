@@ -71,4 +71,25 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   { const e4 = C.normalizar({ inventario: { bia: [] } }); for (let n = 0; n < 3; n++) { e4.inventario.bia.push({ id: 'x' + n, tipo: 'turbo', semana: 3, bonus: true }); const rr = C.usar(e4, 'bia', 'x' + n, null, rank, INI, AG); assert.equal(rr.faixa, 'falha_critica'); }
     assert(e4.inventario.bia.some((x) => x.tipo === 'escudo'), 'escudo de consolo'); assert.equal(e4.azar.bia, 0); }
   C.setDado(() => 8); }
+// ---------- evento da semana, missão, troféus, narração ----------
+{ const mk = () => C.normalizar({ ativa: true, inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }], caio: [] } });
+  let e = mk(); assert(C.definirEvento(e, rank, INI, AG, 'xx', '2999-01-01').erro); assert(C.definirEvento(e, rank, '2999-01-01', AG, 'paz', '3000-01-01').erro); // inválido / não começou
+  assert(C.definirEvento(e, rank, INI, AG, 'paz', '2999-01-01').ok); assert.equal(C.eventoDe(e, 3), 'paz');
+  assert(/paz/i.test(C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG).erro)); // paz bloqueia ataque
+  C.definirEvento(e, rank, INI, AG, 'nenhum', '2999-01-01'); assert.equal(C.eventoDe(e, 3), null);
+  e = mk(); C.definirEvento(e, rank, INI, AG, 'chuva', '2999-01-01'); const n1 = rank.reduce((n, x) => n + (e.inventario[x.usuario] || []).length, 0); C.definirEvento(e, rank, INI, AG, 'chuva', '2999-01-01');
+  assert.equal(rank.reduce((n, x) => n + (e.inventario[x.usuario] || []).length, 0), n1); assert(n1 >= rank.length); // chuva entrega uma vez só
+  e = mk(); C.definirEvento(e, rank, INI, AG, 'dado_dobro', '2999-01-01'); let seq = [1, 9]; C.setDado(() => seq.shift() || 1); const r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.dado, 9); C.setDado(() => 8); // vale o melhor dos dois
+  assert(['nevoeiro', 'dado_dobro', 'paz', 'chuva'].includes(C.eventoDe((() => { const x = mk(); C.definirEvento(x, rank, INI, AG, 'sorteio', '2999-01-01'); return x; })(), 3)));
+  // missão: todos entregaram no prazo as atividades vencidas da semana
+  const ex = C.normalizar({ ativa: true }); const us = rank.map((x) => x.usuario); const prazo = '2026-10-28T10:00:00-03:00';
+  const atv = (ok) => [{ turma: 'T', liberada: true, prazo, entregas: Object.fromEntries(us.map((a, i) => [a, { estado: ok || i ? 'prazo' : 'atraso' }])) }];
+  assert.equal(C.missaoInfo(ex, 'T', INI, AG, us, atv(false)).faltam, 1); assert.equal(C.missao(ex, 'T', INI, AG, us, atv(false), '2999-01-01'), false);
+  assert.equal(C.missao(ex, 'T', INI, AG, us, atv(true), '2999-01-01'), true); assert(ex.missoes['3']); assert.equal(C.missao(ex, 'T', INI, AG, us, atv(true), '2999-01-01'), false); // só uma vez
+  assert(us.every((a) => ex.inventario[a].length === 1));
+  // troféus e narração
+  const eg = C.normalizar({ log: [{ em: new Date(AG).toISOString(), de: 'bia', item: 'banana', faixa: 'critico', dado: 10, vit: 'ana' }, { em: new Date(AG).toISOString(), de: 'caio', item: 'turbo', faixa: 'falha_critica', dado: 1, vit: 'caio' }, { em: new Date(AG).toISOString(), de: 'bia', item: 'casco', faixa: 'normal', dado: 8, bloq: true, vit: 'ana' }] });
+  const tf = C.trofeus(eg, AG); assert(tf.some((x) => x.id === 'rei' && x.quem[0] === 'bia')); assert(tf.some((x) => x.id === 'azarado' && x.quem[0] === 'caio')); assert(tf.some((x) => x.id === 'escudo' && x.quem[0] === 'ana'));
+  const tx = C.narracao(eg, AG, (k) => k.toUpperCase(), 3); assert(/CAIO tirou 1/.test(tx) && /acertou a si mesmo/.test(tx)); assert(!/BIA acertou/.test(tx) && /Crítico! Alguém acertou ANA/.test(tx)); // quem acerta não é citado
+}
 console.log('Copa: todos os testes passaram.');

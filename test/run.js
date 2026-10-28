@@ -638,6 +638,11 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     r = await pres({ acao: 'copa_usar', turma: T, item: 'y1' }, 'alu1'); assert.equal(r.status, 200); assert(JSON.parse(r.body).resultado.includes('Turbo'));
     cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.meu.inventario.length, 0); assert(cp.meu.efeito >= 3 || cp.meu.copa >= cp.meu.oficial);
     assert.equal(JSON.stringify(P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)).map((x) => [x.usuario, x.total])), ptsAntes); // o ranking oficial nunca muda
+    assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'nevoeiro' }, 'alu1')).status, 403); assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'zzz' })).status, 400);
+    assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'nevoeiro' })).status, 200);
+    cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.evento.tipo, 'nevoeiro'); assert.equal(cp.meu.posCopa, null); assert.equal(cp.placar, null); // nevoeiro esconde a posição e o placar
+    cp = JSON.parse((await getp({ acao: 'copa', turma: T })).body); assert.equal(typeof cp.narracao, 'string'); assert(Array.isArray(cp.trofeus));
+    assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'nenhum' })).status, 200);
   }
   // ---------- Plano (calendário) ----------
   { const P = require('../lib/pontos'), A = require('../lib/atividades'), d = require('../lib/dados'), PL = require('../lib/planos');
