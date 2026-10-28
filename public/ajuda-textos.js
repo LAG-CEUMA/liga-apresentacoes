@@ -49,6 +49,7 @@ window.AJUDA = Object.assign(window.AJUDA || {}, {
   pf_pessoal: { t: 'E-mail pessoal', l: ['Um e-mail que você leia sempre (Gmail, Outlook…). Opcional. Usado para avisos e certificados.'] },
   pf_cpf: { t: 'CPF', l: ['Obrigatório para salvar seus dados. Só números ou no formato 000.000.000-00.', 'Serve para identificar você com segurança (certificados, evitar cadastro duplicado). Nenhum outro aluno vê.'] },
   pf_curso: { t: 'Curso', l: ['Seu curso no Ceuma, como você quer que apareça (ex.: Engenharia de Software).'] },
+  al_copa: { t: 'Copa da Liga', l: ['A Copa é a parte divertida: cada volta da pista é uma semana da turma.', 'Você ganha itens por presença, participação e entrega no prazo. Eles valem só na semana em que foram ganhos.', 'Itens como banana e casco mexem só nos pontos da Copa, nunca no seu ranking oficial nem nas notas.', 'Você pode usar 1 item por semana. Nos últimos 2 dias da turma há trégua: nada vale.', 'Ninguém vê quem lançou um item em você.'] },
   al_progresso: { t: 'Meu progresso', l: ['Sua presença, participações, atividades e posição no ranking da turma.', 'O Top 5 mostra só quem já tem pontos.'] },
   ix_menu: { t: 'Botões do topo', l: ['Área do aluno: suas aulas, atividades e progresso.', 'Painel: ferramentas da equipe, só aparece para quem tem permissão.', 'Central de ajuda: respostas para dúvidas.', 'Eventos: inscrição em eventos e certificados.'] },
 

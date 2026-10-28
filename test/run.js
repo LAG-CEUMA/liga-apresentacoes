@@ -621,6 +621,23 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await ap({ acao: 'ativ_liberar', id: 'nao-existe' })).status, 400);
   }
   r = JSON.parse((await getp({ acao: 'minhapontuacao' }, 'alu1')).body); assert(r.turmas[0].top5.length > 0 && r.turmas[0].posicao >= 1 && r.turmas[0].total > 0);
+  // ---------- Copa da Liga ----------
+  { const P = require('../lib/pontos'), A = require('../lib/atividades'), d = require('../lib/dados'); const KC = 'dados/copa/' + T + '.json'; const ptsAntes = JSON.stringify(P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)).map((x) => [x.usuario, x.total]));
+    cfg.turmas[T].inicio = new Date(Date.now() - 864e5 - 3 * 3600e3).toISOString().slice(0, 10); cfg.turmas[T].fim = '2999-01-01'; require('../lib/util').limparCache(); // semana 1
+    dadosArq[KC] = { sha: 'cp1', texto: JSON.stringify({ ativa: true, visibilidade: 'oculta', concedidos: { alu1: 99, alu2: 99, alu3: 99 }, inventario: { alu1: [{ id: 'y1', tipo: 'turbo', semana: 1 }], alu2: [{ id: 'x1', tipo: 'banana', semana: 1 }] } }), msg: '' };
+    let cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.oculta, true); assert(!cp.meu && !cp.placar); // oculta: o aluno não vê nada
+    assert.equal((await pres({ acao: 'copa_config', turma: T, ativa: true, visibilidade: 'propria' }, 'alu1')).status, 403); // aluno não muda a configuração
+    assert.equal((await pres({ acao: 'copa_config', turma: T, ativa: true, visibilidade: 'xx' })).status, 400);
+    assert.equal((await pres({ acao: 'copa_config', turma: T, ativa: true, visibilidade: 'propria' })).status, 200);
+    cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert(cp.meu && cp.placar === null && cp.meu.inventario.length === 1 && cp.meu.posCopa >= 1); assert(cp.meu.alvos.every((x) => x.copa === undefined && x.total === undefined)); // colegas aparecem só como alvos, sem pontos
+    await pres({ acao: 'copa_config', turma: T, ativa: true, visibilidade: 'completa' }); cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert(cp.placar.length >= 2);
+    assert.equal(JSON.parse((await getp({ acao: 'copa', turma: T })).body).dono, true); // professor vê tudo
+    assert.equal((await pres({ acao: 'copa_usar', turma: T, item: 'y1' }, 'dono')).status, 403); // só aluno da turma usa
+    assert.equal((await pres({ acao: 'copa_usar', turma: T, item: 'nao-existe' }, 'alu1')).status, 400);
+    r = await pres({ acao: 'copa_usar', turma: T, item: 'y1' }, 'alu1'); assert.equal(r.status, 200); assert(JSON.parse(r.body).resultado.includes('Turbo'));
+    cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.meu.inventario.length, 0); assert(cp.meu.efeito >= 3 || cp.meu.copa >= cp.meu.oficial);
+    assert.equal(JSON.stringify(P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)).map((x) => [x.usuario, x.total])), ptsAntes); // o ranking oficial nunca muda
+  }
   // ---------- eventos, inscrição, check-in e certificado ----------
   const evp = (corpo, user = 'dono') => chamar(h('eventos'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: corpo });
   const evg = (query, user) => chamar(h('eventos'), { query, user });

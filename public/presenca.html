@@ -50,9 +50,11 @@ table.acomp>thead>tr>th{position:sticky;top:0;z-index:4}table.acomp>thead>tr>th:
 <p>Faça a chamada em <b>2 momentos</b> da aula: <b>Início</b> e <b>Fim</b>. O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.</p>
 <div id="corpo"><p>Carregando…</p></div>
 </main><div id="msg" class="msg" hidden></div>
-<script src="/site.js"></script><script src="/ajuda.js"></script>
+<script src="/site.js"></script><script src="/corrida.js"></script><script src="/ajuda.js"></script>
 <script>
 window.AJUDA={
+rank_copa_cfg:{t:'Configurar a Copa',l:['Copa ativa: liga o sistema de itens nesta turma. Os itens são entregues sozinhos toda semana a quem tem presença, participação e entrega no prazo.','Escondida: só você vê. Os alunos não percebem nada.','Cada aluno vê só o próprio kart: ele vê seus itens e a própria posição, sem ver os pontos dos colegas.','Pista completa: todos veem a pista e a pontuação da Copa de todos.','Itens e efeitos só afetam a Copa, nunca o ranking oficial nem as notas.']},
+rank_chuva:{t:'Chuva de itens',l:['Dá 1 item extra sorteado a cada aluno da turma. Vale até o fim da semana e não conta no limite de 1 uso por semana.','Bom para premiar uma aula boa ou animar a turma.','Só 1 chuva por dia e não funciona na trégua final.']},
 rank_itens:{t:'Itens da corrida',l:['Os itens aparecem ao lado do kart do aluno e nascem de fatos reais, nunca de sorteio.','🍄 Turbo: 2 ou mais entregas seguidas no prazo. Deixa um rastro de fogo na largada.','⭐ Estrela: entregou com 1 dia ou mais de folga.','🐢 Casco: foi o primeiro a entregar a atividade mais recente.','🎁 Caixa: presença completa.','🍌 Banana: o líder ainda tem atividade vencida sem entrega. É só um lembrete.','Itens nunca tiram nem dão pontos ou nota. São só visuais.','Passe o mouse sobre o kart para ver o motivo de cada item.']},
 rank_corrida:{t:'Corrida da Liga',l:['Cada aluno é um kart com a foto do GitHub dele, num circuito. Cada volta é uma semana da turma (do início ao fim previstos). Quanto mais pontos no ranking (presença, participação e atividades), mais voltas ele já completou. O 🚓 (na linha de largada) é o ritmo ideal da semana atual: os karts à frente dele estão adiantados; os que estão antes da linha estão devendo. A distância na pista mostra o tamanho da diferença.','Os 3 primeiros aparecem no pódio. A pista é só para você por enquanto; depois você poderá escolher se os alunos veem.','Se a foto do GitHub não carregar, aparece a inicial do nome.','Em breve: turbo por entregar no prazo e troféus de constância.','Use a Tabela para ver o detalhe de cada parte da pontuação.']},
 acomp_extras:{t:'Ordem, lembrete e planilha',l:['Ordem: muda a ordem dos alunos (alfabética, mais pendências, mais entregas ou maior média). Fica salva neste navegador.','Copiar lembrete dos pendentes: monta um texto pronto com as atividades vencidas e os nomes de quem falta, para você colar no grupo. O portal não envia nada sozinho.','Planilha (Excel): baixa um arquivo CSV com todos os alunos e o estado de cada atividade.','Média: soma das notas já dadas dividida pela soma das notas máximas dessas atividades. Atividades ainda sem nota não entram.','Novo: o aluno respondeu nas últimas 24 horas.']},
@@ -174,60 +176,37 @@ function itensCorrida(P,R){
   if(lider){let falta=0;for(const a of ativs){const l=a.linhas[lider.usuario];if(!l)continue;if(celAcomp(a,l,a.entregas[lider.usuario]||{}).c==='verm')falta++}
     if(falta)add(lider.usuario,'🍌','Banana','Líder com '+falta+' atividade(s) vencida(s) sem entrega: um lembrete, nada é descontado')}
   return out}
+
+// ---------- Copa da Liga: painel do professor ----------
+async function telaCopaProf(alvo){
+  alvo.append(h('p',{},'Carregando a Copa…'));
+  const r=await fetch('/api/presenca?acao=copa&turma='+encodeURIComponent(TURMA));alvo.textContent='';
+  if(!r.ok){alvo.append(h('p',{class:'sub'},'Não consegui carregar a Copa desta turma.'));return}
+  const c=await r.json();const nome=quemTxt;
+  const ativa=h('input',{type:'checkbox'});ativa.checked=c.ativa;
+  const vis=h('select',{},h('option',{value:'oculta'},'Escondida: só o professor vê'),h('option',{value:'propria'},'Cada aluno vê só o próprio kart e seus itens'),h('option',{value:'completa'},'Pista completa para todos os alunos'));vis.value=c.visibilidade;
+  const salvar=h('button',{class:'btn',type:'button',onclick:async()=>{try{await api({acao:'copa_config',turma:TURMA,ativa:ativa.checked,visibilidade:vis.value});aviso('Configuração da Copa salva.');alvo.textContent='';telaCopaProf(alvo)}catch(e){aviso(e.message,1)}}},'Salvar configuração');
+  alvo.append(h('div',{class:'barra livre'},h('label',{style:'display:flex;gap:6px;align-items:center'},ativa,'Copa ativa nesta turma'),vis,salvar,ajuda('rank_copa_cfg')));
+  alvo.append(h('p',{class:'sub'},(c.inicio&&c.fim?`Semana ${c.semana||0} da turma (${c.inicio} a ${c.fim}).`:'Defina início e fim da turma para contar as semanas e liberar os itens.')+(c.tregua?' 🏁 Trégua final em andamento: itens bloqueados e Copa igual ao ranking oficial.':'')+' Itens e efeitos só afetam a Copa, nunca o ranking oficial nem as notas.'));
+  alvo.append(h('div',{class:'barra livre'},h('button',{class:'btn sec',type:'button',title:'Dá 1 item extra a cada aluno, valendo até o fim da semana',onclick:async()=>{if(!confirm('Fazer chover 1 item extra para cada aluno da turma? Valem até o fim desta semana.'))return;try{const x=await api({acao:'copa_chuva',turma:TURMA});aviso(x.resultado);alvo.textContent='';telaCopaProf(alvo)}catch(e){aviso(e.message,1)}}},'🌧️ Fazer chover itens para a turma'),ajuda('rank_chuva')));
+  const tb=h('tbody',{});
+  for(const x of c.placar){const inv=(c.inventario[x.usuario]||[]).map(i=>(c.itens[i.tipo]||{}).ic+(i.bonus?'✨':'')).join(' ');
+    tb.append(h('tr',{},h('td',{},x.posCopa+'º'),h('td',{},quem(x.usuario)),h('td',{},String(x.oficial)),h('td',{},h('b',{},String(x.copa))),h('td',{style:x.efeito<0?'color:var(--err)':''},x.efeito?(x.efeito>0?'+':'')+x.efeito:'–'),h('td',{},(x.escudo?'🛡️ ':'')+(inv||'–'))))}
+  alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['Copa','Aluno','Oficial','Pontos Copa','Efeito','Itens guardados'].map(t=>h('th',{},t)))),tb)));
+  const lg=h('details',{class:'ag'},h('summary',{},'Histórico de uso de itens ('+c.log.length+')'));
+  const LG={turbo:'🍄',escudo:'🛡️',banana:'🍌',casco:'🐢',roleta:'🎰',chuva:'🌧️','chuva-professor':'🌧️'};
+  for(const l of c.log)lg.append(h('p',{class:'sub'},fmtD(l.em)+' · '+(LG[l.item]||'')+' '+(l.de==='professor'||l.de==='roleta'?l.de:nome(l.de))+(l.para&&l.para!==l.de?' → '+(l.para==='todos'?'todos':nome(l.para)):'')+' · '+l.txt));
+  if(!c.log.length)lg.append(h('p',{class:'sub'},'Nenhum item usado ainda.'));alvo.append(lg);
+  alvo.append(h('div',{class:'legenda'},h('b',{},'Regras: '),'itens vencem no fim da semana · 1 uso por aluno por semana · trégua nos últimos 2 dias · último colocado protegido · casco só em quem está à frente · aluno nunca vê quem o atacou, você vê tudo aqui.'))}
 function corridaRank(R,P){
   const max=(R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios)||100;
-  const lista=R.ranking;const w=h('div',{});const IT=itensCorrida(P,R);
-  const T=(CTX.turmas||{})[TURMA]||{};const DS=864e5*7;
-  let N=20,dec=null;
-  if(T.inicio&&T.fim){const a=new Date(T.inicio+'T00:00:00').getTime(),b=new Date(T.fim+'T23:59:59').getTime();N=Math.max(1,Math.round((b-a)/DS));dec=Math.max(0,Math.min(N,(Date.now()-a)/DS))}
-  const semAtual=dec===null?null:Math.min(N,Math.floor(dec)+1);
-  const top=lista.filter(x=>x.total>0).slice(0,3);
-  if(top.length){const ordem=[top[1],top[0],top[2]].filter(Boolean);const alt={1:70,2:48,3:34};
-    w.append(h('div',{class:'corr-pod'},...ordem.map(x=>{const pos=top.indexOf(x)+1;return h('div',{},avatarGH(x.usuario),h('span',{style:'margin-top:4px'},quemTxt(x.usuario).split(' ').slice(0,2).join(' ')),h('span',{class:'sub'},x.total+' pts'),h('div',{class:'bloco',style:'height:'+alt[pos]+'px'},['🥇','🥈','🥉'][pos-1]))})))}
-  const NS='http://www.w3.org/2000/svg';const E=(t,at,...f)=>{const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(at||{}))e.setAttribute(k,v);e.append(...f);return e};
-  const svg=E('svg',{viewBox:'0 0 800 470',class:'circ',role:'img','aria-label':'Pista de corrida da turma'});
-  const D='M160,340 C60,340 40,205 140,165 C230,128 300,195 400,152 C500,108 560,66 665,108 C775,154 775,335 650,368 C560,392 480,325 400,356 C320,388 250,368 160,340 Z';
-  const defs=E('defs',{});defs.append(E('radialGradient',{id:'gr',cx:'50%',cy:'50%',r:'70%'},E('stop',{offset:'0','stop-color':'#1f5a35'}),E('stop',{offset:'1','stop-color':'#123a24'})));
-  svg.append(defs,E('rect',{x:0,y:0,width:800,height:470,rx:18,fill:'url(#gr)'}));
-  for(const[x,y,r]of[[90,60,16],[130,90,11],[720,60,14],[60,420,13],[740,420,15],[690,430,10],[300,60,12]])svg.append(E('circle',{cx:x,cy:y,r,fill:'#1d6b3c',opacity:'.6'}));
-  svg.append(E('path',{d:D,fill:'none',stroke:'#fff','stroke-width':'58','stroke-linejoin':'round',opacity:'.9'}));
-  svg.append(E('path',{d:D,fill:'none',stroke:'#e63946','stroke-width':'58','stroke-dasharray':'14 14','stroke-linejoin':'round'}));
-  svg.append(E('path',{d:D,fill:'none',stroke:'#2b2f3d','stroke-width':'48','stroke-linejoin':'round'}));
-  const centro=E('path',{d:D,id:'tr',fill:'none',stroke:'#ffffff55','stroke-width':'2','stroke-dasharray':'10 12'});svg.append(centro);
-  const L=centro.getTotalLength();const pt=f=>{f=((f%1)+1)%1;const a=centro.getPointAtLength(f*L),b=centro.getPointAtLength(((f+.004)%1)*L);const an=Math.atan2(b.y-a.y,b.x-a.x);return{x:a.x,y:a.y,nx:-Math.sin(an),ny:Math.cos(an),an}};
-  const s0=pt(0);svg.append(E('rect',{x:s0.x-4,y:s0.y-26,width:8,height:52,fill:'url(#chk)',stroke:'#fff','stroke-width':'1',transform:'rotate('+(s0.an*180/Math.PI)+' '+s0.x+' '+s0.y+')'}));
-  defs.append(E('pattern',{id:'chk',width:8,height:8,patternUnits:'userSpaceOnUse'},E('rect',{width:8,height:8,fill:'#fff'}),E('rect',{width:4,height:4,fill:'#111'}),E('rect',{x:4,y:4,width:4,height:4,fill:'#111'})));
-  svg.append(E('text',{x:s0.x,y:s0.y+46,'text-anchor':'middle',fill:'#fff','font-size':'12','font-weight':'700'},'LARGADA / CHEGADA'));
-  const hud=E('g',{'text-anchor':'middle',fill:'#fff'});
-  hud.append(E('text',{x:400,y:228,'font-size':'15',fill:'#f5b83d','font-weight':'700','letter-spacing':'2'},'CORRIDA DA LIGA'),
-    E('text',{x:400,y:268,'font-size':'38','font-weight':'800'},semAtual===null?'Volta ? / '+N:'Volta '+semAtual+' / '+N),
-    E('text',{x:400,y:292,'font-size':'15',fill:'#cfd3e6'},dec===null?'Defina início e fim da turma para contar as semanas':(N-semAtual)+' volta'+(N-semAtual===1?'':'s')+' (semanas) restante'+(N-semAtual===1?'':'s')));
-  svg.append(hud);
-  // pace car e karts
-  const karts=[];const lider=lista.find(x=>x.total>0);
-  const mkKart=(u,voltas,eh,pos)=>{const g=E('g',{class:'kart'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':quemTxt(u)+' · '+pos+'º · '+Math.round(voltas*10)/10+' de '+N+' voltas'));
-    if(eh){g.append(E('circle',{r:15,fill:'#f5b83d',stroke:'#fff','stroke-width':2}),E('text',{y:5,'text-anchor':'middle','font-size':'16'},'🚓'));return{g,voltas,eh,off:0,u:null}}
-    const cid='cp'+u.replace(/\W/g,'');defs.append(E('clipPath',{id:cid},E('circle',{r:15})));
-    g.append(E('circle',{r:17,fill:'#2a2e42',stroke:pos===1?'#ffd54a':'#f5b83d','stroke-width':pos===1?4:2.5}),E('text',{y:5,'text-anchor':'middle','font-size':'15',fill:'#fff','font-weight':'800'},u[0].toUpperCase()));
-    const im=E('image',{href:'https://github.com/'+encodeURIComponent(u)+'.png?size=64',x:-15,y:-15,width:30,height:30,'clip-path':'url(#'+cid+')',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.remove());g.append(im);
-    if(pos===1)g.append(E('text',{y:-22,'text-anchor':'middle','font-size':'15'},'👑'));
-    g.append(E('text',{y:32,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'700',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'V'+Math.floor(voltas+1)));
-    const its=IT[u]||[];its.forEach((it,i)=>{g.append(E('text',{x:22+i*15,y:-8,'font-size':'14'},it.ic))});
-    if(its.length)g.querySelector('title').append(' · '+its.map(it=>it.ic+' '+it.tx).join(' · '));
-    return{g,voltas,eh,off:((pos%3)-1)*12,u,turbo:its.some(it=>it.ic==='🍄')}};
-  const mov=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-  if(dec!==null)karts.push(mkKart(null,dec,true,0));
-  lista.forEach(x=>karts.push(mkKart(x.usuario,Math.max(0,Math.min(1,x.total/max))*N,false,x.posicao)));
-  const trail=E('g',{});svg.append(trail);for(const k of karts)svg.append(k.g);
-  const gaps=karts.filter(k=>!k.eh).map(k=>k.voltas-(dec===null?0:dec));const M=Math.max(1,...gaps.map(Math.abs));
-  for(const k of karts)k.f=k.eh?0:(dec===null?Math.max(0,Math.min(1,k.voltas/N))*.9:((k.voltas-dec)/(2*M))*.9);
-  const pose=(t,ph=0)=>{trail.textContent='';for(const k of karts){const v=k.f*t+ph;const p=pt(v);const x=p.x+p.nx*k.off,y=p.y+p.ny*k.off;k.g.setAttribute('transform','translate('+x+','+y+')');
-      if(mov&&(t<1||ph>0)&&!k.eh)for(let i=1;i<=(k.turbo?6:3);i++){const q=pt(v-i*.012*Math.sign(k.f||1));trail.append(E('circle',{cx:q.x+q.nx*k.off,cy:q.y+q.ny*k.off,r:(k.turbo?9:6)-i,fill:k.turbo?(i%2?'#ff7a45':'#ffd54a'):'#fff',opacity:(k.turbo?.6:.28)-i*.05}))}}};
-  pose(mov?0:1);
-  w.append(h('div',{class:'corr-wrap'},svg));
-  if(mov){const t0=performance.now(),dur=9500;const VOLTA=30000;const passo=n=>{if(!document.body.contains(svg))return;const t=Math.min(1,(n-t0)/dur);if(t<1)pose(1-Math.pow(1-t,3));else pose(1,(((n-t0-dur)/VOLTA)%1));requestAnimationFrame(passo)};requestAnimationFrame(passo)}
+  const lista=R.ranking;const w=h('div',{});const IT=itensCorrida(P,R);const T=(CTX.turmas||{})[TURMA]||{};
+  const linhas=lista.map(x=>({usuario:x.usuario,pontos:x.total,posicao:x.posicao,icones:IT[x.usuario]||[]}));
+  const pod=Corrida.podio(linhas.filter(x=>x.pontos>0).slice(0,3),k=>quemTxt(k).split(' ').slice(0,2).join(' '));if(pod)w.append(pod);
+  w.append(Corrida.pista({linhas,max,inicio:T.inicio,fim:T.fim,nome:quemTxt}));
+  const dec=!!(T.inicio&&T.fim);const N=dec?Math.max(1,Math.round((new Date(T.fim+'T23:59:59')-new Date(T.inicio+'T00:00:00'))/(864e5*7))):20;
   const rep=h('button',{class:'btn sec',type:'button',onclick:()=>{const a=w.parentNode;a.textContent='';a.append(corridaRank(R,P))}},'▶ Rever a largada');
-  w.append(h('div',{class:'barra livre'},rep,h('span',{class:'sub'},dec===null?'Sem datas de início e fim da turma, não dá para contar as voltas.':'Cada volta é uma semana. O 🚓 fica na linha de largada e é o ritmo ideal: quem passou da linha está adiantado; quem está antes dela está devendo. Quanto mais longe, maior a diferença. Depois da largada todos continuam rodando juntos, em loop, mantendo as distâncias.')));
+  w.append(h('div',{class:'barra livre'},rep,h('span',{class:'sub'},!dec?'Sem datas de início e fim da turma, não dá para contar as voltas.':'Cada volta é uma semana. O 🚓 fica na linha de largada e é o ritmo ideal: quem passou da linha está adiantado; quem está antes dela está devendo. Quanto mais longe, maior a diferença. Depois da largada todos continuam rodando juntos, em loop, mantendo as distâncias.')));
   const usados=new Set(Object.values(IT).flat().map(i=>i.ic));
   const LG=[['🍄','Turbo','2 ou mais entregas seguidas no prazo'],['⭐','Estrela','entregou 1 dia ou mais antes do prazo'],['🐢','Casco','primeiro a entregar a atividade mais recente'],['🎁','Caixa','presença completa'],['🍌','Banana','líder com atividade vencida: só um lembrete']];
   w.append(h('div',{class:'legenda'},h('b',{},'Itens: '),...LG.map(([i,n,t])=>h('span',{class:'lg',title:t,style:usados.has(i)?'':'opacity:.5'},i+' '+n+' ('+t+')')),ajuda('rank_itens'),h('span',{class:'sub',style:'flex-basis:100%'},P?'Itens ligados aos fatos reais das atividades. Nenhum item muda pontos ou notas.':'Não consegui ler as atividades agora, então os itens não aparecem.')));
@@ -240,8 +219,9 @@ async function telaRank(alvo){
   if(!r.ok){alvo.textContent='Não consegui carregar o ranking desta turma.';return}
   const R=await r.json();let PP=null;if(ls.get('liga_rank_vis','corrida')==='corrida'){try{PP=await postA({acao:'ativ_painel'})}catch{}}alvo.textContent='';const max=R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios;
   const vis=ls.get('liga_rank_vis','corrida');const abas=h('div',{class:'barra livre'});
-  for(const [v,t] of [['corrida','🏁 Corrida'],['tabela','📋 Tabela']])abas.append(h('button',{class:'btn '+(vis===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_vis',v);alvo.textContent='';telaRank(alvo)}},t));
+  for(const [v,t] of [['corrida','🏁 Corrida'],...(CTX.dono?[['copa','🏆 Copa (itens)']]:[]),['tabela','📋 Tabela']])abas.append(h('button',{class:'btn '+(vis===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_vis',v);alvo.textContent='';telaRank(alvo)}},t));
   abas.append(ajuda('rank_corrida'));alvo.append(abas);
+  if(vis==='copa'&&CTX.dono){const cx=h('div',{});alvo.append(cx);await telaCopaProf(cx);alvo.append(h('div',{class:'legenda'},'🏁 Corrida = pista · 🏆 Copa = configurar e ver itens · 📋 Tabela = detalhes de pontos'));return}
   if(vis==='corrida'){alvo.append(corridaRank(R,PP),h('div',{class:'legenda'},h('b',{},'Lembrete: '),'🏁 Corrida = visual para motivar a turma · 📋 Tabela = detalhes de pontos · a pista usa os mesmos pontos do ranking · nesta fase ela é visível só para o professor.'));return}
   alvo.append(h('p',{class:'sub'},`Pontuação máxima ${max}: presença ${R.pesos.presenca} + participação ${R.pesos.participacao} (meta ${R.config.meta} pontos) + exercícios ${R.pesos.exercicios}, menos penalidades. Empate: presença e depois exercícios.`));
   const tb=h('tbody',{});for(const x of R.ranking)tb.append(h('tr',{style:x.posicao<=5?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},quem(x.usuario)),h('td',{},h('b',{},String(x.total))),h('td',{},String(x.partes.presenca)),h('td',{},String(x.partes.participacao)),h('td',{},String(x.partes.exercicios)),h('td',{style:x.partes.penalidades?'color:var(--err)':''},x.partes.penalidades?'−'+x.partes.penalidades:'0')));

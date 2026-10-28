@@ -5,7 +5,7 @@
 <nav class="abas-aluno" id="abas" aria-label="Seções da área do aluno"></nav>
 <div id="corpo"><p>Carregando…</p></div>
 </main>
-<script src="/novidade.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script>
+<script src="/novidade.js"></script><script src="/corrida.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const ST={presente:'Presente',ausente:'Falta',justificado:'Justificado','sem-chamada':'Sem chamada'};
@@ -78,17 +78,53 @@ function faixaRepo(C){
     const w=el('div','');w.style.marginTop='10px';const a=el('a','btn','Aceitar convite no GitHub');a.href=REPO.url;a.target='_blank';a.rel='noopener';w.append(a);b.append(w);C.append(b)}
   else if(REPO.estado==='sem-repo'){const b=el('div','item');b.style.cssText='margin:0 0 14px;display:block';b.append(el('b','','Seu repositório ainda não foi criado'),el('br'),el('small','','Avise o professor: ele cria na hora e você recebe o convite do GitHub.'));C.append(b)}
 }
+
+// ---------- Copa da Liga (camada divertida; nunca altera o ranking oficial nem as notas) ----------
+let COPA=null;
+async function postCopa(c){const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});let b={};try{b=await r.json()}catch{}return{ok:r.ok,...b}}
+function ateData(c){if(!c.inicio||!c.semana)return '';const d=new Date(new Date(c.inicio+'T00:00:00-03:00').getTime()+7*c.semana*864e5-1);return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}
+function tabCopa(C){
+  const c=COPA,m=c.meu;const turma=PONT.turmas.find(x=>x.turma===c.turma)||{};const max=turma.pesos?(turma.pesos.presenca+turma.pesos.participacao+turma.pesos.exercicios):100;
+  C.append(el('p','sub','A Copa da Liga é a parte divertida: itens ganhos por presença, participação e entregas no prazo mexem só nos pontos da Copa. Seu ranking oficial e suas notas nunca mudam por causa dela.'));
+  if(c.tregua)C.append(el('p','','🏁 Trégua final: nos últimos dias da turma os itens ficam guardados e a Copa vale só o ranking oficial. Boa sorte na reta final!'));
+  const mapa=Object.fromEntries((c.placar||[]).map(x=>[x.usuario,x]));
+  const linhas=c.placar?c.placar.map(x=>({usuario:x.usuario,pontos:x.copa,posicao:x.posCopa,icones:[...(x.escudo?[{ic:'🛡️',tx:'escudo ativo'}]:[])]})):[{usuario:U,pontos:m.copa,posicao:m.posCopa,icones:m.escudo?[{ic:'🛡️',tx:'escudo ativo'}]:[]}];
+  const nomes=Object.fromEntries((c.placar||[]).map(x=>[x.usuario,x.nome]));
+  if(c.placar){const pod=Corrida.podio(linhas.slice().sort((a,b)=>a.posicao-b.posicao).filter(x=>x.pontos>0).slice(0,3),k=>nomes[k]||'@'+k);if(pod)C.append(pod)}
+  C.append(Corrida.pista({linhas,max,inicio:c.inicio,fim:c.fim,eu:U,nome:k=>nomes[k]||(k===U?'Você':'@'+k),titulo:'COPA DA LIGA'}));
+  // meu cartão
+  const card=el('div','item');card.append(el('b','',`Você está em ${m.posCopa}º de ${m.de} na Copa · ${m.copa} pontos`),el('br'),
+    el('small','',`Ranking oficial: ${m.oficial} pontos${m.efeito?` · efeito de itens: ${m.efeito>0?'+':''}${m.efeito}`:''}${m.gapAcima?` · falta ${m.gapAcima} para o colega à sua frente`:''}${m.escudo?' · 🛡️ escudo ativo':''}`));
+  for(const r of m.recebidos){card.append(el('br'),el('small','',`${(c.itens[r.tipo]||{}).ic||''} Alguém te acertou com ${((c.itens[r.tipo]||{}).nome||r.tipo).toLowerCase()}: ${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`))}
+  C.append(card);
+  // meus itens
+  const inv=secao('Meus itens',m.inventario.length+' item(ns) · valem só até '+(ateData(c)||'o fim da semana'));inv.open=true;
+  inv.append(el('p','sub','Item não passa de uma semana para a outra: use ou perca. Você pode usar 1 item por semana (os itens extras de uma chuva não contam). Quem está em último lugar fica protegido de ataques.'));
+  if(!m.inventario.length)inv.append(el('p','sub','Você ainda não tem item nesta semana. Vá às aulas, participe e entregue no prazo para ganhar.'));
+  for(const it of m.inventario){const def=c.itens[it.tipo]||{ic:'❔',nome:it.tipo,txt:'',alvo:'si'};const w=el('div','item');
+    w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
+    const bloqueado=c.tregua||(m.jaUsouNaSemana&&!it.bonus);
+    let sel=null;if(def.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o colega…');o0.value='';sel.append(o0);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
+    const b=el('button','btn',def.alvo==='outro'?'Lançar':def.alvo==='todos'?'Fazer chover':'Usar');b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
+    b.onclick=async()=>{if(def.alvo==='outro'&&!sel.value){alert('Escolha o colega primeiro.');return}b.disabled=true;const r=await postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''});
+      if(!r.ok){alert(r.erro||'Não deu certo.');b.disabled=false;return}alert(r.resultado||'Pronto!');COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
+    if(sel)caixa.append(sel);caixa.append(b);if(bloqueado)caixa.append(el('small','',c.tregua?'Trégua final.':'Já usado esta semana.'));w.append(caixa);inv.append(w)}
+  C.append(inv);
+  const reg=secao('Como funciona','regras rápidas');reg.append(el('p','sub','Ganha item na semana: presença na aula, participação e entrega no prazo (até 3 por semana). O tipo é sorteado.'));
+  for(const [k,d] of Object.entries(c.itens))reg.append(el('p','',`${d.ic} ${d.nome}: ${d.txt}`));
+  reg.append(el('p','sub',`Efeitos duram ${c.diasEfeito} dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
+}
 function desenhar(){
   const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
   const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
-  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);abas.push(['perfil','Meus dados'])}
+  if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);if(COPA&&COPA.meu)abas.push(['copa','🏁 Copa']);abas.push(['perfil','Meus dados'])}
   if(!abas.some(a=>a[0]===ABA))ABA='aulas';
   for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
     if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
     A.append(b)}
   A.append(ajuda('al_'+ABA));
   if(ABA!=='perfil')faixaRepo(C);
-  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else tabProgresso(C);
+  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else if(ABA==='copa')tabCopa(C);else tabProgresso(C);
   // marca como visto para a faixa "novo" do menu da Início
   try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}
 }
@@ -96,7 +132,8 @@ function desenhar(){
   AULAS=await j('/api/aulas');if(!AULAS){document.getElementById('corpo').textContent='Não consegui carregar. Recarregue a página.';return}
   U=AULAS.usuario||null;
   if(U)[ATIV,PONT,PRES,PERF,REPO]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil'),j('/api/presenca?acao=meurepo')]);
-  const h=location.hash.slice(1);if(['aulas','atividades','progresso','perfil'].includes(h))ABA=h;
+  if(U&&PONT&&PONT.turmas){const t=PONT.turmas.find(x=>x.status==='andamento')||PONT.turmas[0];if(t){COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(t.turma));if(COPA&&!COPA.meu)COPA=null}}
+  const h=location.hash.slice(1);if(['aulas','atividades','progresso','perfil','copa'].includes(h))ABA=h;
   desenhar();
 })();
 </script><script src="/como.js"></script>

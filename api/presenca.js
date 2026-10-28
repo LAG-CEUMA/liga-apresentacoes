@@ -49,6 +49,7 @@ module.exports = async (req, res) => {
         lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
         return u.json(res, 200, { usuario, sessoes: lista, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
+      if (q.acao === 'copa') return require('../lib/copaapi').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', turmaOk: turmaMon });
       if (q.acao === 'minhapontuacao') {
         const sess = await d.listarSessoes(); const ativs = await A.listar(); const conf = P.configPontos(cfg); const out = [];
         for (const [id, t] of Object.entries(cfg.turmas)) {
@@ -66,7 +67,7 @@ module.exports = async (req, res) => {
           out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, notaMax: a.notaMax || 10, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, aguardando: (e.estado === 'prazo' || e.estado === 'atraso') && typeof e.nota !== 'number', issue: dsp.url || '' }); }
         return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
-      if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
+    if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
       if (q.acao === 'cota') { // contador de consultas do GitHub: só owners
         if (u.papel(cfg, usuario) !== 'owner') return u.json(res, 403, { erro: 'Só owners veem a cota.' });
         return u.json(res, 200, await u.cotaGitHub());
@@ -114,6 +115,7 @@ module.exports = async (req, res) => {
       try { const c = await require('../lib/pendentes').salvarPerfil(usuario, b); return u.json(res, 200, { ok: true, email: c.email || '', emailPessoal: c.emailPessoal || '', curso: c.curso || '', cpf: c.cpf || '' }); }
       catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
+      if (b.acao === 'copa_usar' || b.acao === 'copa_config' || b.acao === 'copa_chuva') return require('../lib/copaapi').escrever(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', turmaOk: turmaMon });
     if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (String(b.acao || '').startsWith('ativ_')) {
       if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
