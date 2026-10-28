@@ -6,7 +6,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
-<script src="/novidade.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
+<script src="/novidade.js"></script><script src="/corrida.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
@@ -40,7 +40,8 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   const rk=site.rankings||[];
   if(rk.length){const s=secao('Destaques de ranking',rk.length+(rk.length===1?' publicação':' publicações'));s.id='sec-rankings';LigaNovo.aplicar(s,'rankings',rk.map(r=>[r.id,r.foto,r.itens]),true);
     s.append(porPeso(rk,r=>{const i=el('div','item');i.append(el('h3','',r.titulo));if(r.texto)i.append(el('p','',r.texto));
-      const ol=el('div','pont-top');for(const x of r.itens){const eu=x.usuario===d.usuario;const l=el('div','pont-lin'+(eu?' eu':''));l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome','@'+x.usuario+(eu?' (você)':'')),el('span','pont-pts',x.total+' pts'));ol.append(l)}
+      const pod=window.Corrida&&Corrida.podioPlaces(r.itens.map(x=>({usuario:x.usuario,pontos:x.total,posicao:x.posicao})),u=>'@'+u+(u===d.usuario?' (você)':''));if(pod)i.append(pod);
+      const ol=el('div','pont-top');for(const x of r.itens.filter(x=>!pod||x.posicao>3)){const eu=x.usuario===d.usuario;const l=el('div','pont-lin'+(eu?' eu':''));l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome','@'+x.usuario+(eu?' (você)':'')),el('span','pont-pts',x.total+' pts'));ol.append(l)}
       i.append(ol,el('small','',(r.turmaNome?r.turmaNome+' · ':'')+'foto de '+(r.foto?r.foto.split('-').reverse().join('/'):'')));return i}));BL.rankings=s}
   // agenda
   const ag=site.agenda||[];
