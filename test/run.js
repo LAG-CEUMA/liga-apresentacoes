@@ -560,6 +560,16 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
       r = JSON.parse((await ap({ acao: 'ativ_notas_lote', id: id1, itens: [{ aluno: 'alu2', estado: 'atraso', nota: 7 }, { aluno: 'alu3', estado: 'dispensado' }] })).body); assert.equal(r.salvos, 2);
       pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
       assert.equal(pa.entregas.alu2.nota, 7); assert.equal(pa.entregas.alu2.estado, 'atraso'); assert.equal(pa.entregas.alu3.estado, 'dispensado'); assert.equal(pa.entregas.alu1.nota, 9); // quem não estava no lote continua igual
+      // entregue sem nota = aguardando correção: ainda não pontua, o aluno é avisado e o painel continua pedindo a nota
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu2', estado: 'prazo', nota: '' })).status, 200);
+      pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);
+      assert.equal(pa.linhas.alu2.status, 'acorrigir'); // marcado como entregue, mas sem nota: continua na fila
+      let fSem = null;
+      { const rkx = P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)); const l2 = rkx.find((x) => x.usuario === 'alu2'); assert.equal(l2.aguardando, 1); fSem = l2.fEx; // nada de 100% automático: a atividade sem nota não soma pontos
+        const ma = JSON.parse((await getp({ acao: 'minhasatividades' }, 'alu2')).body).atividades.find((x) => x.id === id1); assert.equal(ma.aguardando, true); assert.equal(ma.nota, null);
+        const mp = JSON.parse((await getp({ acao: 'minhapontuacao' }, 'alu2')).body).turmas.find((x) => x.turma === T); assert.equal(mp.aguardando, 1); }
+      assert.equal((await ap({ acao: 'ativ_nota', id: id1, aluno: 'alu2', estado: 'prazo', nota: 8 })).status, 200);
+      { const rkx = P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)); const l2 = rkx.find((x) => x.usuario === 'alu2'); assert.equal(l2.aguardando, 0); assert(l2.fEx > fSem); }
       // o aluno escreve de novo depois da correção: aparece como nova mensagem (e a pergunta é sinalizada)
       comentarios['alu1#1'].push({ user: { login: 'alu1' }, created_at: '2099-01-01T00:00:00Z', body: 'professor, posso refazer?', html_url: 'u1b' });
       pn = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); pa = pn.atividades.find((x) => x.id === id1);

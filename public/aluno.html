@@ -32,7 +32,7 @@ function tabAtiv(C){
   if(!L.length){const v=secao('Atividades','nenhuma liberada ainda');v.append(el('p','sub','Quando o professor liberar uma atividade (exercício ou tarefa), ela aparece aqui com prazo, peso e o link para responder no GitHub.'));C.append(v);v.open=true;return}
   const pend=L.filter(x=>!x.estado||x.estado==='nao'),feitas=L.filter(x=>x.estado&&x.estado!=='nao');
   const item=x=>{const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo+(x.opcional?' (OPCIONAL, pontos extras)':'')),el('br'),
-    el('small','',`${x.prazo?'prazo '+fmt(x.prazo)+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${ES[x.estado]||ES.nao}${x.nota!==null&&x.nota!==undefined?' · nota '+x.nota:''}`));
+    el('small','',`${x.prazo?'prazo '+fmt(x.prazo)+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${x.aguardando?'Entregue · aguardando correção do professor':(ES[x.estado]||ES.nao)}${x.nota!==null&&x.nota!==undefined?' · nota '+x.nota:''}`));
     if(x.issue){const w=el('div','');w.style.cssText='margin-top:10px';const a=el('a','btn','Abrir no GitHub e responder');a.href=x.issue;a.target='_blank';a.rel='noopener';w.append(a,el('small','',' Se aparecer "404", aceite o convite do seu repositório em github.com/LAG-CEUMA ou avise o monitor.'));i.append(w)}else if(!x.estado||x.estado==='nao'){i.append(el('br'),el('small','','O link do GitHub aparece aqui assim que a atividade for enviada ao seu repositório.'))}return i};
   const a=secao('Pendentes',pend.length+(pend.length===1?' atividade':' atividades'));for(const x of pend)a.append(item(x));if(!pend.length)a.append(el('p','sub','Tudo em dia. Nenhuma pendência.'));C.append(a);LigaNovo.aplicar(a,'ativ-pend',pend.map(x=>x.id),true);
   const b=secao('Entregues',feitas.length+(feitas.length===1?' atividade':' atividades'));for(const x of feitas)b.append(item(x));if(!feitas.length)b.append(el('p','sub','Nada entregue ainda.'));C.append(b);LigaNovo.aplicar(b,'ativ-feitas',feitas.map(x=>x.id+x.estado),false);
@@ -46,6 +46,7 @@ function tabProgresso(C){
       const n=el('div','pont-n',String(t.total));n.append(el('small','',' pts'));topo.append(tt,n);c.append(topo);
       const ch=el('div','pont-chips');for(const [nm,v] of [['Presença',t.partes.presenca],['Participação',t.partes.participacao],['Exercícios',t.partes.exercicios]])ch.append(el('span','pont-chip',nm+' '+v));
       if(t.partes.penalidades)ch.append(el('span','pont-chip pen','Penalidades −'+t.partes.penalidades));c.append(ch);
+      if(t.aguardando)c.append(el('p','sub',t.aguardando+(t.aguardando===1?' atividade entregue está':' atividades entregues estão')+' aguardando correção. Os pontos entram assim que o professor der a nota.'));
       if(t.top5.length){c.append(el('div','pont-tit','Top 5 da turma'));const ol=el('div','pont-top');for(const x of t.top5){const eu=x.usuario===U;const l=el('div','pont-lin'+(eu?' eu':''));l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome','@'+x.usuario+(eu?' (você)':'')),el('span','pont-pts',x.total+' pts'));ol.append(l)}c.append(ol)}
       s.append(c)}
     C.append(s);LigaNovo.aplicar(s,'prog-pontos',m.turmas.map(t=>[t.turma,t.total,t.posicao]),true)}

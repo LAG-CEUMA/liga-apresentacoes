@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
         for (const [id, t] of Object.entries(cfg.turmas)) {
           if (!t.alunos.includes(usuario)) continue;
           const rk = P.ranking(cfg, id, sess, ativs); const eu = rk.find((x) => x.usuario === usuario); if (!eu) continue; // owners e monitores da turma ficam fora do ranking
-          out.push({ turma: id, nome: t.nome, status: t.status, pesos: P.pesosDa(cfg, id), total: eu.total, partes: eu.partes, posicao: eu.posicao, de: rk.length,
+          out.push({ turma: id, nome: t.nome, status: t.status, pesos: P.pesosDa(cfg, id), total: eu.total, aguardando: eu.aguardando || 0, partes: eu.partes, posicao: eu.posicao, de: rk.length,
             top5: conf.top5Visivel ? (t.status === 'arquivada' && t.rankingFinal ? t.rankingFinal.filter((x) => x.total > 0).map((x, i) => ({ posicao: i + 1, usuario: x.usuario, total: x.total })) : rk.filter((x) => x.total > 0).slice(0, 5).map((x) => ({ posicao: x.posicao, usuario: x.usuario, total: x.total }))) : [] });
         }
         return u.json(res, 200, { usuario, turmas: out });
@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
         const todas = await A.listar(); const out = [];
         for (const a of todas) { const t = cfg.turmas[a.turma]; if (!a.liberada || !t || !t.alunos.includes(usuario) || !A.aplica(a, usuario)) continue;
           const e = (a.entregas || {})[usuario] || {}; const dsp = (a.disparos || {})[usuario] || {};
-          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, notaMax: a.notaMax || 10, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, issue: dsp.url || '' }); }
+          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, notaMax: a.notaMax || 10, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, aguardando: (e.estado === 'prazo' || e.estado === 'atraso') && typeof e.nota !== 'number', issue: dsp.url || '' }); }
         return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
       if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
