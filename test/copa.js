@@ -108,6 +108,9 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   assert(e.efeitos.some((x) => x.de === 'chefao' && x.delta !== 0)); assert(C.usarChefao(e, 'prof', alvo, rank, INI, AG, FIM).erro); // 1 por semana
   assert(C.usarChefao(mk(), 'prof', alvo, rank, INI, AG, '2026-10-29').erro); // trégua
   assert(C.usarChefao(mk(), 'prof', 'nao-existe', rank, INI, AG, FIM).erro || C.BOSS[tipo].alvo === 'lider');
+  { const e5 = mk(); const t5 = C.chefaoInfo(e5, 'mon', INI, AG, FIM).tipo; const r5 = C.usarChefao(e5, 'mon', 'qualquer-coisa', rank, INI, AG, FIM, true); // monitor: alvo sorteado, o informado é ignorado
+    assert(r5.ok, JSON.stringify(r5)); const ef5 = e5.efeitos.filter((x) => x.de === 'chefao'); assert.equal(ef5.length, 1); assert(rank.some((x) => x.usuario === ef5[0].para));
+    if (C.BOSS[t5].delta < 0) assert.notEqual(ef5[0].para, rank.find((x) => x.posicao === Math.max(...rank.map((y) => y.posicao))).usuario); } // nunca no último colocado
   // oficial nunca muda: placar com efeito do chefão difere só na Copa
   const pl = C.placar(e, rank, AG, FIM); assert(pl.some((x) => x.copa !== x.oficial));
   // falha crítica: a magia vira ao contrário (ou tesouro, no trovão)

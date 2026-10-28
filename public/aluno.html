@@ -83,6 +83,26 @@ function faixaRepo(C){
 let COPA=null,PREV=null,PREVT='';
 async function postCopa(c){const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});let b={};try{b=await r.json()}catch{}return{ok:r.ok,...b}}
 function ateData(c){if(!c.inicio||!c.semana)return '';const d=new Date(new Date(c.inicio+'T00:00:00-03:00').getTime()+7*c.semana*864e5-1);return d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}
+// Animação do resultado: o servidor já decidiu (d10); dado ou roleta é só a forma de mostrar. O aluno escolhe a que preferir.
+const modoJogo=()=>{try{return localStorage.getItem('liga_modo_jogo')==='roleta'?'roleta':'dado'}catch{return'dado'}};
+const rotuloJogo=()=>modoJogo()==='roleta'?'🎰 Girar a roleta':'🎲 Jogar o dado';
+const FCOR=['#7a0f1d','#d64545','#f0b429','#3fb36b','#ffd54a'];
+function faixaIdx(n,t){return n<=t[0]?0:n<=t[1]?1:n<=t[2]?2:n<=t[3]?3:4}
+function girarRoleta(dado,t){return new Promise(fim=>{
+  const NS='http://www.w3.org/2000/svg',E=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e};t=t||[1,3,6,9];
+  const ov=el('div','');ov.style.cssText='position:fixed;inset:0;background:#000b;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;color:#fff';
+  const svg=E('svg',{viewBox:'-130 -130 260 260',width:'min(80vw,340px)',height:'min(80vw,340px)'});const g=E('g',{});svg.append(g);
+  for(let i=0;i<10;i++){const a0=(i*36-90-18)*Math.PI/180,a1=((i+1)*36-90-18)*Math.PI/180,R=118;const p=E('path',{d:`M0 0 L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 0 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} Z`,fill:FCOR[faixaIdx(i+1,t)],stroke:'#111','stroke-width':2});g.append(p);
+    const am=(i*36-90)*Math.PI/180;const tx=E('text',{x:84*Math.cos(am),y:84*Math.sin(am)+6,'text-anchor':'middle','font-size':'20','font-weight':'800',fill:i+1<=t[1]||i+1>9?'#fff':'#111'});tx.textContent=String(i+1);g.append(tx)}
+  svg.append(E('circle',{r:14,fill:'#222',stroke:'#fff','stroke-width':3}),E('path',{d:'M-12 -132 L12 -132 L0 -108 Z',fill:'#fff',stroke:'#111','stroke-width':2}));
+  const msg=el('p','','Girando…');msg.style.cssText='font-size:20px;font-weight:800;margin:10px';ov.append(svg,msg);document.body.append(ov);
+  g.style.transition='transform 2.8s cubic-bezier(.12,.7,.15,1)';g.style.transform='rotate(0deg)';requestAnimationFrame(()=>requestAnimationFrame(()=>{g.style.transform=`rotate(${360*5-(dado-1)*36}deg)`}));
+  setTimeout(()=>{msg.textContent='🎲 Tirou '+dado;setTimeout(()=>{ov.remove();fim()},1100)},2900);ov.onclick=()=>{ov.remove();fim()}})}
+async function jogar(b,chamar,tab){
+  const modo=modoJogo();b.disabled=true;let giro=null;if(modo==='dado')giro=setInterval(()=>{b.textContent='🎲 '+(1+Math.floor(Math.random()*10))},80);
+  const [r]=await Promise.all([chamar(),new Promise(z=>setTimeout(z,modo==='dado'?900:0))]);if(giro)clearInterval(giro);
+  if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent=rotuloJogo();b.disabled=false;return null}
+  if(modo==='roleta'&&r.dado)await girarRoleta(r.dado,tab);alert(r.resultado||'Pronto!');return r}
 function tabCopa(C){
   if(PREV&&!COPA)return previa(C,'copa');
   const c=COPA,m=c.meu;
@@ -107,14 +127,16 @@ function tabCopa(C){
   // meus itens
   const inv=secao('Meus itens',m.inventario.length+' item(ns) · valem só até '+(ateData(c)||'o fim da semana'));inv.open=true;
   inv.append(el('p','sub','Item não passa de uma semana para a outra: use ou perca. Você pode usar 1 item por semana (os itens extras de uma chuva não contam). Quem está em último lugar fica protegido de ataques.'));
+  { const mb=el('div','');mb.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap';mb.append(el('small','','Como mostrar o resultado:'));
+    for(const [v,t] of [['dado','🎲 Dado'],['roleta','🎰 Roleta']]){const x=el('button','btn'+(modoJogo()===v?'':' sec'),t);x.type='button';x.onclick=()=>{try{localStorage.setItem('liga_modo_jogo',v)}catch{}desenhar()};mb.append(x)}
+    mb.append(el('small','','O resultado é o mesmo: o sorteio é do servidor.'));inv.append(mb)}
   if(!m.inventario.length)inv.append(el('p','sub','Você ainda não tem item nesta semana. Vá às aulas, participe e entregue no prazo para ganhar.'));
   for(const it of m.inventario){const def=c.itens[it.tipo]||{ic:'❔',nome:it.tipo,txt:'',alvo:'si'};const w=el('div','item');
     w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
     const bloqueado=c.tregua||(m.jaUsouNaSemana&&!it.bonus);
     let sel=null;if(def.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o colega…');o0.value='';sel.append(o0);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
-    const b=el('button','btn','🎲 Jogar o dado');b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
-    b.onclick=async()=>{if(def.alvo==='outro'&&!sel.value){alert('Escolha o colega primeiro.');return}b.disabled=true;let n=0;const giro=setInterval(()=>{b.textContent='🎲 '+(1+Math.floor(Math.random()*10))},80);const [r]=await Promise.all([postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''}),new Promise(z=>setTimeout(z,900))]);clearInterval(giro);
-      if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent='🎲 Jogar o dado';b.disabled=false;return}alert(r.resultado||'Pronto!');COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
+    const b=el('button','btn',rotuloJogo());b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
+    b.onclick=async()=>{if(def.alvo==='outro'&&!sel.value){alert('Escolha o colega primeiro.');return}const r=await jogar(b,()=>postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''}),(c.dado||{})[it.tipo]);if(!r)return;COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
     if(sel)caixa.append(sel);caixa.append(b);if(bloqueado)caixa.append(el('small','',c.tregua?'Trégua final.':'Já usado esta semana.'));w.append(caixa);inv.append(w)}
   C.append(inv);
   const reg=secao('Como funciona','regras rápidas');reg.append(el('p','sub','Ganha item na semana: presença na aula, participação e entrega no prazo (até 3 por semana). O tipo é sorteado.'));
@@ -140,16 +162,15 @@ async function previa(C,qual){
     const ol=el('div','pont-top');for(const x of r.ranking.filter(x=>x.posicao>3)){const l=el('div','pont-lin');l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome',nome(x.usuario)),el('span','pont-pts',x.total+' pts'));ol.append(l)}corpo.append(ol);return}
   const c=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(PREVT));corpo.textContent='';
   if(!c||c.erro){corpo.append(el('p','sub','Não consegui carregar a Copa desta turma.'));return}
-  if(c.chefao&&c.chefao.def&&c.ativa){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 1 ataque por dia, trégua).'));
+  if(c.chefao&&c.chefao.def){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 1 ataque por dia, trégua).'));
     const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
-    let sel=null;if(d.alvo==='outro'){sel=el('select','');const o0=el('option','','Escolha o aluno…');o0.value='';sel.append(o0);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
-    const b=el('button','btn','🎲 Jogar o dado');b.type='button';if(ch.usado||ch.tregua){b.disabled=true}
-    b.onclick=async()=>{if(sel&&!sel.value){alert('Escolha o aluno primeiro.');return}b.disabled=true;const giro=setInterval(()=>{b.textContent='🎲 '+(1+Math.floor(Math.random()*10))},80);
-      const [r]=await Promise.all([postCopa({acao:'copa_chefao',turma:PREVT,alvo:sel?sel.value:''}),new Promise(z=>setTimeout(z,900))]);clearInterval(giro);
-      if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent='🎲 Jogar o dado';b.disabled=false;return}alert(r.resultado||'Pronto!');desenhar()};
-    if(sel)caixa.append(sel);caixa.append(b);if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);corpo.append(bx)}
+    let sel=null;if(d.alvo==='outro'&&!ch.aleatorio){sel=el('select','');const o0=el('option','','Escolha o aluno…');o0.value='';sel.append(o0);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
+    const b=el('button','btn',rotuloJogo());b.type='button';if(ch.usado||ch.tregua){b.disabled=true}
+    b.onclick=async()=>{if(sel&&!sel.value){alert('Escolha o aluno primeiro.');return}const r=await jogar(b,()=>postCopa({acao:'copa_chefao',turma:PREVT,alvo:sel?sel.value:''}),(c.dadoChefao||{})[ch.tipo]);if(!r)return;desenhar()};
+    if(sel)caixa.append(sel);caixa.append(b);if(ch.aleatorio&&d.alvo==='outro')caixa.append(el('small','','Monitor: o alvo é sorteado.'));if(ch.usado)caixa.append(el('small','','O Chefão já agiu nesta semana.'));else if(ch.tregua)caixa.append(el('small','','Trégua final.'));bx.append(caixa);corpo.append(bx)}
   if(c.missao&&c.missao.vida!=null&&c.ativa)corpo.append(vidaChefao(c.missao));
-  if(!c.ativa)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
+  if(c.monitor)corpo.append(el('p','sub','Você entra como monitor: joga como Chefão com alvo sorteado, e só o dono vê o placar completo e configura a Copa.'));
+  if(!c.ativa&&!c.monitor)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
   else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio kart',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
   if(c.placar&&c.placar.length){const nomeP=k=>nome(k);const linhas=c.placar.map(x=>({usuario:x.usuario,pontos:x.copa,posicao:x.posCopa,icones:x.escudo?[{ic:'🛡️',tx:'escudo ativo'}]:[]}));
     const max=Math.max(100,...c.placar.map(x=>x.copa));corpo.append(Corrida.pista({linhas,max,inicio:c.inicio,fim:c.fim,nome:nomeP,titulo:'COPA DA LIGA'}));

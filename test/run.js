@@ -640,6 +640,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.meu.inventario.length, 0); assert(cp.meu.efeito >= 3 || cp.meu.copa >= cp.meu.oficial);
     assert.equal(JSON.stringify(P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)).map((x) => [x.usuario, x.total])), ptsAntes); // o ranking oficial nunca muda
     assert.equal((await pres({ acao: 'copa_chefao', turma: T, alvo: 'alu2' }, 'alu1')).status, 403); cp = JSON.parse((await getp({ acao: 'copa', turma: T })).body); assert(cp.chefao.def && cp.chefao.alvos.length >= 2); // aluno não joga como chefão; professor vê o item da semana
+    assert.notEqual((await pres({ acao: 'copa_chefao', turma: T }, 'mon2')).status, 500); // monitor joga (alvo sorteado) ou é barrado pela turma, nunca erro
     assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'nevoeiro' }, 'alu1')).status, 403); assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'zzz' })).status, 400);
     assert.equal((await pres({ acao: 'copa_evento', turma: T, tipo: 'nevoeiro' })).status, 200);
     cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.evento.tipo, 'nevoeiro'); assert.equal(cp.meu.posCopa, null); assert.equal(cp.placar, null); // nevoeiro esconde a posição e o placar
