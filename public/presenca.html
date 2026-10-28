@@ -200,7 +200,7 @@ async function telaCopaProf(alvo){
   alvo.append(h('div',{class:'legenda'},h('b',{},'Regras: '),'itens vencem no fim da semana · 1 uso por aluno por semana · trégua nos últimos 2 dias · último colocado protegido · casco só em quem está à frente · aluno nunca vê quem o atacou, você vê tudo aqui.'))}
 function corridaRank(R,P){
   const max=(R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios)||100;
-  const lista=R.ranking;const w=h('div',{});const IT=itensCorrida(P,R);const T=(CTX.turmas||{})[TURMA]||{};
+  const lista=R.ranking;const w=h('div',{});const IT=P?itensCorrida(P,R):{};const T=R.planoT||(CTX.turmas||{})[TURMA]||{};
   const linhas=lista.map(x=>({usuario:x.usuario,pontos:x.total,posicao:x.posicao,icones:IT[x.usuario]||[]}));
   const pod=Corrida.podio(linhas.filter(x=>x.pontos>0).slice(0,3),k=>quemTxt(k).split(' ').slice(0,2).join(' '));if(pod)w.append(pod);
   w.append(Corrida.pista({linhas,max,inicio:T.inicio,fim:T.fim,nome:quemTxt}));
@@ -217,10 +217,16 @@ async function telaRank(alvo){
   alvo.append(h('p',{},'Carregando…'));
   const r=await fetch('/api/presenca?acao=ranking&turma='+encodeURIComponent(TURMA));
   if(!r.ok){alvo.textContent='Não consegui carregar o ranking desta turma.';return}
-  const R=await r.json();let PP=null;if(ls.get('liga_rank_vis','corrida')==='corrida'){try{PP=await postA({acao:'ativ_painel'})}catch{}}alvo.textContent='';const max=R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios;
+  let R=await r.json();let PL=null;
+  if(ls.get('liga_rank_esc','nivel')==='plano'){try{const rp=await fetch('/api/presenca?acao=ranking_plano&turma='+encodeURIComponent(TURMA));if(rp.ok){const j=await rp.json();if(j.plano){PL=j;const mx=Math.max(100,...j.ranking.map(x=>x.possivel||0));R={...R,pesos:{presenca:mx,participacao:0,exercicios:0},ranking:j.ranking,planoT:{inicio:j.plano.inicio,fim:j.plano.fim}}}}}catch{}}
+  let PP=null;if(!PL&&ls.get('liga_rank_vis','corrida')==='corrida'){try{PP=await postA({acao:'ativ_painel'})}catch{}}alvo.textContent='';const max=R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios;
   const vis=ls.get('liga_rank_vis','corrida');const abas=h('div',{class:'barra livre'});
   for(const [v,t] of [['corrida','🏁 Corrida'],...(CTX.dono?[['copa','🏆 Copa (itens)']]:[]),['tabela','📋 Tabela']])abas.append(h('button',{class:'btn '+(vis===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_vis',v);alvo.textContent='';telaRank(alvo)}},t));
   abas.append(ajuda('rank_corrida'));alvo.append(abas);
+  { const esc=ls.get('liga_rank_esc','nivel');const eb=h('div',{class:'barra livre'},h('span',{class:'sub'},'Ranking:'));
+    for(const [v,t] of [['nivel','Por nível (esta turma)'],['plano','Do plano (soma das turmas)']])eb.append(h('button',{class:'btn '+(esc===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_esc',v);alvo.textContent='';telaRank(alvo)}},t));
+    alvo.append(eb);
+    if(esc==='plano'){alvo.append(PL?h('p',{class:'sub'},`${PL.plano.nome} · ${PL.plano.trilha} · soma simples dos pontos das turmas: ${PL.plano.turmas.map(x=>x.nome).join(', ')}.`+(PL.arena&&!PL.arena.ligada?' 🌐 '+PL.arena.aviso:'')):h('p',{class:'sub'},'Esta turma ainda não está em nenhum plano (Admin › Turmas › Planos). Mostrando o ranking da turma.'))} }
   if(vis==='copa'&&CTX.dono){const cx=h('div',{});alvo.append(cx);await telaCopaProf(cx);alvo.append(h('div',{class:'legenda'},'🏁 Corrida = pista · 🏆 Copa = configurar e ver itens · 📋 Tabela = detalhes de pontos'));return}
   if(vis==='corrida'){alvo.append(corridaRank(R,PP),h('div',{class:'legenda'},h('b',{},'Lembrete: '),'🏁 Corrida = visual para motivar a turma · 📋 Tabela = detalhes de pontos · a pista usa os mesmos pontos do ranking · nesta fase ela é visível só para o professor.'));return}
   alvo.append(h('p',{class:'sub'},`Pontuação máxima ${max}: presença ${R.pesos.presenca} + participação ${R.pesos.participacao} (meta ${R.config.meta} pontos) + exercícios ${R.pesos.exercicios}, menos penalidades. Empate: presença e depois exercícios.`));

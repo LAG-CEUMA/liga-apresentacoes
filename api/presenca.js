@@ -87,6 +87,14 @@ module.exports = async (req, res) => {
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes(), await A.listar(q.turma)) });
       }
+      if (q.acao === 'ranking_plano') {
+        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+        const PL = require('../lib/planos'); const pl = PL.doPlano(cfg, q.turma);
+        if (!pl) return u.json(res, 200, { plano: null });
+        const sess = await d.listarSessoes(); const por = {}; for (const id of PL.idsDe(pl)) por[id] = await A.listar(id);
+        const dt = PL.datas(cfg, pl);
+        return u.json(res, 200, { plano: { id: pl.id, nome: pl.nome, trilha: pl.trilha, inicio: dt.inicio, fim: dt.fim, turmas: PL.idsDe(pl).map((id) => ({ id, nome: cfg.turmas[id].nome })) }, ranking: PL.rankingPlano(cfg, pl, sess, por), arena: { ligada: PL.arenaLigada(cfg), aviso: 'Arena Global: disponível quando houver trilhas paralelas (previsto para 2027.2).' } });
+      }
       if (q.acao === 'contexto') {
         let nomes = {}; // nome completo (dos Contatos) só para quem usa a Presença; o e-mail nunca sai daqui
         try { const lista = (await require('../lib/pendentes').ler()).lista; const quem = new Set([...cfg.alunos, ...Object.values(cfg.turmas || {}).flatMap((t) => t.alunos || [])]); for (const x of lista) if (x.usuario && x.nome && quem.has(String(x.usuario).toLowerCase())) nomes[String(x.usuario).toLowerCase()] = String(x.nome).slice(0, 80); } catch { nomes = {}; }

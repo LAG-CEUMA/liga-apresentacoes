@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
       const v = { usuario, dono, papel: papelU, editor, titulo: u.tituloDe(cfg, usuario), permissoes: perm, fixos: dono ? u.admins() : [] };
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
-      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
+      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.planos = cfg.planos || {}; v.arenaAtiva = cfg.arenaAtiva === true; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
@@ -287,6 +287,25 @@ module.exports = async (req, res) => {
       if (status === 'arquivada' && atual.status !== 'arquivada') novo.turmas[id].rankingFinal = P.ranking(novo, id, await d.listarSessoes(), await require('../lib/atividades').listar(id)).slice(0, 5).map((x) => ({ usuario: x.usuario, total: x.total })); // congela o Top 5
       if (status !== 'arquivada') delete novo.turmas[id].rankingFinal;
       msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
+    } else if (b.acao === 'plano') {
+      if (!perm.includes('pessoas')) return nao();
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código do plano: até 20 letras, números, ponto ou traço (ex.: 2026.2-2027.1).' });
+      const data = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? v : '');
+      const atual = (novo.planos || {})[id] || {};
+      const inicio = b.inicio === undefined ? (atual.inicio || '') : data(b.inicio), fim = b.fim === undefined ? (atual.fim || '') : data(b.fim);
+      if (inicio && fim && fim < inicio) return u.json(res, 400, { erro: 'O fim do plano não pode ser antes do início.' });
+      const turmas = (Array.isArray(b.turmas) ? b.turmas : (atual.turmas || [])).map(String).filter((t) => novo.turmas[t]);
+      for (const [oid, op] of Object.entries(novo.planos || {})) if (oid !== id) { const dup = turmas.find((t) => (op.turmas || []).includes(t)); if (dup) return u.json(res, 400, { erro: `A turma ${dup} já está no plano ${oid}. Tire-a de lá primeiro.` }); }
+      novo.planos = novo.planos || {};
+      novo.planos[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao) };
+      msg = `Portal: ${usuario} salvou o plano ${id}`;
+    } else if (b.acao === 'excluir_plano') {
+      if (!perm.includes('pessoas')) return nao();
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!(novo.planos || {})[id]) return u.json(res, 400, { erro: 'Plano não encontrado.' });
+      delete novo.planos[id];
+      msg = `Portal: ${usuario} excluiu o plano ${id}`;
     } else if (b.acao === 'renomear_turma') {
       // Trocar o código é seguro só se ainda não há presença gravada (os arquivos de presença usam o código).
       if (!perm.includes('pessoas')) return nao();

@@ -638,6 +638,24 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.meu.inventario.length, 0); assert(cp.meu.efeito >= 3 || cp.meu.copa >= cp.meu.oficial);
     assert.equal(JSON.stringify(P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)).map((x) => [x.usuario, x.total])), ptsAntes); // o ranking oficial nunca muda
   }
+  // ---------- Plano (calendário) ----------
+  { const P = require('../lib/pontos'), A = require('../lib/atividades'), d = require('../lib/dados'), PL = require('../lib/planos');
+    assert.equal((await post({ acao: 'plano', id: '../x' }, {}, 'sec')).status, 400);
+    assert.equal((await post({ acao: 'plano', id: 'P1', nome: 'Plano', inicio: '2026-10-27', fim: '2026-01-01' }, {}, 'sec')).status, 400); // fim antes do início
+    assert.equal((await post({ acao: 'plano', id: 'P1', nome: 'Plano 2026.2', trilha: 'Trilha 1', inicio: '2026-10-27', fim: '2999-01-01', turmas: [T] }, {}, 'sec')).status, 200);
+    assert.equal((await post({ acao: 'plano', id: 'P2', nome: 'Outro', turmas: [T] }, {}, 'sec')).status, 400); // turma só em um plano
+    cfg.planos = { P1: { nome: 'Plano 2026.2', trilha: 'Trilha 1', inicio: new Date(Date.now() - 864e5 - 3 * 3600e3).toISOString().slice(0, 10), fim: '2999-01-01', turmas: [T], premiacao: '' } }; require('../lib/util').limparCache();
+    const pl = PL.doPlano(cfg, T); assert.equal(pl.id, 'P1');
+    const rt = P.ranking(cfg, T, await d.listarSessoes(), await A.listar(T)), rp = PL.rankingPlano(cfg, pl, await d.listarSessoes(), { [T]: await A.listar(T) });
+    assert.equal(JSON.stringify(rp.map((x) => [x.usuario, x.total])), JSON.stringify(rt.map((x) => [x.usuario, x.total]))); // com uma turma, plano = turma
+    assert.deepEqual(PL.rankingArena(cfg, [], {}), []); // Arena desligada
+    r = JSON.parse((await getp({ acao: 'ranking_plano', turma: T })).body); assert.equal(r.plano.id, 'P1'); assert.equal(r.ranking.length, rt.length); assert.equal(r.arena.ligada, false);
+    // Copa passa a ser do plano, herdando o estado antigo da turma
+    const cp = JSON.parse((await getp({ acao: 'copa', turma: T }, 'alu1')).body); assert.equal(cp.plano.id, 'P1'); assert(cp.meu);
+    assert.equal((await pres({ acao: 'copa_config', turma: T, ativa: true, visibilidade: 'completa' })).status, 200);
+    assert(dadosArq['dados/copa/plano-P1.json']); assert.equal(JSON.parse(dadosArq['dados/copa/plano-P1.json'].texto).visibilidade, 'completa');
+    assert.equal((await post({ acao: 'excluir_plano', id: 'P1' }, {}, 'sec')).status, 200);
+    delete cfg.planos; require('../lib/util').limparCache(); }
   // ---------- eventos, inscrição, check-in e certificado ----------
   const evp = (corpo, user = 'dono') => chamar(h('eventos'), { method: 'POST', user, headers: { origin: 'https://site.test', 'content-type': 'application/json' }, body: corpo });
   const evg = (query, user) => chamar(h('eventos'), { query, user });

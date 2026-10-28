@@ -266,7 +266,24 @@ function desenharTurmas(){
         t.alunos.length?h('button',{class:'btn',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
         h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'),ajuda('turma_botoes'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalTurma('')},'+ Nova turma'),h('div',{class:'sub'},'Dê um código curto (ex.: 2027.2). Alunos novos entram na turma em andamento ou na que você escolher.')));
+  const pg=h('div',{class:'grade'});const dd=v=>v?v.split('-').reverse().join('/'):'sem data';
+  for(const id of Object.keys(D.planos)){const pl=D.planos[id];
+    pg.append(h('div',{class:'cartao2'},h('h3',{},pl.nome),h('div',{class:'sub'},`${pl.trilha} · ${dd(pl.inicio)} a ${dd(pl.fim)}`+(pl.premiacao?' · premiação '+dd(pl.premiacao):'')),
+      h('div',{style:'margin:6px 0'},...(pl.turmas.length?pl.turmas.map(t=>h('span',{class:'pill m'},(D.turmas[t]||{}).nome||t)):[h('span',{class:'sub'},'nenhuma turma ainda')])),
+      h('button',{class:'btn sec',type:'button',onclick:()=>modalPlano(id)},'Editar plano')))}
+  pg.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Novo plano'),h('div',{class:'sub'},'Plano = calendário (ex.: 2026.2 a 2027.1) com as turmas/níveis dele. O ranking do plano soma os pontos das turmas, e a Copa passa a valer para o plano inteiro.')));
+  p.append(h('h2',{style:'margin:22px 0 6px'},'Planos (calendários)',ajuda('plano')),h('p',{class:'sub',style:'max-width:760px'},'Cada trilha tem o seu plano. A Arena Global (comparar trilhas) já está pronta, mas fica desligada até existirem trilhas paralelas (previsto para 2027.2).'),pg);
   p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
+function modalPlano(id){
+  const pl=id?D.planos[id]:{nome:'',trilha:'Trilha 1',inicio:'',fim:'',turmas:[],premiacao:''};
+  const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-2027.1',style:'text-transform:uppercase',disabled:!!id,oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:pl.nome,maxLength:40,placeholder:'ex.: Plano 2026.2 a 2027.1'}),tr=h('input',{type:'text',value:pl.trilha,maxLength:30}),ini=h('input',{type:'date',value:pl.inicio}),fim=h('input',{type:'date',value:pl.fim}),pre=h('input',{type:'date',value:pl.premiacao||''});
+  const sel=new Set(pl.turmas);const usadas={};for(const [k,o] of Object.entries(D.planos))if(k!==id)for(const t of o.turmas)usadas[t]=o.nome;
+  const lista=h('div',{style:'max-height:30vh;overflow:auto;border:1px solid #fff2;border-radius:10px;padding:6px 12px'});
+  for(const t of Object.keys(D.turmas))lista.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:sel.has(t),disabled:!!usadas[t],onchange:e=>{e.target.checked?sel.add(t):sel.delete(t)}}),D.turmas[t].nome+(usadas[t]?' (já está em '+usadas[t]+')':'')));
+  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir o plano "${pl.nome}"? As turmas continuam; a Copa volta a ser por turma.`))return;try{await enviar({acao:'excluir_plano',id});aviso('Plano excluído');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir plano'):'';
+  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar plano':'Novo plano'),h('div',{class:'form'},h('label',{},'Código',cod),h('label',{},'Nome',nome),h('label',{},'Trilha',tr),h('label',{},'Início',ini),h('label',{},'Fim',fim),h('label',{},'Premiação (opcional)',pre)),
+    h('p',{class:'sub'},'Turmas deste plano (cada turma fica em um plano só):'),lista,
+    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,turmas:[...sel]});aviso('Plano salvo');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
 function modalTurma(id){
   const t=id?D.turmas[id]:{nome:'',status:'planejada',inicio:'',fim:'',nivel:'',acessoApos:true,acessoAte:''};
   const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-N0',style:'text-transform:uppercase',oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:t.nome,maxLength:40,placeholder:'ex.: Nível 0 · 2026.2'}),ini=h('input',{type:'date',value:t.inicio}),fim=h('input',{type:'date',value:t.fim||''}),
@@ -457,7 +474,7 @@ function mostrar(k){
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
-  D=await r.json();D.turmas=D.turmas||{};D.cargos=D.cargos||{};D.equipe=D.equipe||(D.dono?{}:undefined);
+  D=await r.json();D.turmas=D.turmas||{};D.planos=D.planos||{};D.cargos=D.cargos||{};D.equipe=D.equipe||(D.dono?{}:undefined);
   const pm=D.permissoes||[],ver=(id,ok)=>{const e=$(id);if(e)e.hidden=!ok};
   const soFerr=!D.dono&&!pm.includes('pessoas')&&!pm.includes('aulas');ver('f-site',!soFerr&&(D.dono||pm.includes('site')));ver('f-pres',!soFerr&&(D.dono||pm.includes('presenca')||D.papel==='monitor'));ver('f-ed',!soFerr&&!!D.editor);ver('f-wiki',!soFerr&&!D.dono&&['owner','monitor','equipe'].includes(D.papel));
   mostrar(ABA||location.hash.slice(1)||(()=>{try{return localStorage.getItem('liga_admin_aba')}catch{return ''}})()||'pessoas')}
