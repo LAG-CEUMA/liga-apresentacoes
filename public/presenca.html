@@ -330,7 +330,7 @@ async function telaAcomp(alvo){
     tb.append(row,ficha)}
   if(!vis.length)tb.append(h('tr',{},h('td',{colspan:String(3+ativs.length),class:'sub'},'Nenhum aluno neste filtro.')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela acomp'},h('thead',{},th),tb)),h('p',{class:'sub'},'Sumido: tem atividade vencida e nunca respondeu, ou está há '+DIAS_ALERTA+' dias ou mais sem responder nada. Dica: passe o mouse sobre uma bolinha para ver o detalhe.'),
-    h('div',{class:'legenda'},h('b',{},'Lembrete de uso: '),'clique no nome = abre/recolhe a ficha do aluno · clique na bolinha = abrir resposta ou corrigir · clique no título da coluna = ir para a atividade na Correção · 📸 gera a imagem para o WhatsApp · "novo" = respondeu nas últimas 24 h · Média = só das notas já dadas.'));
+    h('div',{class:'legenda'},h('b',{},'Lembrete de uso: '),'clique no nome = abre/recolhe a ficha do aluno · clique na bolinha = abrir resposta ou corrigir · clique no título da coluna = ir para a atividade na Correção · 📸 gera a imagem e o texto de incentivo para o WhatsApp · "novo" = respondeu nas últimas 24 h · Média = só das notas já dadas.'));
   clearTimeout(telaAcomp.t);telaAcomp.t=setTimeout(()=>{if(ABA==='acomp'&&!document.hidden&&document.body.contains(alvo)&&!document.querySelector('tr.ficha:not([hidden])')){alvo.textContent='';telaAcomp(alvo)}},300000)}
 function irCorrecao(id){window.ATV_OPEN=window.ATV_OPEN||new Set();ATV_OPEN.add('c:'+id);ATV_OPEN.delete('x:c:'+id);ABA='corr';try{history.replaceState(null,'','#corr')}catch{}desenhar();setTimeout(()=>{const d=[...document.querySelectorAll('details.ag')].find(x=>x.dataset.id===id);if(d){d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}},400)}
 function menuBolinha(ev,a,k,l,c,abrirFicha){
@@ -401,6 +401,29 @@ function desenhaQuadro(D,op){
   g.fillText(motiv?'Quem ainda não entregou: dá tempo! É só comentar na Issue da atividade no seu repositório.':'Entregue comentando na Issue da atividade, no seu repositório aluno-<usuário>.',pad,yb);
   g.fillStyle='#8a90a8';g.font=F(500,16);g.fillText('✓ entregue e corrigido   … entregue, aguardando correção   ! entregue com atraso   ○ ainda a entregar',pad,yb+34);
   return cv}
+
+function textoIncentivo(D,op,v){
+  const {lista,info,ativs}=D;const al=lista.filter(k=>info[k]);const nm=k=>nomeCurto(k,op.completo);
+  const comEnt=al.filter(k=>info[k].ent>0).sort((a,b)=>info[b].ent-info[a].ent);
+  const topo=comEnt.length?info[comEnt[0]].ent:0;const dest=comEnt.filter(k=>info[k].ent===topo).slice(0,5);
+  const emDia=al.filter(k=>info[k].tot>0&&info[k].ent===info[k].tot);
+  const novos=al.filter(k=>info[k].novo&&!dest.includes(k)).slice(0,4);
+  const faltam=al.filter(k=>info[k].ent<info[k].tot).length;
+  const abertas=ativs.filter(a=>!a.opcional&&a.prazo&&new Date(a.prazo).getTime()>Date.now()).sort((a,b)=>a.prazo.localeCompare(b.prazo));
+  const vencidas=ativs.filter(a=>!a.opcional&&a.prazo&&new Date(a.prazo).getTime()<=Date.now());
+  const dm=d=>new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const L=[];
+  const hr=new Date().getHours(),sd=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';const abre=[sd+', Liga! 🎮','Fala, pessoal da Liga! 🚀','Atenção, Liga de Games! 🏆'][v%3];L.push(abre);
+  L.push('');L.push('Olha como está o nosso quadro de entregas! 👆');
+  if(dest.length)L.push('',['⭐ Destaque da vez: ','🔥 Mandando muito bem: ','👏 Quem está na frente: '][v%3]+dest.map(nm).join(', ')+' — '+topo+' entrega'+(topo>1?'s':'')+' feita'+(topo>1?'s':'')+'. Parabéns!');
+  if(emDia.length)L.push('✅ Com tudo em dia: '+emDia.map(nm).join(', ')+'.');
+  if(novos.length)L.push('💪 Entregaram agora há pouco: '+novos.map(nm).join(', ')+'. Isso é constância!');
+  if(faltam){L.push('','E quem ainda não entregou: calma, dá tempo! 😉 Cada entrega conta e o quadro muda a cada dia.');
+    if(abertas.length)L.push('📌 Próximos prazos: '+abertas.slice(0,3).map(a=>(a.codigo||a.titulo)+' (até '+dm(a.prazo)+')').join(', ')+'.');
+    if(vencidas.length)L.push('⏳ As atividades que já passaram do prazo ainda podem ser entregues, com atraso (vale 50%). Melhor entregar atrasado do que não entregar!')}
+  else L.push('','Turma inteira em dia. Que orgulho! 🎉');
+  L.push('','Como entregar: comente na Issue da atividade, no seu repositório aluno-<seu usuário>. Travou? Escreva lá mesmo que eu ajudo. Bora subir no quadro! 🚀');
+  return L.join('\n')}
 function janelaImagem(D){
   document.querySelectorAll('.pop,.imgjan').forEach(x=>x.remove());
   const op={modo:ls.get('liga_img_modo','motiv'),completo:ls.get('liga_img_nome','')==='1'};
@@ -409,14 +432,17 @@ function janelaImagem(D){
   const prev=h('img',{style:'width:100%;border-radius:10px;border:1px solid #fff2'});
   const modo=h('select',{},h('option',{value:'motiv'},'Motivacional (sem vermelho, só progresso)'),h('option',{value:'completo'},'Completo (mostra vencidas em vermelho)'));modo.value=op.modo;
   const nome=h('input',{type:'checkbox'});nome.checked=op.completo;
-  let blob=null;
-  const gera=()=>{op.modo=modo.value;op.completo=nome.checked;ls.set('liga_img_modo',op.modo);ls.set('liga_img_nome',op.completo?'1':'0');const cv=desenhaQuadro(D,op);prev.src=cv.toDataURL('image/png');cv.toBlob(b=>{blob=b},'image/png')};
+  let blob=null,vt=0;
+  const txt=h('textarea',{rows:'11',style:'width:100%;background:#12141c;color:#fff;border:1px solid #fff2;border-radius:10px;padding:10px;font:inherit;resize:vertical'});
+  const gera=()=>{op.modo=modo.value;op.completo=nome.checked;ls.set('liga_img_modo',op.modo);ls.set('liga_img_nome',op.completo?'1':'0');txt.value=textoIncentivo(D,op,vt);const cv=desenhaQuadro(D,op);prev.src=cv.toDataURL('image/png');cv.toBlob(b=>{blob=b},'image/png')};
   modo.addEventListener('change',gera);nome.addEventListener('change',gera);
   const copiar=h('button',{class:'btn',type:'button',onclick:async()=>{try{if(!blob)throw 0;await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);aviso('Imagem copiada. Agora é só colar (Ctrl+V) no WhatsApp.')}catch{aviso('Seu navegador não deixou copiar. Use o botão Baixar PNG e envie o arquivo.',1)}}},'📋 Copiar imagem');
   const baixa=h('a',{class:'btn sec',href:'#',onclick:ev=>{if(!blob){ev.preventDefault();return}baixa.href=URL.createObjectURL(blob);baixa.download='quadro-de-entregas-'+new Date().toISOString().slice(0,10)+'.png'}},'⬇ Baixar PNG');
+  const outra=h('button',{class:'btn sec',type:'button',title:'Gera o texto de novo com outras palavras',onclick:()=>{vt++;txt.value=textoIncentivo(D,op,vt)}},'🔄 Outra versão');
+  const copTxt=h('button',{class:'btn',type:'button',onclick:async()=>{const ok=await copiarTexto(txt.value);aviso(ok?'Texto copiado. Cole no WhatsApp junto com a imagem.':'Não consegui copiar.',!ok)}},'📋 Copiar texto');
   const fecha=h('button',{class:'btn sec',type:'button',onclick:()=>bg.remove()},'Fechar');
   cx.append(h('div',{class:'barra livre'},h('b',{},'Imagem do quadro de entregas'),h('span',{style:'flex:1'}),fecha),h('p',{class:'sub'},'A imagem usa os dados de agora. No modo Motivacional, quem ainda não entregou aparece com um círculo vazio, nunca em vermelho. Donos do portal e equipe não entram.'),
-    h('div',{class:'barra livre'},modo,h('label',{style:'display:flex;gap:6px;align-items:center'},nome,'Nome completo'),ajuda('acomp_imagem')),prev,h('div',{class:'barra livre'},copiar,baixa));
+    h('div',{class:'barra livre'},modo,h('label',{style:'display:flex;gap:6px;align-items:center'},nome,'Nome completo'),ajuda('acomp_imagem')),prev,h('div',{class:'barra livre'},copiar,baixa),h('b',{},'Texto de incentivo (pode editar antes de copiar)'),txt,h('div',{class:'barra livre'},copTxt,outra),h('p',{class:'sub'},'Como usar: 1) Copiar imagem e colar no WhatsApp. 2) Copiar texto e colar na legenda ou na mensagem. O texto elogia quem está na frente e avisa que ainda dá tempo, sem expor quem não entregou.'));
   bg.append(cx);bg.addEventListener('click',e=>{if(e.target===bg)bg.remove()});document.body.append(bg);gera()}
 function fichaAcomp(k,I,ativs,R,P,fechar){
   const box=h('div',{class:'fichabox'});
