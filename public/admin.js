@@ -500,7 +500,7 @@ function desenharInicio(){
     for(const [,alvo,t,d,id] of L){const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
       if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
       if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}
-      if(id==='corr'){const b=h('span',{id:'badge-corr',style:'margin-left:8px;vertical-align:middle;background:#ff5d5d;color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;font-size:13px'},'');b.hidden=!window.CORR_N;if(window.CORR_N)b.textContent=window.CORR_N+' a ver';a.firstChild.append(b)}else a.firstChild.append(b)
+      if(id==='corr'){const b=h('span',{id:'badge-corr',style:'margin-left:8px;vertical-align:middle;background:#ff5d5d;color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;font-size:13px'},'');b.hidden=!window.CORR_N;if(window.CORR_N)b.textContent=window.CORR_N+' a ver';a.firstChild.append(b)}
       g.append(a)}
     p.append(g)}}
 function desenharFerramentas(){
