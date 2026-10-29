@@ -60,6 +60,7 @@ async function lista() {
     if (!n.aulas.length) c.append(h('p', { class: 'sub' }, 'Nenhuma aula ainda.'));
     for (const a of n.aulas) c.append(h('div', { class: 'al' }, h('span', { class: 't' }, h('b', {}, a.titulo), h('br'), h('small', { class: 'sub' }, a.id)),
       a.editavel ? h('a', { class: 'b pri', href: `/editor?dir=${n.dir}&id=${a.id}` }, 'Editar slides') : h('span', { class: 'sub' }, 'sem permissão'), h('a', { class: 'b', href: `/aula/${n.dir}/${a.id}`, target: '_blank' }, 'Ver'), a.editavel ? h('button', { class: 'b perigo', title: 'Como excluir esta aula', onclick: () => { REPO_INFO = { repo: d.repo, branch: d.branch }; modalExcluir(n.dir, a.id, a.titulo); } }, 'Excluir…') : null));
+    if (n.podeCriar) c.append(h('div', { style: 'margin:8px 0' }, h('button', { class: 'b', title: 'Objetivo, materiais, avaliação e as aulas previstas deste nível', onclick: () => modalPlano(n.dir, n.nome) }, 'Planejamento do nível')));
     if (n.podeCriar) {
       const tit = h('input', { type: 'text', placeholder: 'Título da nova aula', style: 'flex:1;min-width:220px' });
       const copia = h('select', { style: 'width:260px' }, h('option', { value: '' }, 'Começar do zero'), ...todas.map((a) => h('option', { value: a.dir + '/' + a.id }, `Copiar de: ${a.nome} · ${a.titulo}`)));
@@ -123,6 +124,22 @@ function moverPara(de, para) { if (para < 0 || para >= M.slides.length) return; 
 function duplicarSlide(k) { commit(); M.slides.splice(k + 1, 0, JSON.parse(JSON.stringify(M.slides[k]))); cur = k + 1; marcarSujo(true); snap(); desenhaTudo(); }
 function excluirSlide(k) { if (M.slides.length < 2) return aviso('A aula precisa ter pelo menos um slide.', 1); if (!confirm('Excluir o slide ' + (k + 1) + '? (dá para desfazer com Ctrl+Z)')) return; commit(); M.slides.splice(k, 1); cur = Math.min(cur, M.slides.length - 1); marcarSujo(true); snap(); desenhaTudo(); }
 function novoSlide(m) { commit(); M.slides.splice(cur + 1, 0, { html: m.html, fundo: m.fundo, cor: m.cor, notas: '', tempo: '' }); cur++; marcarSujo(true); snap(); desenhaTudo(); }
+async function modalPlano(dir, nome) {
+  let P = {}; try { P = (await ler('acao=plano&dir=' + encodeURIComponent(dir))).plano || {}; } catch (e) { return aviso(e.message, 1); }
+  const area = (v, ph, ln) => h('textarea', { rows: ln || 3, placeholder: ph, style: 'width:100%' }, v || '');
+  const f = { objetivo: area(P.objetivo, 'O que o aluno sabe fazer ao terminar este nível?'), publico: area(P.publico, 'Quem é o público e o que precisa saber antes?', 2), materiais: area(P.materiais, 'Programas, arquivos e materiais usados', 2), avaliacao: area(P.avaliacao, 'Como o aluno é avaliado (atividades, entrega final…)?', 2) };
+  const num = h('input', { type: 'number', min: 0, max: 60, value: P.numAulas || '', style: 'width:90px' });
+  const lista = h('div', {}); const linhas = [];
+  const nova = (a) => { a = a || {}; const r = { tema: h('input', { type: 'text', value: a.tema || '', placeholder: 'Tema da aula' }), objetivo: h('input', { type: 'text', value: a.objetivo || '', placeholder: 'Objetivo' }), atividade: h('input', { type: 'text', value: a.atividade || '', placeholder: 'Atividade/exercício' }), tempo: h('input', { type: 'text', value: a.tempo || '', placeholder: 'Tempo', style: 'width:80px' }) };
+    const li = h('div', { style: 'display:grid;grid-template-columns:1fr 1fr 1fr 80px auto;gap:6px;margin:6px 0;align-items:center' }, r.tema, r.objetivo, r.atividade, r.tempo, h('button', { class: 'b perigo', type: 'button', onclick: () => { li.remove(); linhas.splice(linhas.indexOf(r), 1); } }, '×')); linhas.push(r); lista.append(li); };
+  (P.aulas || []).forEach(nova); if (!(P.aulas || []).length) nova();
+  const rot = (t, el) => h('label', { style: 'display:block;margin:10px 0 2px;font-weight:700' }, t, h('div', { style: 'font-weight:400;margin-top:4px' }, el));
+  const v = modal([h('h3', { style: 'margin-top:0' }, 'Planejamento · ' + nome), h('p', { class: 'sub' }, 'Ficha do nível: serve de guia antes de montar os slides. Só quem edita este nível e os owners veem.'),
+    rot('Objetivo do nível', f.objetivo), rot('Público e pré-requisitos', f.publico), rot('Materiais e programas', f.materiais), rot('Avaliação', f.avaliacao),
+    rot('Número de aulas previstas', num), h('div', { style: 'font-weight:700;margin:14px 0 2px' }, 'Aulas previstas (tema · objetivo · atividade · tempo)'), lista,
+    h('div', { style: 'display:flex;gap:8px;margin-top:10px;justify-content:space-between;flex-wrap:wrap' }, h('button', { class: 'b', type: 'button', onclick: () => nova() }, '+ Aula'), h('div', { style: 'display:flex;gap:8px' }, h('button', { class: 'b', type: 'button', onclick: () => v.remove() }, 'Fechar'),
+      h('button', { class: 'b pri', type: 'button', onclick: async () => { try { await api({ acao: 'plano_salvar', dir, plano: { objetivo: f.objetivo.value, publico: f.publico.value, materiais: f.materiais.value, avaliacao: f.avaliacao.value, numAulas: num.value, aulas: linhas.map((r) => ({ tema: r.tema.value, objetivo: r.objetivo.value, atividade: r.atividade.value, tempo: r.tempo.value })) } }); aviso('Planejamento salvo'); v.remove(); } catch (e) { aviso(e.message, 1); } } }, 'Salvar')))]);
+}
 function modal(corpo) { const v = h('div', { class: 'edmodal', onclick: (e) => { if (e.target === v) v.remove(); } }, h('div', {}, corpo)); document.body.append(v); return v; }
 function modalNovoSlide() {
   const v = modal([h('h3', { style: 'margin-top:0' }, 'Novo slide'), h('p', { class: 'sub' }, 'Escolha um modelo. Depois é só clicar nos textos e trocar.'),

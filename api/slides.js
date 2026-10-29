@@ -25,6 +25,10 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { usuario, dono, repo: u.REPO(), branch: u.BRANCH(), niveis: visiveis });
       }
       if (acao === 'imagens') { if (!algum) return erro(403, 'Sem permissão.'); return u.json(res, 200, { imagens: await Site.listarImagensDo('slides'), todas: dono ? await Site.imagensComModulos() : undefined }); }
+      if (acao === 'plano') {
+        if (!S.DIR_RE.test(String(q.dir || '')) || !pode(q.dir, null)) return erro(403, 'Sem permissão para ver o planejamento deste nível.');
+        return u.json(res, 200, { plano: await S.lerPlano(q.dir) });
+      }
       if (!validar(q.dir, q.id)) return erro(400, 'Aula inválida.');
       if (acao === 'versoes') { if (!pode(q.dir, q.id)) return erro(403, 'Sem permissão.'); return u.json(res, 200, { versoes: await S.versoes(q.dir, q.id) }); }
       if (acao === 'versao') {
@@ -48,6 +52,10 @@ module.exports = async (req, res) => {
     if (!u.origemOk(req) || !String(req.headers['content-type'] || '').includes('application/json')) return erro(403, 'Requisição recusada.');
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return erro(400, 'Corpo inválido.');
+    if (b.acao === 'plano_salvar') {
+      if (!S.DIR_RE.test(String(b.dir || '')) || !pode(b.dir, null)) return erro(403, 'Sem permissão para editar o planejamento deste nível.');
+      try { return u.json(res, 200, { ok: true, plano: await S.salvarPlano(b.dir, b.plano, usuario) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
+    }
     if (b.acao === 'salvar') {
       if (!validar(b.dir, b.id)) return erro(400, 'Aula inválida.');
       if (!pode(b.dir, b.id)) return erro(403, 'Sem permissão para editar esta aula.');
