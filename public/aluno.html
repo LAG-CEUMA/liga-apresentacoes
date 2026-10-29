@@ -14,8 +14,32 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem){const d=el('details','nivel');const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 const fmt=p=>p?new Date(p).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
 let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,PERF=null,REPO=null,ABA='aulas';
+const pendentes=()=>((ATIV&&ATIV.atividades)||[]).filter(x=>(!x.estado||x.estado==='nao')&&!x.respondida&&!x.opcional);
 const j=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
 
+function tabResumo(C){
+  const L=(ATIV&&ATIV.atividades)||[];
+  const pend=pendentes().sort((a,b)=>(a.prazo?new Date(a.prazo).getTime():9e15)-(b.prazo?new Date(b.prazo).getTime():9e15));
+  const esp=L.filter(x=>x.aguardando||(x.respondida&&typeof x.nota!=='number')).length;
+  const feitas=L.filter(x=>typeof x.nota==='number').length;
+  const opc=L.filter(x=>x.opcional&&(!x.estado||x.estado==='nao')&&!x.respondida).length;
+  const t=PONT&&PONT.turmas&&(PONT.turmas.find(x=>x.status==='andamento')||PONT.turmas[0]);
+  const ola=el('div','res-ola');ola.append(el('b','','Olá, @'+U+'!'),el('small','',t?t.nome:''));C.append(ola);
+  // 1. o que fazer agora
+  const g=el('div','res-card '+(pend.length?'res-fazer':'res-ok'));
+  if(pend.length){g.append(el('h3','','Para fazer agora'));
+    for(const x of pend.slice(0,3)){const venc=x.prazo&&new Date(x.prazo).getTime()<Date.now();const r=el('div','res-lin');const a=el('a','',(x.codigo?x.codigo+' · ':'')+x.titulo);a.href=x.issue||'#atividades';if(x.issue){a.target='_blank';a.rel='noopener'}r.append(a,el('small',venc?'res-venc':'',x.prazo?(venc?'prazo vencido em ':'até ')+fmt(x.prazo):'sem prazo'));g.append(r)}
+    if(pend.length>3)g.append(el('small','res-mais','e mais '+(pend.length-3)+' em Atividades'));
+  }else{g.append(el('h3','','✔ Tudo em dia'));g.append(el('p','sub',L.length?'Você não tem nenhuma atividade obrigatória pendente.'+(opc?' Há '+opc+' desafio'+(opc>1?'s':'')+' opcional'+(opc>1?'is':'')+' para pontos extras.':''):'Quando o professor liberar atividades, elas aparecem aqui.'))}
+  C.append(g);
+  // 2. números
+  const n=el('div','res-num');
+  const caixa=(v,r,aba)=>{const b=el('button','res-n');b.type='button';b.append(el('b','',String(v)),el('small','',r));b.onclick=()=>{ABA=aba;try{history.replaceState(null,'','#'+aba)}catch{}desenhar()};return b};
+  n.append(caixa(pend.length,'a fazer','atividades'),caixa(esp,'aguardando correção','atividades'),caixa(feitas,'corrigidas','atividades'));
+  if(t)n.append(caixa(t.total>0?t.posicao+'º':'—',t.total>0?'de '+t.de+' · '+t.total+' pts':'ranking','ranking'));
+  C.append(n);
+  C.append(el('p','sub','Aulas e slides estão em "Aulas". Sua presença e seus pontos estão em "Meu progresso".'));
+}
 function tabAulas(C){
   const d=AULAS;
   if(!d.aulas.length)C.append(el('p','sub',U?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
@@ -243,15 +267,16 @@ function tabRanking(C){
   C.append(el('p','sub','Quer ver os detalhes da sua presença e participação? Abra "Meu progresso". Quer jogar com itens? Abra "🏁 Copa".'))}
 function desenhar(){
   const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
-  const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
+  const abas=[];
+  if(U)abas.push(['resumo','Resumo']);abas.push(['aulas','Aulas']);
   if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);abas.push(['ranking','🏆 Ranking']);if(COPA||PREV)abas.push(['copa','🏁 Copa']);abas.push(['perfil','Meus dados'])}
-  if(!abas.some(a=>a[0]===ABA))ABA='aulas';
+  if(!abas.some(a=>a[0]===ABA))ABA=U?'resumo':'aulas';
   for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
-    if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
+    if(id==='atividades'&&ATIV&&pendentes().length){const n=el('span','novo',String(pendentes().length));b.append(n)}
     A.append(b)}
   A.append(ajuda('al_'+ABA));
   if(ABA!=='perfil')faixaRepo(C);
-  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else if(ABA==='copa')tabCopa(C);else if(ABA==='ranking')tabRanking(C);else tabProgresso(C);
+  if(ABA==='resumo')tabResumo(C);else if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else if(ABA==='copa')tabCopa(C);else if(ABA==='ranking')tabRanking(C);else tabProgresso(C);
   // marca como visto para a faixa "novo" do menu da Início
   try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}
 }
@@ -261,7 +286,7 @@ function desenhar(){
   if(U)[ATIV,PONT,PRES,PERF,REPO]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil'),j('/api/presenca?acao=meurepo')]);
   if(U&&PONT&&PONT.turmas){const t=PONT.turmas.find(x=>x.status==='andamento')||PONT.turmas[0];if(t){COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(t.turma));if(COPA&&COPA.erro)COPA=null}}
   if(U&&!(PONT&&PONT.turmas&&PONT.turmas.length)){const cx=await j('/api/presenca?acao=contexto');if(cx&&cx.turmas&&Object.keys(cx.turmas).length){PREV=cx;PREVT=Object.keys(cx.turmas).find(k=>cx.turmas[k].status==='andamento')||Object.keys(cx.turmas)[0]}}
-  const h=location.hash.slice(1);if(['aulas','atividades','progresso','ranking','perfil','copa'].includes(h))ABA=h;
+  const h=location.hash.slice(1);if(['resumo','aulas','atividades','progresso','ranking','perfil','copa'].includes(h))ABA=h;else if(U)ABA='resumo';
   desenhar();
 })();
 </script><script src="/como.js"></script>

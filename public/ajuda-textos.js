@@ -42,8 +42,9 @@ window.AJUDA = Object.assign(window.AJUDA || {}, {
   pers_11: { t: 'Ordem dos blocos', l: ['Dê um número de 1 a 99 para cada bloco da tela inicial. O menor aparece primeiro.'] },
 
   /* ---- Área do aluno e início ---- */
+  al_resumo: { t: 'Resumo', l: ['Sua situação em uma tela: o que fazer agora, o que está aguardando correção e a sua posição no ranking.', 'Clique em um dos quadros de números para abrir a tela com os detalhes.'] },
   al_aulas: { t: 'Aulas', l: ['As aulas liberadas para a sua turma. Se uma aula não aparece, ela ainda não foi publicada para você.'] },
-  al_atividades: { t: 'Atividades', l: ['Exercícios (feitos em sala) e tarefas (de casa) que o instrutor liberou.', 'Cada uma é uma Issue no seu repositório do GitHub. Clique em Abrir no GitHub e responder e escreva a resposta em um comentário.', 'Se aparecer erro 404, aceite o convite do seu repositório (e-mail ou github.com/notifications).'] },
+  al_atividades: { t: 'Atividades', l: ['Exercícios (feitos em sala) e tarefas (de casa) que o instrutor liberou.', 'Cada uma é uma Issue no seu repositório do GitHub. Clique em Responder no GitHub e responder e escreva a resposta em um comentário.', 'Se aparecer erro 404, aceite o convite do seu repositório (e-mail ou github.com/notifications).'] },
   auditoria: { t: 'Auditoria dos repositórios', l: ['Confere o GitHub com o cadastro da plataforma e lista o que não bate.', 'Conta trocada ou inexistente é o item mais sério: um nome de usuário antigo pode ser registrado por outra pessoa.', 'A plataforma não apaga nada: use o link de cada item para remover o acesso ou o repositório no GitHub.'] },
   al_perfil: { t: 'Meus dados', l: ['Aqui você mesmo completa seus contatos: e-mail institucional, e-mail pessoal e curso.', 'Só a administração da Liga vê. Servem para avisos, convocações e certificados.', 'Nome e usuário do GitHub só o professor altera.'] },
   pf_email: { t: 'E-mail institucional', l: ['O e-mail da faculdade (ex.: a000000@ceuma.com.br). Opcional. Não dá acesso à plataforma: o login é só pelo GitHub.'] },
