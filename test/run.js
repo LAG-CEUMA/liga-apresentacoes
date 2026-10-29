@@ -448,6 +448,11 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'renomear_turma', de: '2026', para: 'OUTRA' }, {}, 'sec')).status, 400); // tem chamadas salvas
   assert.equal((await post({ acao: 'excluir_turma', id: '2026' }, {}, 'sec')).status, 400); // tem alunos
   assert.equal((await post({ acao: 'excluir_turma', id: '2026.2-N0' }, {}, 'sec')).status, 200); assert(!cfg.turmas['2026.2-N0']);
+  { assert.equal((await post({ acao: 'turma', id: 'FORCA-X', nome: 'Forca', inicio: '2026-11-01', fim: '2026-12-01' }, {}, 'sec')).status, 200);
+    assert.equal((await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', simular: true }, {}, 'sec')).status, 403); // não-owner
+    const sim = await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', simular: true }); assert.equal(sim.status, 200); assert(JSON.parse(sim.body).simulacao && cfg.turmas['FORCA-X']); // só simula
+    assert.equal((await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', confirma: 'errado' })).status, 400);
+    const ex = await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', confirma: 'forca-x' }); assert.equal(ex.status, 200); assert(!cfg.turmas['FORCA-X']); }
   assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'arquivada' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, u.maisUmAno()); // arquivar = 1 ano
   assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'andamento' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, '');
   {

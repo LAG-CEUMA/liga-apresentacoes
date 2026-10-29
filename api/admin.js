@@ -328,6 +328,39 @@ module.exports = async (req, res) => {
       delete novo.turmas[id];
       for (const m of Object.values(novo.monitores)) m.turmas = m.turmas.filter((x) => x !== id);
       msg = `Portal: ${usuario} excluiu a turma ${id} (vazia)`;
+    } else if (b.acao === 'excluir_turma_forcado') {
+      // Exclusão forçada (só owners): apaga chamadas, atividades e Copa da turma, tira a turma e, se pedido, os repositórios dos alunos que só estavam nela.
+      if (!dono) return nao();
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!novo.turmas[id]) return u.json(res, 400, { erro: 'Turma não encontrada.' });
+      if (Object.keys(novo.turmas).length <= 1) return u.json(res, 400, { erro: 'Precisa existir pelo menos uma turma.' });
+      const ORG = process.env.GH_ORG || 'LAG-CEUMA', DR = process.env.DATA_REPO || u.REPO();
+      const tr = await u.gh(`/repos/${DR}/git/trees/${u.BRANCH()}?recursive=1`);
+      if (!tr.ok) return u.json(res, 502, { erro: `GitHub ${tr.status} ao listar os arquivos de dados.` });
+      const arqs = ((await tr.json()).tree || []).filter((i) => (i.type === 'blob' || !i.type) && (i.path.startsWith(`dados/aulas/${id}/`) || i.path.startsWith(`dados/atividades/${id}/`) || i.path === `dados/copa/${id}.json`));
+      const outros = new Set(); for (const [k, t] of Object.entries(novo.turmas)) if (k !== id) for (const a of t.alunos || []) outros.add(a);
+      const protegidos = new Set([...(novo.owners || []), ...u.admins(), ...Object.keys(novo.equipe || {}), ...Object.keys(novo.monitores || {})]);
+      const soDela = (novo.turmas[id].alunos || []).filter((a) => !outros.has(a));
+      const repos = soDela.filter((a) => !protegidos.has(a)).map((a) => `aluno-${a}`);
+      if (b.simular) return u.json(res, 200, { ok: true, simulacao: true, turma: id, nome: novo.turmas[id].nome, arquivos: arqs.length, chamadas: arqs.filter((x) => x.path.startsWith('dados/aulas/')).length, atividades: arqs.filter((x) => x.path.startsWith('dados/atividades/')).length, alunos: (novo.turmas[id].alunos || []).length, repos, aviso: soDela.some((a) => protegidos.has(a)) ? 'Há owners/equipe/monitores entre os alunos: os repositórios deles não serão apagados.' : '' });
+      if (String(b.confirma || '').trim().toUpperCase() !== id) return u.json(res, 400, { erro: 'Digite o código da turma para confirmar.' });
+      let apagados = 0; const falhas = [];
+      for (const f of arqs) {
+        const r = await u.gh(`/repos/${DR}/contents/${f.path.split('/').map(encodeURIComponent).join('/')}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `Portal: ${usuario} excluiu a turma ${id} (exclusão forçada)`, sha: f.sha, branch: u.BRANCH() }) });
+        if (r.ok) apagados++; else falhas.push(f.path);
+      }
+      const reposOk = [], reposManual = [];
+      if (b.apagarRepos) for (const rp of repos) {
+        const r = await u.gh(`/repos/${ORG}/${rp}`, { method: 'DELETE' });
+        if (r.ok || r.status === 404) reposOk.push(rp); else reposManual.push({ repo: rp, url: `https://github.com/${ORG}/${rp}/settings`, status: r.status });
+      }
+      u.limparCache();
+      delete novo.turmas[id];
+      for (const m of Object.values(novo.monitores)) m.turmas = (m.turmas || []).filter((x) => x !== id);
+      novo.alunos = (novo.alunos || []).filter((a) => outros.has(a) || !soDela.includes(a));
+      for (const pl of Object.values(novo.planos || {})) pl.turmas = (pl.turmas || []).filter((x) => x !== id);
+      msg = `Portal: ${usuario} excluiu a turma ${id} (exclusão forçada: ${apagados} arquivos de dados)`;
+      b.__resp = { ok: true, forcado: true, apagados, falhas, reposOk, reposManual, reposNaoPedidos: b.apagarRepos ? [] : repos };
     } else if (b.acao === 'pontuacao') {
       if (!dono) return nao();
       const n = (v, a, z) => { const x = Number(v); return Number.isFinite(x) ? Math.min(z, Math.max(a, Math.round(x * 10) / 10)) : null; };
@@ -362,6 +395,6 @@ module.exports = async (req, res) => {
       msg = `Portal: ${usuario} moveu ${mover.length} aluno(s) da turma ${b.de} para ${b.para}`;
     } else return u.json(res, 400, { erro: 'Ação inválida.' });
     await u.gravarConfig(novo, msg);
-    u.json(res, 200, { ok: true });
+    u.json(res, 200, b.__resp || { ok: true });
   } catch (e) { console.error('[portal]', e && e.message); u.json(res, 500, { erro: 'Não consegui salvar agora. Tente de novo.' }); }
 };
