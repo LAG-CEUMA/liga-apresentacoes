@@ -87,7 +87,7 @@ function desenharPessoas(){
   lista.sort((a,b)=>nomeDe(a).localeCompare(nomeDe(b),'pt-BR',{sensitivity:'base'}));
   const emails=lista.map(l=>l.c&&l.c.email).filter(Boolean);
   const cp=h('button',{class:'btn sec',type:'button',onclick:async()=>{try{await navigator.clipboard.writeText(emails.join('; '));aviso(emails.length+' e-mail(s) copiado(s). Cole no campo Para/CCO.')}catch{aviso('Não consegui copiar.',1)}}},'Copiar e-mails ('+emails.length+')');
-  const agr=h('button',{type:'button',class:'chipx'+(AGRUPAR?' on':''),title:'Mostra as pessoas separadas por turma, em ordem alfabética dentro de cada uma',onclick:()=>{AGRUPAR=!AGRUPAR;try{localStorage.setItem('liga_pessoas_agrupar',AGRUPAR?'1':'')}catch{}desenharPessoas()}},'Agrupar por turma');
+  const agr=h('button',{type:'button',hidden:!!TURMA_F,class:'chipx'+(AGRUPAR?' on':''),title:'Mostra as pessoas separadas por turma, em ordem alfabética dentro de cada uma',onclick:()=>{AGRUPAR=!AGRUPAR;try{localStorage.setItem('liga_pessoas_agrupar',AGRUPAR?'1':'')}catch{}desenharPessoas()}},'Agrupar por turma');
   barra.append(sel,agr,busca,h('span',{style:'flex:1'}),...(D.dono?[cp]:[]),h('button',{class:'btn',type:'button',onclick:()=>abrirGaveta('')},'+ Nova pessoa'));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo sobre uma pessoa fica aqui: dados (nome, e-mail, usuário), papéis, turma, cargos e permissões. Clique em Editar. Para cadastrar alguém novo, use + Nova pessoa.'),barra);
   const caixa=h('div',{class:'lista-cartao'});
@@ -98,7 +98,8 @@ function desenharPessoas(){
     const falta=[];if(!(c&&c.nome))falta.push('nome');if(!l.n)falta.push('usuário do GitHub');
     return h('div',{class:'pessoa'},h('div',{},h('b',{},titulo),h('div',{class:'sub',style:'font-size:12px'},sub)),h('div',{},h('div',{},...(i&&temPapel(i)?pillsPapel(i):[h('span',{class:'pill',style:'opacity:.7'},'Sem acesso')]),...(falta.length?[h('span',{class:'pill',style:'background:#5a4416'},'Falta: '+falta.join(', '))]:[])),h('div',{class:'pode'},i&&i.owner?'Pode tudo.':(w.pode[0]?'Pode '+w.pode[0].replace(/;.*$/,''):''))),
       h('button',{class:'btn sec',type:'button',onclick:()=>abrirGaveta(l.n,c)},'Editar'))};
-  if(!AGRUPAR)for(const l of lista)caixa.append(linha(l));
+  if(TURMA_F)caixa.prepend(h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:4px 2px 10px'},h('b',{},'Só quem é da turma: '+((D.turmas[TURMA_F]||{}).nome||TURMA_F)+' · '+lista.length),h('button',{class:'btn sec',type:'button',style:'padding:6px 12px;font-size:13px',onclick:()=>{TURMA_F='';desenharPessoas()}},'Ver todas as turmas')));
+  if(!AGRUPAR||TURMA_F)for(const l of lista)caixa.append(linha(l));
   else{const gr={};for(const l of lista){const ts=(l.i&&l.i.turmas.length)?l.i.turmas:[''];for(const tt of ts)(gr[tt]=gr[tt]||[]).push(l)}
     const ordem=Object.keys(gr).sort((a,b)=>(a===''?1:0)-(b===''?1:0)||(((D.turmas[b]||{}).status==='andamento')-((D.turmas[a]||{}).status==='andamento'))||a.localeCompare(b));
     for(const tt of ordem){const det=h('details',{class:'grp-turma',style:'margin:8px 0'},h('summary',{style:'cursor:pointer;font-weight:700;padding:8px 4px'},(tt?(D.turmas[tt]||{}).nome||tt:'Sem turma')+' · '+gr[tt].length));for(const l of gr[tt])det.append(linha(l));caixa.append(det)}}
