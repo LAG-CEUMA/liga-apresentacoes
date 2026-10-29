@@ -481,7 +481,7 @@ function desenharInicio(){
     corr:[['…','a corrigir']]
   };
   const G=[
-    ['Dia a dia',[
+    ['Turmas (dia a dia)',[
       [tem('presenca')||D.papel==='monitor','/presenca#corr','Correção de atividades','Respostas dos alunos esperando nota e dúvidas. Abre a turma em andamento.','corr'],
       [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Chamada, participação e ranking. Cada turma também tem esses botões em Turmas.','chamada'],
       [pm.includes('pessoas'),'#turmas','Turmas e alunos','Criar turmas, matricular alunos, repositórios e planos.','turmas'],
@@ -532,7 +532,7 @@ function desenharFerramentas(){
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
   // Menu enxuto: o Início é o centro; dentro de uma área só aparecem "← Início" e as áreas irmãs do mesmo grupo.
-  const GRUPO={turmas:'Dia a dia',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
+  const GRUPO={turmas:'Turmas (dia a dia)',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
   const A=$('abas');A.textContent='';
   if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',onclick:()=>mostrar('inicio')},'← Início'));
     const gr=GRUPO[k],irm=disp.filter(x=>GRUPO[x[0]]===gr);
