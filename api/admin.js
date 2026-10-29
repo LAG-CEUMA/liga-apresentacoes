@@ -150,14 +150,14 @@ module.exports = async (req, res) => {
       novo.owners = own; novo.alunos = alu;
       msg = `Portal: ${usuario} atualizou as listas (${own.length} owners, ${alu.length} alunos)`;
     } else if (b.acao === 'monitor') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('pessoas') || (!dono && papelU === 'monitor')) return nao();
       const nome = ler([b.usuario])[0];
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
       novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (novo.monitores[nome] || {}).turmas || [] };
       msg = `Portal: ${usuario} definiu permissões do monitor ${nome} (${novo.monitores[nome].aulas.length} aulas, ${novo.monitores[nome].roteiros.length} roteiros)`;
     } else if (b.acao === 'remover_monitor') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('pessoas') || (!dono && papelU === 'monitor')) return nao();
       const nome = ler([b.usuario])[0];
       if (!nome || !novo.monitores[nome]) return u.json(res, 400, { erro: 'Monitor não encontrado.' });
       delete novo.monitores[nome];
@@ -193,6 +193,10 @@ module.exports = async (req, res) => {
           const destino = turmasOk.length ? turmasOk : [Object.keys(novo.turmas).find((k) => novo.turmas[k].status === 'andamento') || Object.keys(novo.turmas)[0]];
           for (const t of destino) novo.turmas[t].alunos.push(nome);
         }
+      }
+      if (!dono && papelU === 'monitor') { // monitor só cadastra/atribui alunos: nunca mexe em monitores, equipe ou owners
+        const alvoPapel = u.papel(cfg, nome); if (!['aluno', 'visitante'].includes(alvoPapel)) return u.json(res, 403, { erro: 'Monitor só mexe em alunos. Para monitores, equipe ou owners, peça a um owner.' });
+        if (b.monitor !== undefined && !!b.monitor !== !!(cfg.monitores || {})[nome]) return u.json(res, 403, { erro: 'Monitor só atribui alunos. Para criar ou remover monitores, peça a um owner.' });
       }
       if (b.monitor !== undefined) {
         if (b.monitor) novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (Array.isArray(b.monitor_turmas) ? b.monitor_turmas : []).map(String).filter((t) => novo.turmas[t]) };

@@ -107,6 +107,7 @@ function desenharPessoas(){
 }
 
 function abrirGaveta(nome,contato){
+  const SO_ALUNOS=!D.dono&&D.papel==='monitor'; // monitor só atribui alunos
   const i0=nome?info(nome):null;const dono=D.dono;contato=contato||(nome?contatoDe(nome):null);
   const DADOS={curso:(contato&&contato.curso)||'',nome:(contato&&contato.nome)||'',email:(contato&&contato.email)||'',anterior:contato?(contato.email||('@'+contato.usuario)):''};
   const E={usuario:nome,owner:i0?i0.owner:false,aluno:i0?i0.aluno:true,turmas:new Set(i0?i0.turmas:[Object.keys(D.turmas).find(t=>D.turmas[t].status==='andamento')||Object.keys(D.turmas)[0]]),
@@ -140,7 +141,7 @@ function abrirGaveta(nome,contato){
     // papéis
     box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga',ajuda('pes_papel')),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo. ',h('b',{},'Nenhum marcado = cadastro inativo (sem acesso à plataforma).'),),
       ck('Owner',E.owner,v=>{E.owner=v;desenhar()},!dono||(i0&&i0.fixo)||(i0&&nome===D.usuario),dono?'':' (só owners definem)'),
-      ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()}),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()}),
+      ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()},SO_ALUNOS&&!!i0&&(i0.owner||i0.mon||i0.eq)),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()},SO_ALUNOS,SO_ALUNOS?' (só owners definem)':''),
       dono?ck('Equipe (cargos)',E.equipe,v=>{E.equipe=v;desenhar()}):''));
     if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma',ajuda('pes_turma')),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...turmasPorTrilha(tot).flatMap(g=>[h('div',{class:'sub',style:'margin:10px 0 4px;font-weight:700'},g.titulo),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...g.ids.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})))]),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
     if(E.monitor){
