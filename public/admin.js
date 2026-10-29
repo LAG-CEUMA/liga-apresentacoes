@@ -220,8 +220,11 @@ function desenharCargos(){
   p.append(det)}
 
 // ---------- aba Turmas ----------
-function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;return Object.entries(m).sort((x,y)=>x[0].localeCompare(y[0]))}
-const nomeNivel=d=>d?((niveisLista().find(x=>x[0]===d)||[])[1]||d):'Todos os níveis';
+function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;for(const pl of Object.values(D.planos||{}))for(const d of pl.niveis||[])if(!m[d])m[d]='Nível '+Number(d.slice(6,8));return Object.entries(m).sort((x,y)=>x[0].localeCompare(y[0]))}
+const trilhaDoNivel=d=>Object.keys(D.planos||{}).find(k=>(D.planos[k].niveis||[]).includes(d))||'';
+const rotuloNivel=d=>{const t=trilhaDoNivel(d),n=((niveisLista().find(x=>x[0]===d)||[])[1]||d);return t?n+' · '+(D.planos[t].trilha||D.planos[t].nome):n};
+const nomeNivel=d=>d?rotuloNivel(d):'Todos os níveis';
+const niveisDaTrilha=k=>(k&&D.planos[k]?D.planos[k].niveis||[]:[]).map(d=>[d,(niveisLista().find(x=>x[0]===d)||[,d])[1]]);
 const ESTADO_REPO={ficticio:['Aluno de teste (fictício): não usa GitHub','ok'],ok:['Pronto','ok'],'criado-com-acesso':['Criado, com acesso','ok'],convidado:['Convite enviado','m'],'criado-e-convidado':['Criado e convite enviado','m'],'convite-pendente':['Convite enviado, aguardando o aluno aceitar','m'],'sem-convite':['Repositório existe, falta convidar','t'],'sem-repo':['Repositório ainda não existe','t'],erro:['Erro','t']};
 async function reposDaTurma(id,nome){
   const corpo=h('div',{},h('p',{class:'sub'},'Verificando…'));const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Repositórios dos alunos · '+nome,ajuda('repos')),h('p',{class:'sub'},'Cada aluno precisa de um repositório privado aluno-<usuario> (criado do modelo aluno-modelo) e de um convite aceito. Aqui você confere e resolve de uma vez.'),corpo,h('div',{style:'display:flex;justify-content:flex-end;margin-top:12px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'))],'modal');
@@ -317,8 +320,18 @@ function modalPlano(id){
   const lista=h('div',{style:'max-height:30vh;overflow:auto;border:1px solid #fff2;border-radius:10px;padding:6px 12px'});
   const itemTurma=(t,nm)=>h('label',{class:'ck'},h('input',{type:'checkbox',checked:sel.has(t),disabled:!!usadas[t],onchange:e=>{e.target.checked?sel.add(t):sel.delete(t)}}),nm+(usadas[t]?' (já está em '+usadas[t]+')':''));
   for(const t of Object.keys(D.turmas))lista.append(itemTurma(t,D.turmas[t].nome));
-  // Adicionar nível: cria a turma daquele nível já dentro desta trilha
-  const nvSel=h('select',{},h('option',{value:''},'Escolha o nível…'),...niveisLista().map(([k,x])=>h('option',{value:k},x)));
+  // Níveis desta trilha (cada nível pertence a uma trilha só) e criação de turma por nível
+  const niv=[...(pl.niveis||[])];const nivBox=h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;margin:6px 0'});
+  const nvSel=h('select',{});
+  const redesenhaNiv=()=>{nivBox.textContent='';if(!niv.length)nivBox.append(h('span',{class:'sub'},'Nenhum nível ainda.'));for(const d of niv)nivBox.append(h('span',{class:'pill m'},((niveisLista().find(x=>x[0]===d)||[,d])[1])+' · '+d.slice(9).replace(/-/g,' ')));
+    nvSel.textContent='';nvSel.append(h('option',{value:''},'Escolha o nível…'),...niv.map(d=>h('option',{value:d},(niveisLista().find(x=>x[0]===d)||[,d])[1])))};
+  redesenhaNiv();
+  const nN=h('input',{type:'number',min:0,max:99,placeholder:'Nº',style:'width:70px'}),nNome=h('input',{type:'text',placeholder:'Assunto do nível (ex.: Pensar como designer)',style:'width:260px'});
+  const novoNiv=h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!id){aviso('Salve a trilha primeiro; depois volte aqui para criar os níveis.',1);return}
+    try{const r=await enviar({acao:'novo_nivel',trilha:id,numero:nN.value,nome:nNome.value});niv.push(r.dir);D.planos[id].niveis=[...niv];niv.sort();redesenhaNiv();nN.value='';nNome.value='';aviso('Nível criado nesta trilha. Agora você pode criar as aulas dele no Editor.')}catch(e){aviso(e.message,1)}}},'+ Criar nível');
+  const livres=niveisLista().filter(([d])=>!trilhaDoNivel(d)&&!/^nivel-(90|99)/.test(d));
+  const adotSel=h('select',{},h('option',{value:''},'Nível existente sem trilha…'),...livres.map(([d,x])=>h('option',{value:d},x+' · '+d.slice(9).replace(/-/g,' '))));
+  const adotar=h('button',{class:'btn sec',type:'button',onclick:()=>{const d=adotSel.value;if(!d)return;const n=d.slice(6,8);if(niv.some(x=>x.slice(6,8)===n)){aviso('Esta trilha já tem o Nível '+Number(n)+'.',1);return}niv.push(d);niv.sort();adotSel.querySelector('option[value="'+d+'"]').remove();redesenhaNiv()}},'Adicionar à trilha');
   const criarNivel=h('button',{class:'btn sec',type:'button',onclick:async()=>{
     const nv=nvSel.value;if(!nv){aviso('Escolha o nível.',1);return}
     const base=(id||cod.value||'').toUpperCase();if(!base){aviso('Preencha o código da trilha antes.',1);return}
@@ -330,25 +343,29 @@ function modalPlano(id){
   const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir a trilha "${pl.nome}"? As turmas continuam; a Copa volta a ser por turma.`))return;try{await enviar({acao:'excluir_plano',id});aviso('Trilha excluída');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir trilha'):'';
   const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar trilha':'Nova trilha'),
     h('div',{class:'form'},h('label',{},'Nome da trilha',tr),h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome do calendário',nome),h('label',{},'Dia da semana',dia),h('label',{},'Horário',hor),h('label',{},'Início',ini),h('label',{},'Fim (pode ser provisório)',fim),h('label',{},'Premiação (opcional)',pre),h('label',{},'Semanas sem aula (datas dd/mm/aaaa, separadas por vírgula)',sem)),
-    h('p',{class:'sub',style:'margin-top:14px'},h('b',{},'Níveis e turmas desta trilha'),' (cada turma fica em uma trilha só):'),lista,
+    h('p',{class:'sub',style:'margin-top:14px'},h('b',{},'Níveis desta trilha'),' (o conteúdo de cada nível é só desta trilha; cada trilha tem quantos níveis precisar):'),nivBox,
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},nN,nNome,novoNiv),
+    livres.length?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px'},adotSel,adotar):'',
+    h('p',{class:'sub',style:'margin-top:14px'},h('b',{},'Turmas desta trilha'),' (cada turma fica em uma trilha só):'),lista,
     h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center'},nvSel,criarNivel),
-    h('p',{class:'sub',style:'margin:6px 0 0;max-width:720px'},'Cria uma turma nova daquele nível e já a coloca nesta trilha. O nível define quais aulas os alunos da turma veem. Não muda as turmas que já existem: se uma turma marcada acima é do nível errado, desmarque-a (ou use Editar na turma e troque o nível).'),
-    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,diaSemana:dia.value,horario:hor.value,semanasSemAula:lerDatas(sem.value),turmas:[...sel]});aviso('Trilha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
+    h('p',{class:'sub',style:'margin:6px 0 0;max-width:720px'},'Cria uma turma nova daquele nível e já a coloca nesta trilha.'),
+    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,diaSemana:dia.value,horario:hor.value,semanasSemAula:lerDatas(sem.value),turmas:[...sel],niveis:niv});aviso('Trilha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
 function modalTurma(id){
   const t=id?D.turmas[id]:{nome:'',status:'planejada',inicio:'',fim:'',nivel:'',acessoApos:true,acessoAte:''};
   const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-N0',style:'text-transform:uppercase',oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:t.nome,maxLength:40,placeholder:'ex.: Nível 0 · 2026.2'}),ini=h('input',{type:'date',value:t.inicio}),fim=h('input',{type:'date',value:t.fim||''}),
     st=h('select',{},...[['planejada','Planejada'],['andamento','Em andamento'],['arquivada','Arquivada']].map(([k,x])=>h('option',{value:k},x))),
-    nv=h('select',{},h('option',{value:''},'Todos os níveis (sem restrição)'),...niveisLista().map(([k,x])=>h('option',{value:k},x))),
+    nv=h('select',{}),
     ap=h('input',{type:'checkbox',checked:t.acessoApos!==false}),ate=h('input',{type:'date',value:t.acessoAte||''});
-  st.value=t.status;nv.value=t.nivel||'';
+  st.value=t.status;
   const mostraAte=()=>{ateL.hidden=st.value!=='arquivada'};st.addEventListener('change',mostraAte);
   const ateL=h('label',{},'Acesso ao material vai até ',ate);
   const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir a turma "${t.nome}"? Só é possível se ela estiver vazia e sem chamadas.`))return;try{await enviar({acao:'excluir_turma',id});aviso('Turma excluída');fechar();await carregar()}catch(e){aviso(e.message,1);if(D.dono&&/chamadas salvas|ainda tem alunos/.test(e.message))aviso('Quer apagar mesmo assim? Use o botão "Excluir à força".',1)}}},'Excluir turma'):'';
   const forcar=(id&&D.dono)?h('button',{class:'btn sec',type:'button',title:'Só owners. Apaga chamadas, atividades e Copa da turma, tira a turma e (se você pedir) apaga os repositórios dos alunos que só estavam nela. Mostra antes o que será apagado.',onclick:async()=>{try{const sim=await enviar({acao:'excluir_turma_forcado',id,simular:true});const rs=sim.repos.length?'\n\nRepositórios dos alunos (só dessa turma):\n'+sim.repos.map(x=>'• '+x).join('\n'):'';if(!confirm(`EXCLUIR À FORÇA a turma ${sim.turma} (${sim.nome})?\n\nSerão apagados: ${sim.chamadas} arquivo(s) de chamadas, ${sim.atividades} de atividades e a Copa. ${sim.alunos} aluno(s) saem da turma.${rs}${sim.aviso?'\n\n'+sim.aviso:''}\n\nNão dá para desfazer.`))return;let apagarRepos=false;if(sim.repos.length)apagarRepos=confirm(`Apagar TAMBÉM os ${sim.repos.length} repositório(s) do GitHub listados?\n\nOK = apagar os repositórios\nCancelar = manter os repositórios`);const cf=prompt(`Para confirmar, digite o código da turma: ${sim.turma}`);if(cf===null)return;const r=await enviar({acao:'excluir_turma_forcado',id,confirma:cf,apagarRepos});let m=`Turma excluída. ${r.apagados} arquivo(s) de dados apagados.`;if(r.falhas.length)m+=` ${r.falhas.length} não puderam ser apagados.`;if(r.reposOk.length)m+=` ${r.reposOk.length} repositório(s) apagados.`;aviso(m);if(r.reposManual.length){alert('O GitHub não deixou apagar estes repositórios (o token do portal não tem permissão de apagar). Abra cada link, role até "Danger Zone" e apague:\n\n'+r.reposManual.map(x=>x.url).join('\n'))}fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir à força'):'';
   const planoAtual=Object.keys(D.planos||{}).find(k=>(D.planos[k].turmas||[]).includes(id))||'';
   const trSel=h('select',{},h('option',{value:''},'Sem trilha'),...Object.keys(D.planos||{}).map(k=>h('option',{value:k},(D.planos[k].trilha||D.planos[k].nome)+(D.planos[k].diaSemana!==undefined&&D.planos[k].diaSemana!==''?' · '+DIAS[D.planos[k].diaSemana]:''))));trSel.value=planoAtual;
+  const preencheNv=()=>{const ls=trSel.value?niveisDaTrilha(trSel.value):niveisLista();const cur=nv.value||t.nivel||'';nv.textContent='';nv.append(h('option',{value:''},trSel.value?(ls.length?'Escolha o nível…':'Esta trilha ainda não tem níveis (crie em Editar trilha)'):'Escolha a trilha primeiro'),...ls.map(([k,x])=>h('option',{value:k},x)));nv.value=ls.some(x=>x[0]===cur)?cur:''};preencheNv();trSel.addEventListener('change',()=>{nv.value='';preencheNv()});
   const novaTr=h('button',{class:'btn sec',type:'button',style:'padding:6px 12px;font-size:13px;margin-top:6px',onclick:()=>modalPlano('')},'+ Criar nova trilha');
-  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome',nome),h('label',{},'Nível da turma',nv),h('label',{},'Trilha',trSel,novaTr),h('label',{},'Situação',st),h('label',{},'Início',ini),h('label',{},'Fim previsto',fim)),
+  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome',nome),h('label',{},'Trilha (assunto)',trSel,novaTr),h('label',{},'Nível da turma (dentro da trilha)',nv),h('label',{},'Situação',st),h('label',{},'Início',ini),h('label',{},'Fim previsto',fim)),
     id?h('p',{class:'sub'},'Código, nome, nível e datas podem ser corrigidos depois. O código só muda enquanto a turma não tem chamadas salvas.'):'',
     h('label',{class:'ck'},ap,'Mantém acesso ao material (slides) por 1 ano depois de arquivada'),ateL,
     h('p',{class:'sub'},'Os alunos da turma só veem as aulas do nível dela (e que estejam como Membros). Roteiros nunca aparecem para alunos. Passado o prazo, o acesso ao material dessa turma se encerra; para estender, edite a data acima.'),

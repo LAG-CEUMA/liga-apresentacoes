@@ -125,7 +125,7 @@ module.exports = async (req, res) => {
     }
     const novo = JSON.parse(JSON.stringify(cfg));
     const existe = new Set(aulas.map((a) => a.chave));
-    const dirs = new Set(aulas.map((a) => a.dir));
+    const dirs = new Set([...aulas.map((a) => a.dir), ...Object.values(cfg.planos || {}).flatMap((p) => p.niveis || [])]);
     let msg;
     if (b.acao === 'acesso') {
       if (!perm.includes('aulas')) return nao();
@@ -301,8 +301,22 @@ module.exports = async (req, res) => {
       const diaSemana = b.diaSemana === undefined ? (atual.diaSemana === undefined ? '' : atual.diaSemana) : (/^[0-6]$/.test(String(b.diaSemana)) ? Number(b.diaSemana) : '');
       const horario = String(b.horario === undefined ? (atual.horario || '') : b.horario).trim().slice(0, 30);
       const semanasSemAula = (Array.isArray(b.semanasSemAula) ? b.semanasSemAula : (atual.semanasSemAula || [])).map(data).filter(Boolean).slice(0, 60).sort();
-      novo.planos[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao), diaSemana, horario, semanasSemAula };
+      const niveis = [...new Set((Array.isArray(b.niveis) ? b.niveis : (atual.niveis || [])).map(String).filter((x) => /^nivel-\d{2}-[a-z0-9-]{1,40}$/.test(x)))].slice(0, 30);
+      for (const [oid, op] of Object.entries(novo.planos || {})) if (oid !== id) { const dup = niveis.find((x) => (op.niveis || []).includes(x)); if (dup) return u.json(res, 400, { erro: `O nível ${dup} já pertence à trilha ${op.trilha || oid}.` }); }
+      const nums = niveis.map((x) => x.slice(6, 8)); if (new Set(nums).size !== nums.length) return u.json(res, 400, { erro: 'Esta trilha já tem um nível com esse número.' });
+      novo.planos[id] = { niveis, nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao), diaSemana, horario, semanasSemAula };
       msg = `Portal: ${usuario} salvou o plano ${id}`;
+    } else if (b.acao === 'novo_nivel') { // cria um nível (pasta de aulas) já dentro de uma trilha
+      if (!perm.includes('pessoas')) return nao();
+      const id = String(b.trilha || '').trim().toUpperCase(); const pl = (novo.planos || {})[id];
+      if (!pl) return u.json(res, 400, { erro: 'Salve a trilha antes de criar níveis nela.' });
+      const n = Math.round(Number(b.numero));
+      if ((pl.niveis || []).some((x) => Number(x.slice(6, 8)) === n)) return u.json(res, 400, { erro: `A trilha já tem o Nível ${n}.` });
+      const S = require('../lib/slides'); let dir;
+      try { dir = await S.novoNivel(b.numero, b.nome, usuario, true); } catch (e) { return u.json(res, 400, { erro: e.message }); }
+      pl.niveis = [...(pl.niveis || []), dir].sort();
+      msg = `Portal: ${usuario} criou o nível ${dir} na trilha ${id}`;
+      b.__resp = { ok: true, dir };
     } else if (b.acao === 'excluir_plano') {
       if (!perm.includes('pessoas')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
