@@ -128,7 +128,7 @@ function abrirGaveta(nome,contato){
       box.append(h('div',{class:'sec'},h('h3',{},'Dados da pessoa',ajuda('pes_dados')),
         cx('Nome completo *',inp(DADOS.nome,'Ex.: Davi Novato Silva',v=>{DADOS.nome=v})),
         cx('E-mail institucional (opcional)',inp(DADOS.email,dono?'a000000@ceuma.com.br':(contato?'(já cadastrado; só owners veem)':'a000000@ceuma.com.br'),v=>{DADOS.email=v}),'Só contato (convocações). Não dá acesso. Só owners enxergam os e-mails já salvos.'),
-        cx('Curso (opcional)',inp(DADOS.curso,'Ex.: Ciência da Computação',v=>{DADOS.curso=v})),
+        cx('Curso ou profissão (opcional)',inp(DADOS.curso,'Ex.: Ciência da Computação · Engenheiro de Computação',v=>{DADOS.curso=v})),
         cx('Usuário do GitHub *',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?(i0&&(i0.owner||i0.eq)?'Já cadastrado; owners e equipe não podem ter o usuário trocado por aqui.':'Cadastrado. Se foi informado errado, use o botão abaixo para corrigir.'):'É por ele que a pessoa entra na plataforma (o nome que aparece no perfil do GitHub).')))}
     if(nome&&!(i0&&(i0.owner||i0.eq)))box.lastChild.append(h('button',{class:'btn sec',type:'button',style:'margin-top:8px',onclick:async()=>{
       const ni=h('input',{type:'text',placeholder:'novo-usuario (sem @)',style:'width:100%;margin-top:8px'});

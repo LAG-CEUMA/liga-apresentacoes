@@ -35,7 +35,7 @@ module.exports = async (req, res) => {
       if (q.acao === 'meuperfil') {
         if (u.papel(cfg, usuario) === 'visitante') return u.json(res, 403, { erro: 'Sem acesso.' });
         const c = (await require('../lib/pendentes').ler()).lista.find((x) => x.usuario === usuario);
-        return u.json(res, 200, { usuario, cadastrado: !!c, nome: (c && c.nome) || '', email: (c && c.email) || '', emailPessoal: (c && c.emailPessoal) || '', curso: (c && c.curso) || '', cpf: (c && c.cpf) || '' });
+        return u.json(res, 200, { usuario, cadastrado: !!c, nome: (c && c.nome) || '', email: (c && c.email) || '', emailPessoal: (c && c.emailPessoal) || '', curso: (c && c.curso) || '', cpf: (c && c.cpf) || '', fotoModo: (c && c.fotoModo) || 'github', fotoPublica: !!(c && c.fotoPublica) });
       }
       if (q.acao === 'minha') {
         const todas = await d.listarSessoes();
@@ -118,6 +118,16 @@ module.exports = async (req, res) => {
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     if (b.turma) b.turma = String(b.turma).toUpperCase();
+      if (b.acao === 'minhafoto' || b.acao === 'minhafoto_pref' || b.acao === 'minhafoto_remover') {
+        if (u.papel(cfg, usuario) === 'visitante') return u.json(res, 403, { erro: 'Sem acesso.' });
+        const F = require('../lib/fotos');
+        try {
+          if (b.acao === 'minhafoto') { await F.salvar(usuario, b.imagem); await F.preferencia(usuario, 'upload', !!b.publica); }
+          else if (b.acao === 'minhafoto_pref') await F.preferencia(usuario, b.modo, !!b.publica);
+          else { await F.remover(usuario); await F.preferencia(usuario, 'github', false); }
+          return u.json(res, 200, { ok: true });
+        } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+      }
       if (b.acao === 'meuperfil') {
       if (u.papel(cfg, usuario) === 'visitante') return u.json(res, 403, { erro: 'Sem acesso.' });
       try { const c = await require('../lib/pendentes').salvarPerfil(usuario, b); return u.json(res, 200, { ok: true, email: c.email || '', emailPessoal: c.emailPessoal || '', curso: c.curso || '', cpf: c.cpf || '' }); }

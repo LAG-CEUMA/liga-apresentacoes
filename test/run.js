@@ -85,7 +85,7 @@ global.fetch = async (url, op = {}) => {
   return resp(404, {});
 };
 const u = require('../lib/util');
-const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado', 'wiki'];
+const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado', 'wiki', 'foto'];
 const h = (n) => require((ROTAS.includes(n) ? '../lib/rotas/' : '../api/') + n);
 function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {} } = {}) {
   const req = { query, method, body, headers: { host: 'site.test', ...headers } };
@@ -453,6 +453,9 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     const sim = await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', simular: true }); assert.equal(sim.status, 200); assert(JSON.parse(sim.body).simulacao && cfg.turmas['FORCA-X']); // só simula
     assert.equal((await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', confirma: 'errado' })).status, 400);
     const ex = await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', confirma: 'forca-x' }); assert.equal(ex.status, 200); assert(!cfg.turmas['FORCA-X']); }
+  { const f1 = await pres({ acao: 'minhafoto', imagem: 'data:image/jpeg;base64,AAAA' }); assert.equal(f1.status, 400); // não é JPEG
+    const f2 = await pres({ acao: 'minhafoto', imagem: 'data:image/png;base64,iVBORw0KGgo=' }); assert.equal(f2.status, 400);
+    const f3 = await chamar(h('foto'), { query: { u: 'dono' } }); assert.equal(f3.status, 302); assert(String(f3.h.Location).includes('github.com/dono.png')); } // sem foto enviada: avatar do GitHub
   assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'arquivada' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, u.maisUmAno()); // arquivar = 1 ano
   assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'andamento' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, '');
   {

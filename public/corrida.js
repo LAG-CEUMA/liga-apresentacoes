@@ -49,7 +49,7 @@ function pista(o){
   pose(mov?0:1);
   if(mov){const t0=performance.now(),dur=9500;const VOLTA=30000;const passo=n=>{if(!document.body.contains(svg))return;const t=Math.min(1,(n-t0)/dur);if(t<1)pose(1-Math.pow(1-t,3));else pose(1,(((n-t0-dur)/VOLTA)%1));requestAnimationFrame(passo)};requestAnimationFrame(passo)}
   const wrap=h('div',{class:'corr-wrap'},svg);wrap.dataset.voltas=N;wrap.dataset.dec=dec===null?'':dec;return wrap}
-function avatar(u){const ini=h('span',{class:'ini'},(u||'?')[0].toUpperCase());const im=h('img',{src:'https://github.com/'+encodeURIComponent(u)+'.png?size=96',alt:u,loading:'lazy',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.replaceWith(ini));return im}
+function avatar(u){const ini=h('span',{class:'ini'},(u||'?')[0].toUpperCase());const im=h('img',{src:'/api/foto?u='+encodeURIComponent(u),alt:u,loading:'lazy',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.replaceWith(ini));return im}
 function podio(top,nome){if(!top.length)return null;const ordem=[top[1],top[0],top[2]].filter(Boolean);const alt={1:70,2:48,3:34};
   return h('div',{class:'corr-pod'},...ordem.map(x=>{const pos=top.indexOf(x)+1;return h('div',{},avatar(x.usuario),h('span',{style:'margin-top:4px'},nome(x.usuario)),h('span',{class:'sub'},x.pontos+' pts'),h('div',{class:'bloco',style:'height:'+alt[pos]+'px'},['🥇','🥈','🥉'][pos-1]))}))}
 function podioPlaces(itens,nome){ // itens: [{usuario,pontos,posicao}] já ordenados; empates ficam lado a lado no mesmo degrau
