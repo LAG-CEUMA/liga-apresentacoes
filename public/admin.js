@@ -141,9 +141,15 @@ function abrirGaveta(nome,contato){
       ck('Owner',E.owner,v=>{E.owner=v;desenhar()},!dono||(i0&&i0.fixo)||(i0&&nome===D.usuario),dono?'':' (só owners definem)'),
       ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()}),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()}),
       dono?ck('Equipe (cargos)',E.equipe,v=>{E.equipe=v;desenhar()}):''));
-    if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma',ajuda('pes_turma')),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...tot.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
+    if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma',ajuda('pes_turma')),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...turmasPorTrilha(tot).flatMap(g=>[h('div',{class:'sub',style:'margin:10px 0 4px;font-weight:700'},g.titulo),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...g.ids.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})))]),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
     if(E.monitor){
-      const bl=h('div',{class:'sec'},h('h3',{},'Aulas que o monitor ministra',ajuda('pes_monitor')),h('div',{class:'sub'},'Turmas em que ensina (nenhuma marcada = todas):'),...tot.map(t=>chip(D.turmas[t].nome,E.mturmas.has(t),()=>{E.mturmas.has(t)?E.mturmas.delete(t):E.mturmas.add(t);desenhar()})));
+      const bl=h('div',{class:'sec'},h('h3',{},'Monitor: o que ele ministra',ajuda('pes_monitor')),
+        h('div',{style:'font-weight:700;margin:8px 0 2px'},'1. Em quais turmas ele ministra?'),
+        h('div',{class:'sub'},E.mturmas.size?E.mturmas.size+' turma(s) marcada(s).':'Nenhuma marcada: vale para TODAS as turmas.'),
+        ...turmasPorTrilha(tot).flatMap(g=>[h('div',{class:'sub',style:'margin:10px 0 4px;font-weight:700'},g.titulo),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...g.ids.map(t=>chip(D.turmas[t].nome,E.mturmas.has(t),()=>{E.mturmas.has(t)?E.mturmas.delete(t):E.mturmas.add(t);desenhar()})))]),
+        h('div',{style:'font-weight:700;margin:16px 0 2px'},'2. Quais aulas ele pode abrir?'),
+        h('div',{class:'sub'},'Slides = projetar para a turma. Roteiro = guia do apresentador (nunca aparece para alunos). Abra o nível e marque, ou use o atalho abaixo.'),
+        h('button',{type:'button',class:'chipx',style:'margin:6px 0',onclick:()=>{const ts=E.mturmas.size?[...E.mturmas]:tot;let n=0;for(const t of ts){const nv=(D.turmas[t]||{}).nivel;for(const a of D.aulas||[])if(!nv||String(a.chave).startsWith(nv+'/')){E.aulas.add(a.chave);if(a.tem_roteiro)E.roteiros.add(a.chave);n++}}aviso(n+' aula(s) marcada(s) a partir dos níveis das turmas.');desenhar()}},'Marcar as aulas dos níveis dessas turmas'));
       const grupos={};for(const a of D.aulas||[])(grupos[a.nivel]=grupos[a.nivel]||[]).push(a);
       bl.append(h('div',{class:'aulaln sub',style:'border:0'},h('span',{},'Aula'),h('span',{},'Slides'),h('span',{},'Roteiro')));
       Object.keys(grupos).sort().forEach(nv=>{const l=grupos[nv];const n=l.filter(a=>E.aulas.has(a.chave)||E.roteiros.has(a.chave)).length;
@@ -290,6 +296,10 @@ function desenharTurmas(){
   if(soltas.length){const det=h('details',{class:'nivel',open:true},h('summary',{},h('span',{class:'nvt'},'Turmas sem trilha'),h('span',{class:'nvc'},soltas.length+' turma(s)')));const gr=h('div',{style:grade});for(const t of soltas)gr.append(CARDS[t]);det.append(gr);p.append(det)}
   p.append(h('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin:16px 0'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Nova trilha'),h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma('')},'+ Nova turma avulsa'),h('span',{class:'sub'},'Trilha = dia da semana, horário e calendário, com os níveis (turmas) dentro. Alunos novos entram na turma que você escolher.')));
   p.append(h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
+function turmasPorTrilha(ids){ // agrupa ids de turma pela trilha (plano) a que pertencem
+  const out=[],usado=new Set();
+  for(const k of Object.keys(D.planos||{})){const pl=D.planos[k],ts=(pl.turmas||[]).filter(t=>ids.includes(t));if(ts.length){out.push({titulo:(pl.trilha||pl.nome)+(pl.diaSemana!==undefined&&pl.diaSemana!==''?' · '+DIAS[pl.diaSemana]:''),ids:ts});ts.forEach(t=>usado.add(t))}}
+  const sobra=ids.filter(t=>!usado.has(t));if(sobra.length)out.push({titulo:'Sem trilha',ids:sobra});return out}
 const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const dmy=v=>v?v.split('-').reverse().join('/'):'';
 const lerDatas=t=>String(t||'').split(/[\s,;]+/).map(x=>{const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):''}).filter(Boolean);
