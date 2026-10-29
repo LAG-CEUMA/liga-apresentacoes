@@ -135,6 +135,7 @@ module.exports = async (req, res) => {
       if (!perm.includes('aulas')) return nao();
       const chaves = Array.isArray(b.chaves) ? b.chaves : [b.chave];
       if (!chaves.length || chaves.length > 500 || !chaves.every((c) => existe.has(c)) || !u.NIVEIS.includes(b.nivel)) return u.json(res, 400, { erro: 'Aula ou nível inválido.' });
+      if (!dono && papelU === 'monitor') { const meu = new Set([...((cfg.monitores[usuario] || {}).aulas || []), ...((cfg.monitores[usuario] || {}).roteiros || [])]); if (!chaves.every((c) => meu.has(c))) return u.json(res, 403, { erro: 'Monitor só mexe nas aulas que ministra.' }); }
       for (const c of chaves) { if (b.nivel === 'owners') delete novo.aulas[c]; else novo.aulas[c] = b.nivel; }
       msg = chaves.length === 1 ? `Portal: ${usuario} definiu ${chaves[0]} como ${b.nivel}` : `Portal: ${usuario} definiu ${chaves.length} aulas (${String(b.nivel_nome || 'várias').slice(0, 40)}) como ${b.nivel}`;
     } else if (b.acao === 'listas') {
@@ -194,6 +195,7 @@ module.exports = async (req, res) => {
           for (const t of destino) novo.turmas[t].alunos.push(nome);
         }
       }
+      if (!dono && papelU === 'monitor' && nome === usuario) return u.json(res, 403, { erro: 'Você não edita as próprias permissões de monitor. Peça a um owner.' });
       if (!dono && papelU === 'monitor') { // monitor só cadastra/atribui alunos: nunca mexe em monitores, equipe ou owners
         const alvoPapel = u.papel(cfg, nome); if (!['aluno', 'visitante'].includes(alvoPapel)) return u.json(res, 403, { erro: 'Monitor só mexe em alunos. Para monitores, equipe ou owners, peça a um owner.' });
         if (b.monitor !== undefined && !!b.monitor !== !!(cfg.monitores || {})[nome]) return u.json(res, 403, { erro: 'Monitor só atribui alunos. Para criar ou remover monitores, peça a um owner.' });
