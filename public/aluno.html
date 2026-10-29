@@ -31,9 +31,25 @@ function tabAtiv(C){
   const L=(ATIV&&ATIV.atividades)||[];
   if(!L.length){const v=secao('Atividades','nenhuma liberada ainda');v.append(el('p','sub','Quando o professor liberar uma atividade (exercício ou tarefa), ela aparece aqui com prazo, peso e o link para responder no GitHub.'));C.append(v);v.open=true;return}
   const pend=L.filter(x=>(!x.estado||x.estado==='nao')&&!x.respondida),feitas=L.filter(x=>(x.estado&&x.estado!=='nao')||x.respondida);
-  const item=x=>{const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo+(x.opcional?' (OPCIONAL, pontos extras)':'')),el('br'),
-    el('small','',`${x.prazo?'prazo '+fmt(x.prazo)+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${x.aguardando?'Entregue · aguardando correção do professor':(x.respondida?'Respondida em '+fmt(x.respondidaEm)+' · '+(x.respondidaAtraso?'com atraso':'no prazo')+' · aguardando correção do professor':(ES[x.estado]||ES.nao))}${x.nota!==null&&x.nota!==undefined?' · nota '+x.nota:''}`));
-    if(x.issue){const w=el('div','');w.style.cssText='margin-top:10px';const a=el('a','btn','Abrir no GitHub e responder');a.href=x.issue;a.target='_blank';a.rel='noopener';w.append(a,el('small','',' Se aparecer "404", aceite o convite do seu repositório em github.com/LAG-CEUMA ou avise o monitor.'));i.append(w)}else if(!x.estado||x.estado==='nao'){i.append(el('br'),el('small','','O link do GitHub aparece aqui assim que a atividade for enviada ao seu repositório.'))}return i};
+  const agora=Date.now();
+  const item=x=>{
+    const ok=typeof x.nota==='number',resp=x.aguardando||x.respondida||(x.estado&&x.estado!=='nao'&&x.estado!=='dispensado'),disp=x.estado==='dispensado';
+    const atrasoEnt=x.estado==='atraso'||(x.respondida&&x.respondidaAtraso);
+    let cls,rot,sub;
+    if(disp){cls='cz';rot='Dispensado';sub=''}
+    else if(ok){cls='ok';rot='✔ Corrigida · nota '+x.nota;sub=atrasoEnt?'entregue com atraso':'entregue no prazo'}
+    else if(resp){cls='esp';rot='⏳ Aguardando correção';sub=(x.respondidaEm?'respondida em '+fmt(x.respondidaEm)+' · ':'')+(atrasoEnt?'com atraso':'no prazo')}
+    else if(x.prazo&&new Date(x.prazo).getTime()<agora){cls='atr';rot='Pendente · prazo vencido';sub='ainda dá para entregar'}
+    else{cls='pen';rot='Pendente';sub=x.prazo?'até '+fmt(x.prazo):''}
+    const i=el('div','atv '+cls);
+    const top=el('div','atv-top');const tt=el('div','atv-tt');
+    tt.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo),el('small','',[x.prazo&&(ok||resp)?'prazo '+fmt(x.prazo):'',x.opcional?'opcional · pontos extras':'peso '+x.peso].filter(Boolean).join(' · ')));
+    const st=el('div','atv-st');st.append(el('span','atv-chip',rot));if(sub)st.append(el('small','',sub));
+    top.append(tt,st);i.append(top);
+    if(x.issue){const a=el('a',(ok||resp)?'atv-link':'btn atv-btn',(ok||resp)?'Ver minha resposta no GitHub':'Responder no GitHub');a.href=x.issue;a.target='_blank';a.rel='noopener';i.append(a)}
+    else if(!ok&&!resp&&!disp)i.append(el('small','atv-sub','O link do GitHub aparece aqui assim que a atividade for enviada ao seu repositório.'));
+    return i};
+  const dica=el('p','sub','Responda comentando na Issue da atividade, no GitHub. Se aparecer "404", aceite o convite do seu repositório em github.com/LAG-CEUMA ou avise o monitor.');dica.style.cssText='margin:0 0 12px;font-size:13px';if(pend.length)C.append(dica);
   const a=secao('Pendentes',pend.length+(pend.length===1?' atividade':' atividades'));for(const x of pend)a.append(item(x));if(!pend.length)a.append(el('p','sub','Tudo em dia. Nenhuma pendência.'));C.append(a);LigaNovo.aplicar(a,'ativ-pend',pend.map(x=>x.id),true);
   const b=secao('Entregues',feitas.length+(feitas.length===1?' atividade':' atividades'));for(const x of feitas)b.append(item(x));if(!feitas.length)b.append(el('p','sub','Nada entregue ainda.'));C.append(b);LigaNovo.aplicar(b,'ativ-feitas',feitas.map(x=>x.id+x.estado+(x.respondida?'r':'')),false);
 }
