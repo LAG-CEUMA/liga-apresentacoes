@@ -39,6 +39,25 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { ok: true, item });
       } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
+    if (b.acao === 'perfis_ler' || b.acao === 'perfis_salvar' || b.acao === 'perfis_criar_atividade') {
+      if (!dono) return nao();
+      const PF = require('../lib/perfis'); const turma = String(b.turma || ''); const t = (cfg.turmas || {})[turma]; if (!t) return u.json(res, 400, { erro: 'Turma inválida.' });
+      if (!t.nivel) return u.json(res, 400, { erro: 'Ligue esta turma a um nível (Painel > Turmas > Editar) para anotar os interesses por nível.' });
+      const equipe = new Set([...cfg.owners, ...u.admins(), ...Object.keys(cfg.monitores || {}), ...Object.keys(cfg.equipe || {})].map((x) => String(x).toLowerCase()));
+      const alunos = (t.alunos || []).filter((x) => !/^ficticio-/.test(x));
+      try {
+        if (b.acao === 'perfis_criar_atividade') {
+          const A = require('../lib/atividades'); const m = PF.ATIVIDADE_METAS(t.nivel);
+          if ((await A.listar(turma)).some((a) => String(a.descricao || '').includes(PF.MARCADOR))) return u.json(res, 400, { erro: 'Esta turma já tem uma atividade de revisão de metas. Abra em Presença > Atividades.' });
+          const r = await A.tratar({ acao: 'ativ_salvar', turma, ...m, ordem: 0 }, { usuario, alunosDe: () => alunos });
+          return u.json(res, r.status, r.corpo);
+        }
+        if (b.acao === 'perfis_salvar') { const al = nomeGh(b.usuario || ''); if (!alunos.includes(al)) return u.json(res, 400, { erro: 'Esta pessoa não está na turma.' }); return u.json(res, 200, { ok: true, historico: await PF.salvar(al, t.nivel, turma, b, usuario) }); }
+        const { dados } = await PF.ler();
+        return u.json(res, 200, { ok: true, turma, nivel: t.nivel, nomeNivel: PF.nomeNivel(t.nivel), frentes: PF.FRENTES, metas: PF.METAS, fome: PF.fomePorNivel(dados),
+          alunos: alunos.map((x) => ({ usuario: x, equipe: equipe.has(x), historico: (dados.alunos[x] || {}).historico || [] })) });
+      } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
+    }
     if (b.acao === 'imagens_listar' || b.acao === 'imagem_excluir') {
       if (!dono) return nao();
       const Site = require('../lib/site');

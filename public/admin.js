@@ -452,9 +452,57 @@ function desenharWiki(){
 }
 
 
+// ---------- Interesses dos alunos (só owners): frente de cada um por nível, com histórico, e a fome de conhecimento por nível ----------
+let TURMA_INT='';
+async function desenharInteresses(){
+  const raiz=$('p-interesses');raiz.textContent='';
+  const ids=Object.keys(D.turmas).filter(id=>D.turmas[id].status!=='arquivada');if(!ids.length){raiz.append(h('p',{class:'sub'},'Nenhuma turma ativa.'));return}
+  if(!ids.includes(TURMA_INT))TURMA_INT=ids.find(id=>D.turmas[id].status==='andamento')||ids[0];
+  const sel=h('select',{onchange:()=>{TURMA_INT=sel.value;desenharInteresses()}});for(const id of ids)sel.append(h('option',{value:id,selected:id===TURMA_INT},D.turmas[id].nome));
+  raiz.append(h('p',{class:'sub',style:'max-width:760px'},'Só owners veem esta aba. Aqui fica anotado, nível a nível, a frente que cada aluno quer seguir e quanto ele quer aprender. Cada aluno tem um registro por nível: aparece o mais recente, e o histórico abre embaixo.'),h('div',{style:'margin:8px 0'},'Turma: ',sel));
+  const area=h('div',{},h('p',{},'Carregando…'));raiz.append(area);
+  let r;try{r=await enviar({acao:'perfis_ler',turma:TURMA_INT})}catch(e){area.textContent='';area.append(h('p',{class:'sub'},e.message));return}
+  const F=r.frentes,M=r.metas,alunos=r.alunos.filter(a=>!a.equipe),atual=a=>a.historico[a.historico.length-1],com=alunos.filter(a=>a.historico.length),sem=alunos.filter(a=>!a.historico.length);area.textContent='';
+  const dt=v=>String(v||'').slice(0,10).split('-').reverse().join('/'),frs=x=>[F[x.frente]||'sem frente principal',...(x.outras||[]).map(k=>F[k])].join(' + ');
+  // fome de conhecimento: todos os alunos que já têm registro (de qualquer turma)
+  const fo=r.fome||{niveis:[]};const caixa=h('div',{class:'card',style:'margin:10px 0'},h('h2',{style:'margin:0 0 4px'},'Fome de conhecimento por nível'),
+    h('p',{class:'sub'},'Compara o registro de cada aluno com o do nível seguinte. A mudança conta para o nível que ele tinha acabado de fazer: ampliou as frentes de interesse, trocou de frente, e quanto subiu a vontade de aprender (de 1 a 5). Vale para todas as turmas.'));
+  if(!fo.niveis.some(x=>x.transicoes)){caixa.append(h('p',{class:'sub'},'Ainda não há comparação: ela aparece quando os alunos responderem a revisão de metas no nível seguinte.'))}
+  const tb=h('table',{class:'tabela'},h('tr',{},...['Nível','Respostas','Vontade média (1-5)','Comparados','Ampliaram','Mantiveram','Reduziram','Trocaram de frente','Variação da vontade'].map(x=>h('th',{},x))));
+  for(const n of fo.niveis){const dest=n.nivel===fo.destaque;tb.append(h('tr',{style:dest?'background:#f5b83d22':''},h('td',{},n.nome+(dest?' ★ mais despertou interesse':'')),h('td',{},String(n.respostas)),h('td',{},n.fomeMedia==null?'—':String(n.fomeMedia)),h('td',{},String(n.transicoes||'—')),
+    h('td',{},n.transicoes?String(n.ampliaram):'—'),h('td',{},n.transicoes?String(n.mantiveram):'—'),h('td',{},n.transicoes?String(n.reduziram):'—'),h('td',{},n.transicoes?String(n.trocaram):'—'),h('td',{},n.deltaFome==null?'—':(n.deltaFome>0?'+':'')+n.deltaFome)))}
+  if(fo.niveis.length)caixa.append(h('div',{style:'overflow-x:auto'},tb));area.append(caixa);
+  // atividade de revisão de metas para esta turma
+  const ba=h('button',{type:'button',class:'btn sec'},'Criar a atividade "Suas metas continuam as mesmas?" nesta turma');
+  ba.onclick=async()=>{try{ba.disabled=true;await enviar({acao:'perfis_criar_atividade',turma:TURMA_INT});aviso('Atividade criada (ainda não liberada). Revise e libere em Presença > Atividades.')}catch(e){aviso(e.message,true)}finally{ba.disabled=false}};
+  area.append(h('div',{class:'dica'},h('b',{},'Em cada nível: '),'crie a revisão de metas nesta turma. Cada aluno recebe na Issue a própria resposta anterior (só a frente e o resumo, nunca as notas internas) e responde se as metas continuam, o que mudou e quanto quer aprender. Depois anote aqui. ',h('div',{style:'margin-top:8px'},ba)));
+  // resumo por frente (registro atual)
+  const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0'});
+  for(const [k,nome] of Object.entries(F)){const pr=com.filter(a=>atual(a).frente===k),ex=com.filter(a=>(atual(a).outras||[]).includes(k));
+    g.append(h('div',{class:'cartao2'},h('b',{},nome),h('div',{class:'num'},String(pr.length)),h('div',{class:'sub'},pr.length?pr.map(a=>'@'+a.usuario).join(', '):'ninguém como 1ª opção'),ex.length?h('div',{class:'sub',style:'margin-top:4px'},'também citam: '+ex.map(a=>'@'+a.usuario).join(', ')):''))}
+  area.append(h('h2',{style:'margin:18px 0 6px'},'Frentes agora · '+D.turmas[TURMA_INT].nome),h('div',{class:'sub'},`${com.length} de ${alunos.length} aluno(s) com interesse anotado. Registros novos desta turma ficam no ${r.nomeNivel}.`),g);
+  const form=(a)=>{const ult=atual(a),p=ult&&ult.nivel===r.nivel?ult:{};const c=h('div',{class:'card',style:'margin:6px 0'});
+    const fr=h('select',{},h('option',{value:''},'(sem frente principal)'));for(const [k,n] of Object.entries(F))fr.append(h('option',{value:k,selected:k===p.frente},n));
+    const mt=h('select',{});for(const [k,n] of Object.entries(M))mt.append(h('option',{value:k,selected:k===(p.metas||(ult&&ult.nivel!==r.nivel?'mesmas':''))},n));
+    const fm=h('select',{},h('option',{value:''},'não informou'));for(let i=1;i<=5;i++)fm.append(h('option',{value:String(i),selected:p.fome===i},String(i)));
+    const ou=h('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin:6px 0'},h('span',{class:'sub'},'Outras frentes:'),...Object.entries(F).map(([k,n])=>h('label',{},h('input',{type:'checkbox',value:k,checked:(p.outras||[]).includes(k)}),' '+n)));
+    const campo=(ph,v,n)=>h('input',{type:'text',placeholder:ph,maxlength:String(n),value:v||'',style:'width:100%;margin:4px 0'});
+    const mo=campo('Resumo do que o aluno disse (o aluno verá este texto na próxima revisão de metas)',p.motivo,300),pe=campo('Perfil em poucas palavras, só para owners (ex.: Artista 3D)',p.perfil,80),di=campo('Como aproveitar, só para owners',p.dica,300),fo2=campo('Fonte (ex.: N0.1-2·T3)',p.fonte||'',60);
+    const bt=h('button',{type:'button',class:'btn'},'Salvar no '+r.nomeNivel);
+    bt.onclick=async()=>{try{bt.disabled=true;await enviar({acao:'perfis_salvar',turma:TURMA_INT,usuario:a.usuario,frente:fr.value,metas:mt.value,fome:fm.value,outras:[...ou.querySelectorAll('input:checked')].map(x=>x.value),perfil:pe.value,motivo:mo.value,dica:di.value,fonte:fo2.value});aviso('Interesses salvos.');desenharInteresses()}catch(e){aviso(e.message,true)}finally{bt.disabled=false}};
+    c.append(h('div',{class:'sub'},p.nivel?'Corrigindo o registro do '+r.nomeNivel+'.':'Novo registro do '+r.nomeNivel+(ult?' (o anterior fica no histórico).':'.')),h('div',{style:'display:flex;gap:12px;flex-wrap:wrap;margin:4px 0'},h('span',{},'Frente principal: ',fr),h('span',{},'Metas: ',mt),h('span',{},'Vontade de aprender (1-5): ',fm)),ou,mo,pe,di,fo2,h('div',{class:'sub'},'Para apagar o registro deste nível, deixe tudo em branco e salve.'),h('div',{style:'margin-top:6px'},bt));return c};
+  const reg=(x)=>h('div',{style:'border-left:3px solid #fff3;padding:4px 10px;margin:6px 0'},h('b',{},nomeNivel(x.nivel)+' · '+frs(x)),h('div',{class:'sub'},[M[x.metas||''],x.fome?'vontade '+x.fome+'/5':'',x.perfil].filter(Boolean).join(' · ')),x.motivo?h('div',{},h('b',{},'Por quê: '),x.motivo):'',x.dica?h('div',{},h('b',{},'Como aproveitar: '),x.dica):'',h('div',{class:'sub'},(x.fonte?'Fonte: '+x.fonte+' · ':'')+'anotado por @'+x.por+' em '+dt(x.em)));
+  const linha=(a)=>{const p=atual(a);const d=h('details',{class:'nivel pequeno'});const ant=a.historico.slice(0,-1).reverse();
+    d.append(h('summary',null,h('span',{class:'nvt'},'@'+a.usuario+(p&&p.perfil?' · '+p.perfil:'')),h('span',{class:'nvc'},p?frs(p)+(p.fome?' · vontade '+p.fome+'/5':'')+(a.historico.length>1?' · '+a.historico.length+' níveis':''):'ainda sem resposta')),
+      h('div',{class:'nvcorpo'},p?reg(p):'',ant.length?h('details',{},h('summary',{},'Ver histórico ('+ant.length+' registro(s) anterior(es))'),...ant.map(reg)):'',form(a)));return d};
+  area.append(h('h2',{style:'margin:18px 0 6px'},'Alunos com interesse anotado ('+com.length+')'));if(!com.length)area.append(h('p',{class:'sub'},'Ninguém ainda.'));for(const a of com.sort((x,y)=>(atual(x).frente||'zz').localeCompare(atual(y).frente||'zz')||x.usuario.localeCompare(y.usuario)))area.append(linha(a));
+  area.append(h('h2',{style:'margin:18px 0 6px'},'Ainda sem resposta ('+sem.length+')'));for(const a of sem.sort((x,y)=>x.usuario.localeCompare(y.usuario)))area.append(linha(a));
+  const eq=r.alunos.filter(a=>a.equipe);if(eq.length)area.append(h('p',{class:'sub',style:'margin-top:12px'},'Equipe matriculada nesta turma (fica fora da lista e das contas): '+eq.map(a=>'@'+a.usuario).join(', ')+'.'));
+}
+
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(!D.dono&&!D.permissoes.includes('pessoas')&&!D.permissoes.includes('aulas'))a.push(['ferramentas','Ferramentas']);if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[];if(!D.dono&&!D.permissoes.includes('pessoas')&&!D.permissoes.includes('aulas'))a.push(['ferramentas','Ferramentas']);if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['interesses','Interesses dos alunos']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function desenharFerramentas(){
   const p=$('p-ferramentas');p.textContent='';const pm=D.permissoes||[];
   const L=[[pm.includes('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques de ranking da tela inicial.'],
@@ -469,8 +517,8 @@ function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
   $('abas').append(ajuda('adm_'+k));
-  for(const [id] of [['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['interesses'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='interesses')desenharInteresses();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
