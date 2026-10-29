@@ -895,6 +895,31 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
     assert.equal((await w({ acao: 'wiki_remover', slug: 'so-dono' }, 'alu1')).status, 403);
     for (const s of ['so-dono', 'monitores-aqui', 'corpo-adm', 'para-membros']) assert.equal((await w({ acao: 'wiki_remover', slug: s })).status, 200);
     assert.equal(JSON.parse((await chamar(h('admin'), { user: 'dono' })).body).wiki.paginas.length, 0); }
+  { // interesses dos alunos: só owners; um registro por nível com histórico; fome por nível; revisão de metas mostra a resposta anterior na Issue
+    const turmasAntes = cfg.turmas; cfg.turmas = { ...(cfg.turmas || {}), TINT: { nome: 'Int', status: 'andamento', nivel: 'nivel-00-tutorial', alunos: ['alu1', 'alu2', 'ficticio-x'] }, TSEM: { nome: 'Sem nível', status: 'andamento', alunos: ['alu1'] } }; u.limparCache();
+    const pf = (b, user = 'dono') => post({ acao: 'perfis_ler', turma: 'TINT', ...b }, {}, user), ps = (b, user = 'dono') => post({ acao: 'perfis_salvar', turma: 'TINT', ...b }, {}, user);
+    assert.equal((await pf({}, 'alu1')).status, 403); assert.equal((await ps({ usuario: 'alu1', frente: 'arte' }, 'mon1')).status, 403);
+    assert.equal((await post({ acao: 'perfis_ler', turma: 'NAOEXISTE' })).status, 400); assert.equal((await post({ acao: 'perfis_ler', turma: 'TSEM' })).status, 400);
+    let r = JSON.parse((await pf({})).body); assert.deepEqual(r.alunos.map((a) => [a.usuario, a.historico.length]), [['alu1', 0], ['alu2', 0]]); assert.equal(r.nomeNivel, 'Nível 0');
+    assert.equal((await ps({ usuario: 'intruso', frente: 'arte' })).status, 400); assert.equal((await ps({ usuario: 'alu1', frente: 'xpto' })).status, 400); assert.equal((await ps({ usuario: 'alu1', fome: 9 })).status, 400);
+    assert.equal((await ps({ usuario: '@ALU1', frente: 'arte', outras: ['arte', 'nada'], fome: '3', perfil: '  Artista   3D ', motivo: 'Modelagem 3D', dica: 'SEGREDO-DICA' })).status, 200);
+    assert.equal((await ps({ usuario: 'alu1', frente: 'arte', fome: '2', motivo: 'Modelagem 3D', dica: 'SEGREDO-DICA' })).status, 200); // mesmo nível: corrige, não duplica
+    r = JSON.parse((await pf({})).body).alunos.find((a) => a.usuario === 'alu1').historico; assert.equal(r.length, 1); assert.equal(r[0].fome, 2); assert.equal(r[0].nivel, 'nivel-00-tutorial'); assert.equal(r[0].por, 'dono');
+    assert(dadosArq['dados/perfis/interesses.json'].msg.indexOf('alu1') < 0, 'o commit não leva o nome do aluno');
+    // nível seguinte: acrescenta ao histórico e o nível 0 recebe o crédito da mudança
+    cfg.turmas.TINT.nivel = 'nivel-01-pensar-como-designer'; u.limparCache();
+    assert.equal((await ps({ usuario: 'alu1', frente: 'arte', outras: ['design', 'audio'], metas: 'mesmas', fome: 5, motivo: 'Quer também criar cenários' })).status, 200);
+    r = JSON.parse((await pf({})).body); const h1 = r.alunos.find((a) => a.usuario === 'alu1').historico; assert.deepEqual(h1.map((x) => x.nivel), ['nivel-00-tutorial', 'nivel-01-pensar-como-designer']);
+    const n0 = r.fome.niveis.find((x) => x.nivel === 'nivel-00-tutorial'); assert.equal(n0.transicoes, 1); assert.equal(n0.ampliaram, 1); assert.equal(n0.deltaFome, 3); assert.equal(r.fome.destaque, 'nivel-00-tutorial');
+    // revisão de metas: cria uma vez (não liberada) e a Issue traz a resposta anterior, sem as notas internas
+    let c = await post({ acao: 'perfis_criar_atividade', turma: 'TINT' }); assert.equal(c.status, 200); const idM = JSON.parse(c.body).id; assert.equal(JSON.parse(c.body).atividade.liberada, false);
+    assert.equal((await post({ acao: 'perfis_criar_atividade', turma: 'TINT' })).status, 400);
+    const P = require('../lib/perfis'), dd = (await P.ler()).dados; const txt1 = P.paraAluno(dd, 'alu1'); assert(/Nível 1/.test(txt1) && /Arte, Design, Áudio/.test(txt1) && /criar cenários/.test(txt1)); assert(!/SEGREDO-DICA/.test(txt1)); assert(/Ainda não temos/.test(P.paraAluno(dd, 'alu2')));
+    const A = require('../lib/atividades'); const lib = await A.tratar({ acao: 'ativ_liberar', turma: 'TINT', id: idM }, { usuario: 'dono', alunosDe: () => ['alu1'] }); assert.equal(lib.status, 200);
+    const corpoIssue = JSON.stringify(issuesCriadas.slice(-1)); assert(/criar cenários/.test(corpoIssue) && !corpoIssue.includes(P.MARCADOR) && !/SEGREDO-DICA/.test(corpoIssue), corpoIssue.slice(0, 300));
+    assert.equal((await ps({ usuario: 'alu1', frente: '', outras: [], fome: '', perfil: '', motivo: '', dica: '' })).status, 200); // apagar só o registro do nível atual
+    assert.equal(JSON.parse((await pf({})).body).alunos.find((a) => a.usuario === 'alu1').historico.length, 1);
+    cfg.turmas = turmasAntes; u.limparCache(); }
   // painel de aulas e semanas continuam só para quem pode
   assert.equal((await chamar(h('semanas'), { user: 'alu1' })).status, 403);
   // roteadores (limite de funções da Vercel gratuita)
