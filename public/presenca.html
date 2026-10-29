@@ -624,7 +624,7 @@ async function telaCorr(alvo){
   {const fora=[];for(const a of P.atividades)for(const k of Object.keys(a.linhas)){const l=a.linhas[k];if(l.fora&&!(a.avisos&&a.avisos[k]))fora.push({id:a.id,aluno:k,ref:l.foraNum})}
    if(fora.length)alvo.append(h('div',{class:'aviso-nota'},h('b',{},'⚠ '+fora.length+' resposta(s) postada(s) fora do lugar (sub-issue ou Issue nova). '),'Contei todas como entrega, sem prejuízo. ',h('button',{class:'btn',type:'button',title:'Comenta em cada Issue de atividade, com um texto padrão, explicando onde responder. Só envia quando você clica e nunca repete para quem já foi avisado.',onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;try{const r=await postA({acao:'ativ_avisar_lote',itens:fora});aviso(r.enviados+' aluno(s) avisado(s).');CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}catch(x){aviso(x.message,1);b.disabled=false}}},'Avisar todos (texto padrão)'),ajuda('corr_fora')))}
   if(R.revisadas>0)alvo.append(h('div',{class:'aviso-nota'},h('b',{},'⚠ '+R.revisadas+' já fechada(s) no GitHub, mas sem nota lançada. '),'Sem lançar a nota aqui, o aluno fica com 0 pontos nessa atividade. Procure o selo laranja “Fechada no GitHub · falta a nota” e clique em Lançar nota.'));
-  const ver=h('select',{},h('option',{value:'at'},'Só o que precisa de atenção'),h('option',{value:'tudo'},'Mostrar todos os alunos'));ver.value=ls.get('liga_corr_ver','at');ver.addEventListener('change',()=>{ls.set('liga_corr_ver',ver.value);alvo.textContent='';telaCorr(alvo)});
+  const ver=h('select',{},h('option',{value:'corrigir'},'Só o que falta corrigir'),h('option',{value:'at'},'O que precisa de atenção (inclui sem resposta)'),h('option',{value:'tudo'},'Mostrar todos os alunos'));ver.value=ls.get('liga_corr_ver','corrigir');if(!ver.value)ver.value='corrigir';ver.addEventListener('change',()=>{ls.set('liga_corr_ver',ver.value);alvo.textContent='';telaCorr(alvo)});
   const atu=h('button',{class:'btn sec',type:'button',onclick:()=>{CORR_FORCAR=true;alvo.textContent='';telaCorr(alvo)}},'Atualizar agora');
   alvo.append(h('div',{class:'barra'},atu,ver,h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm)),ajuda('aba_corr')));
   window.ATV_OPEN=window.ATV_OPEN||new Set();
@@ -661,7 +661,7 @@ async function telaCorr(alvo){
     const selLote=h('select',{style:'width:170px'},...opsLote.map(([v,t])=>h('option',{value:v},t)));selLote.value=String(mx);
     const aplicar=h('button',{class:'btn sec',type:'button',title:'Coloca esta nota em todos os pendentes. Só vale depois de Salvar alterações.',onclick:()=>{let n=0;for(const k of Object.keys(linhas))if(['acorrigir','novamsg','revisada'].includes(statusDe[k])){linhas[k].nota.value=selLote.value;if(linhas[k].est.value==='nao')linhas[k].est.value='prazo';sujos.add(k);n++}atBtn();aviso(n?'Nota aplicada a '+n+' aluno(s). Revise e clique em Salvar alterações.':'Não há alunos pendentes nesta atividade.')}},'Aplicar a todos os pendentes');
     const lote=h('div',{class:'barra',style:'padding:8px 6px'},h('span',{class:'sub'},'Corrigir vários de uma vez:'),selLote,aplicar,salvarTodos,ajuda('corr_lote'));
-    for(const k of ks){const l=a.linhas[k];if(ver.value==='at'&&!['acorrigir','novamsg','revisada','semresposta','erro'].includes(l.status))continue;mostrou++;
+    for(const k of ks){const l=a.linhas[k];if(ver.value==='corrigir'&&!['acorrigir','novamsg','revisada'].includes(l.status))continue;if(ver.value==='at'&&!['acorrigir','novamsg','revisada','semresposta','erro'].includes(l.status))continue;mostrou++;
       const e=a.entregas[k]||{};
       const rot={acorrigir:'A corrigir',revisada:'Fechada no GitHub · falta a nota',novamsg:'Nova mensagem',corrigida:'Corrigida'+(e.nota!==undefined?' · '+e.nota+'/'+mx:''),semresposta:'Sem resposta',dispensado:'Dispensado',semissue:'Sem Issue',erro:'Não consegui ler o GitHub'}[l.status];
       const linha=h('div',{class:'cr'},h('div',{class:'t',style:'min-width:200px'},quem(k),h('span',{class:'st '+l.status},rot),a.prazo&&l.status!=='dispensado'&&l.status!=='semissue'?pz(a.prazo,l.respondeu?l.quando:null):''));
@@ -677,12 +677,14 @@ async function telaCorr(alvo){
       det.append(linha)}
     if(Object.keys(linhas).length>1)det.children[0].after(lote);
     if(SOU_PROF())det.children[0].after(h('div',{class:'barra',style:'padding:8px 6px'},btnClaude(a),ajuda('corr_claude'),h('span',{class:'sub'},'Copia o pedido e abre o Claude: cole e envie.')));
+    if(!mostrou&&ver.value==='corrigir')continue; // modo "só o que falta corrigir": atividade sem pendência some da lista
     if(!mostrou)det.append(h('p',{class:'sub',style:'padding:10px 6px'},ver.value==='at'?'Nada pendente nesta atividade. Mude o filtro para ver todos.':'Nenhum aluno nesta atividade.'));
     alvo.append(det)}
+  if(ver.value==='corrigir'&&!alvo.querySelector('details.ag[data-id]'))alvo.append(h('p',{class:'sub',style:'padding:10px 6px'},'✔ Nada esperando correção. Mude o filtro para ver todos os alunos.'));
   // dúvidas avulsas: Issues que o próprio aluno abriu no repositório dele
   const dd=h('details',{class:'ag'});dd.append(h('summary',{},h('span',{},'Dúvidas e mensagens avulsas'),visiveis.length?h('span',{class:'st novamsg'},visiveis.length+' nova(s)'):'',h('span',{class:'cnt'},P.duvidas.length+' aberta(s) no GitHub')));
   dd.open=visiveis.length>0&&!ATV_OPEN.has('x:duv');dd.addEventListener('toggle',()=>{if(!dd.open)ATV_OPEN.add('x:duv')});
-  const lista=ver.value==='at'?visiveis:P.duvidas;
+  const lista=ver.value==='tudo'?P.duvidas:visiveis;
   if(!lista.length)dd.append(h('p',{class:'sub',style:'padding:10px 6px'},'Nenhuma dúvida avulsa aberta pelos alunos.'));
   for(const d of lista){const chave=d.usuario+'#'+d.numero+'@'+d.atualizado;const visto=!!V[chave];
     dd.append(h('div',{class:'cr'},h('div',{class:'t',style:'min-width:200px'},quem(d.usuario),h('span',{class:'st '+(visto?'corrigida':'novamsg')},visto?'Vista':'Dúvida')),h('span',{},d.titulo),d.talvez?h('span',{class:'aviso-fora'},' ⚠ pode ser resposta de '+d.talvez.join(', ')+' (veio como Issue nova) ',ajuda('corr_fora')):'',
