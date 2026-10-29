@@ -482,9 +482,7 @@ function desenharInicio(){
   };
   const G=[
     ['Turmas (dia a dia)',[
-      [tem('presenca')||D.papel==='monitor','/presenca#corr','Correção de atividades','Respostas dos alunos esperando nota e dúvidas. Abre a turma em andamento.','corr'],
-      [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Chamada, participação e ranking. Cada turma também tem esses botões em Turmas.','chamada'],
-      [pm.includes('pessoas'),'#turmas','Turmas e alunos','Criar turmas, matricular alunos, repositórios e planos.','turmas'],
+      [pm.includes('pessoas'),'#turmas','Todas as turmas e planos','Criar turmas, matricular alunos, repositórios, promover e arquivar.','turmas'],
     ]],
     ['Conteúdo',[
       [!!D.editor,'/editor','Editor de slides','Criar e editar as aulas, roteiros e atividades.'],
@@ -508,11 +506,21 @@ function desenharInicio(){
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo o que você pode fazer, agrupado por tarefa. Cada ação existe em um lugar só.'));
   const nav=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px;position:sticky;top:0;z-index:5;padding:8px 0;background:var(--bg)'});const chips={};
   p.append(nav);
-  for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);if(!L.length)continue;
+  const podePres=tem('presenca')||D.papel==='monitor';
+  const idsAnd=podePres?Object.keys(D.turmas||{}).filter(k=>D.turmas[k].status==='andamento'):[];
+  for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);const extra=nome==='Turmas (dia a dia)'?idsAnd.length:0;if(!L.length&&!extra)continue;
     const idG='grp-'+nome.replace(/\s+/g,'-');
-    const ch=h('button',{type:'button',class:'btn sec',style:'padding:6px 14px;font-size:14px',onclick:()=>document.getElementById(idG).scrollIntoView({behavior:'smooth',block:'start'})},nome+' ('+L.length+')');chips[idG]=ch;nav.append(ch);
+    const ch=h('button',{type:'button',class:'btn sec',style:'padding:6px 14px;font-size:14px',onclick:()=>document.getElementById(idG).scrollIntoView({behavior:'smooth',block:'start'})},nome+' ('+(L.length+extra)+')');chips[idG]=ch;nav.append(ch);
     p.append(h('h3',{id:idG,style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;scroll-margin-top:60px'},nome));
     const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
+    if(extra)for(const id of idsAnd){const t=D.turmas[id];const bt=(txt,fn,extraEl)=>h('button',{class:'btn',type:'button',style:'padding:8px 14px;font-size:14px',onclick:fn},txt,extraEl||'');
+      g.append(h('div',{class:'cartao2',style:'grid-column:1/-1'},
+        h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap'},h('h3',{style:'margin:0'},t.nome),h('span',{class:'sub'},(t.alunos||[]).length+' alunos · '+(t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'em andamento'))),
+        h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'},
+          bt('Chamada',abrirPresenca(id,'chamada')),
+          bt('Atividades e correção',abrirPresenca(id,'corr'),h('span',{class:'bdg',id:'corr-'+id,style:'margin-left:8px;background:#ff5d5d;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px',hidden:!((window.CORR_POR||{})[id])},String((window.CORR_POR||{})[id]||''))),
+          bt('Ranking',abrirPresenca(id,'rank')),
+          bt('Aulas e materiais',()=>materiaisDaTurma(id)))))}
     for(const [,alvo,t,d,id,sk] of L){const sts=(ST[sk||id]||[]);const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),sts.length?h('div',{class:'kv',style:'margin-top:10px'},...sts.map(([n,l],i)=>h('div',{},h('div',{class:'num',...((sk||id)==='corr'?{id:'stat-corr'}:{}),style:typeof n==='string'&&n.length>6?'font-size:18px':''},String(n)),h('div',{class:'sub'},l)))):'',h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
       if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
       if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}
@@ -552,7 +560,7 @@ async function carregar(){
 // aviso: respostas dos alunos no GitHub esperando correção (só para quem usa a Presença)
 async function avisoCorrecao(){
   if(typeof D==='undefined'||!D||!(D.dono||(D.permissoes||[]).includes('presenca')||D.papel==='monitor'))return;
-  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);const sc=$('stat-corr');if(sc)sc.textContent=String(n);window.CORR_N=n;if(n<=0)return;
+  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);const sc=$('stat-corr');if(sc)sc.textContent=String(n);window.CORR_N=n;window.CORR_POR={};for(const x of c.turmas){const q=x.acorrigir+x.novas+x.revisadas;window.CORR_POR[x.turma]=q;const bx=$('corr-'+x.turma);if(bx){bx.hidden=!q;bx.textContent=String(q)}}if(n<=0)return;
     const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.revisadas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.revisadas?x.revisadas+' fechada(s) no GitHub sem nota':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
     const b=h('a',{href:'/presenca#corr',target:'liga-presenca',id:'aviso-corr',style:'display:block;text-decoration:none;color:inherit;background:#f5b83d22;border:1px solid var(--ouro);border-left:6px solid var(--ouro);border-radius:12px;padding:12px 16px;margin:12px 0'},h('b',{},'Alunos responderam no GitHub: '+n+' item(ns) esperando você'),h('div',{class:'sub'},t+'. Abrir a Correção →'));
     window.CORR_N=n;const bd=$('badge-corr');if(bd){bd.hidden=false;bd.textContent=n+' a ver'}$('abas').before(b)}catch{}}
