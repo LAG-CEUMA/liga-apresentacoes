@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Chamada e presença</title>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Turma</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css"><style>.seletores{display:grid;grid-template-columns:minmax(150px,200px) 1fr 160px;gap:14px;align-items:end}.seletores label{display:flex;flex-direction:column;gap:5px;min-width:0}.seletores label>span{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mut,#9aa0b4);font-weight:700}.seletores select,.seletores input{width:100%;box-sizing:border-box;padding:10px;background:#12141c;color:var(--txt);border:1px solid #fff3;border-radius:8px;font:inherit}.seletores select{text-overflow:ellipsis}@media(max-width:720px){.seletores{grid-template-columns:1fr}}
 
 .ag{background:#171a26;border:1px solid #fff3;border-left:6px solid var(--ouro);border-radius:14px;margin:14px 0;padding:0 14px 6px}
@@ -46,8 +46,8 @@ table.acomp>thead>tr>th{position:sticky;top:0;z-index:4}table.acomp>thead>tr>th:
 </style>
 </head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag" data-site="tag">CHAMADA E PRESENÇA</p><h1>Presença</h1></div><div class="acoes"><span id="cota-host"></span><a class="btn sec" href="/">&larr; Início</a></div></div>
-<p>Faça a chamada em <b>2 momentos</b> da aula: <b>Início</b> e <b>Fim</b>. O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.</p>
+<div class="topo"><div><p class="tag" data-site="tag" id="tag-pg">TURMA</p><h1 id="tit-pg">Carregando…</h1></div><div class="acoes"><span id="cota-host"></span><a class="btn sec" href="/">&larr; Início</a></div></div>
+<div id="intro"></div>
 <div id="corpo"><p>Carregando…</p></div>
 </main><div id="msg" class="msg" hidden></div>
 <script src="/site.js"></script><script src="/corrida.js"></script><script src="/ajuda.js"></script>
@@ -123,6 +123,8 @@ function seletores(){
   for(const nv of Object.keys(niveis).sort()){const g=h('optgroup',{label:nv});for(const a of niveis[nv])g.append(h('option',{value:a.chave},a.titulo));sel.append(g)}
   sel.value=CHAVE;sel.addEventListener('change',async()=>{CHAVE=sel.value;ls.set('liga_aula',CHAVE);N=1;await carregarSessao();desenhar()});
   const data=h('input',{type:'date',value:DATA||CTX.hoje});data.addEventListener('change',()=>{DATA=data.value});
+  const precisaAula=ABA==='chamada'||ABA==='part';
+  if(!precisaAula)return h('div',{class:'linha',style:'display:flex;gap:12px;align-items:center;padding:10px 14px'},h('span',{class:'sub'},'Turma'),turma);
   return h('div',{class:'linha seletores'},h('label',{},h('span',{},'Turma'),turma),h('label',{},h('span',{},'Aula'),sel),h('label',{},h('span',{},'Data'),data))}
 function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ativ','Atividades'],['corr','Correção'],['acomp','Acompanhamento'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button','data-aba':k,class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t,k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA))}
 function telaChamada(){
@@ -683,7 +685,10 @@ async function telaCorr(alvo){
   alvo.append(dd);
   clearTimeout(telaCorr.t);telaCorr.t=setTimeout(()=>{if(ABA==='corr'&&!document.hidden&&document.body.contains(alvo)&&!alvo.dataset.sujo){alvo.textContent='';telaCorr(alvo)}},300000);
   function rot2(k){return ((CTX.nomes||{})[k])||k}}
-function desenhar(){const c=$('corpo');c.textContent='';c.append(seletores(),aba());
+const INTRO={chamada:'Faça a chamada em <b>2 momentos</b> da aula: <b>Início</b> e <b>Fim</b>. O que você marca fica como rascunho neste aparelho e <b>só vale quando clicar em "Salvar chamada"</b>. O aluno conta como presente se estiver em pelo menos metade das chamadas salvas.',part:'Registre quem participou da aula (pontos extras) ou perdeu pontos. Vale para a aula e a data escolhidas acima.',ativ:'Crie, libere e dê prazo às atividades da turma. Os alunos respondem no GitHub.',acomp:'Como cada aluno está indo: presença, participação e entregas.',rank:'Ranking oficial da turma e a Copa.',hist:'Registro das chamadas e correções já feitas.'};
+const TITA={chamada:'Chamada',part:'Participações',ativ:'Atividades',corr:'Correção',acomp:'Acompanhamento',rank:'Ranking',hist:'Histórico'};
+function cabecalho(){const t=(CTX.turmas||{})[TURMA];const el=document.getElementById('tit-pg');if(el)el.textContent=(t?t.nome:'Turma')+' · '+TITA[ABA];const ti=document.getElementById('tag-pg');if(ti)ti.textContent='TURMA';document.title=TITA[ABA]+' · '+(t?t.nome:'Turma');const i=document.getElementById('intro');if(i){i.innerHTML=INTRO[ABA]?'<p>'+INTRO[ABA]+'</p>':''}}
+function desenhar(){const c=$('corpo');c.textContent='';cabecalho();c.append(seletores(),aba());
   if(ABA==='chamada')c.append(telaChamada());else if(ABA==='part')c.append(telaPart());else if(ABA==='acomp'){const d=h('div');c.append(d);telaAcomp(d)}else if(ABA==='ativ'){const d=h('div');c.append(d);telaAtiv(d)}else if(ABA==='corr'){const d=h('div');c.append(d);telaCorr(d)}else if(ABA==='rank'){const d=h('div');c.append(d);telaRank(d)}else if(ABA==='hist'){const d=h('div');c.append(d);telaHist(d)}}
 (async()=>{
   const r=await fetch('/api/presenca?acao=contexto');
