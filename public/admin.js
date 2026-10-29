@@ -471,15 +471,24 @@ function abasDisponiveis(){const a=[['inicio','Início']];if(D.permissoes.includ
 function desenharInicio(){
   const p=$('p-inicio');p.textContent='';const pm=D.permissoes||[];const dono=!!D.dono;
   const tem=x=>dono||pm.includes(x);
+  const T=Object.values(D.turmas||{}),and=T.filter(t=>t.status==='andamento'),alAnd=and.reduce((n,t)=>n+(t.alunos||[]).length,0);
+  const ST={
+    turmas:[[and.length,'em andamento'],[alAnd,'alunos nelas'],[Object.keys(D.planos||{}).length,'plano(s)']],
+    pessoas:[[(D.alunos||[]).length,'alunos'],[Object.keys(D.monitores||{}).length,'monitores'],[Object.keys(D.equipe||{}).length,'equipe']],
+    cargos:[[Object.keys(D.cargos||{}).length,'perfis']],
+    aulas:[[(D.aulas||[]).length,'aulas']],
+    chamada:and.length?[[and.length===1?and[0].nome:and.length+' turmas','em andamento']]:[],
+    corr:[['…','a corrigir']]
+  };
   const G=[
     ['Dia a dia',[
       [tem('presenca')||D.papel==='monitor','/presenca#corr','Correção de atividades','Respostas dos alunos esperando nota e dúvidas. Abre a turma em andamento.','corr'],
-      [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Chamada, participação e ranking. Cada turma também tem esses botões em Turmas.'],
-      [pm.includes('pessoas'),'#turmas','Turmas e alunos','Criar turmas, matricular alunos, repositórios e planos.'],
+      [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Chamada, participação e ranking. Cada turma também tem esses botões em Turmas.','chamada'],
+      [pm.includes('pessoas'),'#turmas','Turmas e alunos','Criar turmas, matricular alunos, repositórios e planos.','turmas'],
     ]],
     ['Conteúdo',[
       [!!D.editor,'/editor','Editor de slides','Criar e editar as aulas, roteiros e atividades.'],
-      [pm.includes('aulas'),'#aulas','Níveis das aulas','Quem enxerga cada aula (só owners, membros ou público).'],
+      [pm.includes('aulas'),'#aulas','Níveis das aulas','Quem enxerga cada aula (só owners, membros ou público).','aulas'],
       [dono,'#imagens','Banco de imagens','Imagens usadas nos slides e no site.'],
       [dono||['owner','monitor','equipe'].includes(D.papel),dono?'#wiki':'/wiki','Guias e dúvidas','Tutoriais e respostas para a equipe.'],
     ]],
@@ -489,18 +498,17 @@ function desenharInicio(){
       [dono,'#reservadas','Páginas reservadas','Endereços protegidos e redirecionamentos.'],
     ]],
     ['Acesso',[
-      [pm.includes('pessoas'),'#pessoas','Pessoas','Cadastrar e ordenar alunos, monitores e equipe.'],
-      [dono,'#cargos','Perfis','O que cada tipo de pessoa pode fazer.'],
+      [pm.includes('pessoas'),'#pessoas','Pessoas','Cadastrar e ordenar alunos, monitores e equipe.','pessoas'],
+      [dono,'#cargos','Perfis','O que cada tipo de pessoa pode fazer.','cargos'],
     ]],
   ];
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo o que você pode fazer, agrupado por tarefa. Cada ação existe em um lugar só.'));
   for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);if(!L.length)continue;
     p.append(h('h3',{style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7'},nome));
     const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
-    for(const [,alvo,t,d,id] of L){const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
+    for(const [,alvo,t,d,id,sk] of L){const sts=(ST[sk||id]||[]);const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),sts.length?h('div',{class:'kv',style:'margin-top:10px'},...sts.map(([n,l],i)=>h('div',{},h('div',{class:'num',...((sk||id)==='corr'?{id:'stat-corr'}:{}),style:typeof n==='string'&&n.length>6?'font-size:18px':''},String(n)),h('div',{class:'sub'},l)))):'',h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
       if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
       if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}
-      if(id==='corr'){const b=h('span',{id:'badge-corr',style:'margin-left:8px;vertical-align:middle;background:#ff5d5d;color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;font-size:13px'},'');b.hidden=!window.CORR_N;if(window.CORR_N)b.textContent=window.CORR_N+' a ver';a.firstChild.append(b)}
       g.append(a)}
     p.append(g)}}
 function desenharFerramentas(){
@@ -529,7 +537,7 @@ async function carregar(){
 // aviso: respostas dos alunos no GitHub esperando correção (só para quem usa a Presença)
 async function avisoCorrecao(){
   if(typeof D==='undefined'||!D||!(D.dono||(D.permissoes||[]).includes('presenca')||D.papel==='monitor'))return;
-  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);if(n<=0)return;
+  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);const sc=$('stat-corr');if(sc)sc.textContent=String(n);window.CORR_N=n;if(n<=0)return;
     const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.revisadas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.revisadas?x.revisadas+' fechada(s) no GitHub sem nota':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
     const b=h('a',{href:'/presenca#corr',target:'liga-presenca',id:'aviso-corr',style:'display:block;text-decoration:none;color:inherit;background:#f5b83d22;border:1px solid var(--ouro);border-left:6px solid var(--ouro);border-radius:12px;padding:12px 16px;margin:12px 0'},h('b',{},'Alunos responderam no GitHub: '+n+' item(ns) esperando você'),h('div',{class:'sub'},t+'. Abrir a Correção →'));
     window.CORR_N=n;const bd=$('badge-corr');if(bd){bd.hidden=false;bd.textContent=n+' a ver'}$('abas').before(b)}catch{}}
