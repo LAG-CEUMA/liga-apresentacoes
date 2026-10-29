@@ -8,13 +8,19 @@ module.exports = async (req, res) => {
     const usuario = u.usuarioDaSessao(req);
     if (!usuario) return u.json(res, 401, { erro: 'Entre com o GitHub.' });
     const { cfg } = await u.lerConfig();
-    const geral = u.temPerm(cfg, usuario, 'presenca');
+    const geral = u.temPerm(cfg, usuario, 'presenca'); // tem alguma permissão de presença/atividades por cargo
+    const ehOwner = u.papel(cfg, usuario) === 'owner', mon = cfg.monitores[usuario];
+    const monTurma = (t) => !!mon && (!mon.turmas.length || mon.turmas.includes(t));
+    const cargoPara = (p, turma) => { if (!u.permissoes(cfg, usuario).includes(p)) return false; const e = u.escopoDe(cfg, usuario, p); return e === null || !turma || e.turmas.has(turma); };
+    const pode = (p, turma) => ehOwner || monTurma(turma) || cargoPara(p, turma); // monitor: tudo, nas turmas dele; cargo: só o que foi marcado e no alcance
+    const podeQualquer = (ps, turma) => ps.some((p) => pode(p, turma));
+    const PRS = u.GRUPOS.presenca;
     const aulas = await u.listarAulas();
     const titulos = Object.fromEntries(aulas.map((a) => [a.chave, a.titulo]));
-    const podeChamar = (chave) => geral || (u.papel(cfg, usuario) === 'monitor' && cfg.monitores[usuario].aulas.includes(chave));
+    const podeChamar = (chave) => { if (ehOwner || (mon && mon.aulas.includes(chave))) return true; if (!cargoPara('pr_chamada')) return false; const e = u.escopoDe(cfg, usuario, 'pr_chamada'); return e === null || e.niveis.has(String(chave).split('/')[0]); };
     const minhas = aulas.filter((a) => podeChamar(a.chave));
     const q = { ...(req.query || {}) }; if (q.turma) q.turma = String(q.turma).toUpperCase();
-    const turmaMon = (turma) => { const m = cfg.monitores[usuario]; return geral || !m || !m.turmas.length || m.turmas.includes(turma); };
+    const turmaMon = (turma) => ehOwner || monTurma(turma) || PRS.some((p) => cargoPara(p, turma));
     const alunosDe = (turma) => (cfg.turmas[turma] ? cfg.turmas[turma].alunos : cfg.alunos);
     const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos, inicio: t.inicio || '', fim: t.fim || '' }]));
     const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
@@ -78,20 +84,20 @@ module.exports = async (req, res) => {
       if (q.acao === 'correcao_resumo') {
         if (u.cotaBaixa(800)) return u.json(res, 200, { turmas: [], acorrigir: 0, revisadas: 0, duvidas: 0, falhou: false, economia: true }); // aviso na plataforma: quantas respostas dos alunos esperam correção, por turma
         const out = []; let falhou = false;
-        for (const [id, t] of Object.entries(turmasVisiveis)) { if (t.status === 'arquivada') continue;
+        for (const [id, t] of Object.entries(turmasVisiveis)) { if (t.status === 'arquivada' || !pode('at_corrigir', id)) continue;
           try { const p = await A.painel(id, alunosDe(id)); if (p.atividades.length) out.push({ turma: id, nome: t.nome, ...p.resumo, duv: p.duvidas.map((x) => ({ usuario: x.usuario, numero: x.numero, atualizado: x.atualizado })) }); } catch { falhou = true; } }
         return u.json(res, 200, { turmas: out, acorrigir: out.reduce((n, x) => n + x.acorrigir + x.novas + x.revisadas, 0), revisadas: out.reduce((n, x) => n + x.revisadas, 0), duvidas: out.reduce((n, x) => n + x.duvidas, 0), falhou });
       }
       if (q.acao === 'atividades') {
-        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !podeQualquer(['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'], q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         return u.json(res, 200, { turma: q.turma, roster: alunosDe(q.turma), atividades: await A.listar(q.turma) });
       }
       if (q.acao === 'ranking') {
-        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !pode('pr_ranking', q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes(), await A.listar(q.turma)) });
       }
       if (q.acao === 'ranking_plano') {
-        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !turmaMon(q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+        if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !pode('pr_ranking', q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         const PL = require('../lib/planos'); const pl = PL.doPlano(cfg, q.turma);
         if (!pl) return u.json(res, 200, { plano: null });
         const sess = await d.listarSessoes(); const por = {}; for (const id of PL.idsDe(pl)) por[id] = await A.listar(id);
@@ -101,7 +107,7 @@ module.exports = async (req, res) => {
       if (q.acao === 'contexto') {
         let nomes = {}; // nome completo (dos Contatos) só para quem usa a Presença; o e-mail nunca sai daqui
         try { const lista = (await require('../lib/pendentes').ler()).lista; const quem = new Set([...cfg.alunos, ...Object.values(cfg.turmas || {}).flatMap((t) => t.alunos || [])]); for (const x of lista) if (x.usuario && x.nome && quem.has(String(x.usuario).toLowerCase())) nomes[String(x.usuario).toLowerCase()] = String(x.nome).slice(0, 80); } catch { nomes = {}; }
-        return u.json(res, 200, { usuario, geral, dono: u.papel(cfg, usuario) === 'owner', aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, nomes, turmas: turmasVisiveis, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
+        return u.json(res, 200, { usuario, geral, dono: u.papel(cfg, usuario) === 'owner', aulas: minhas.map((a) => ({ chave: a.chave, nivel: a.nivel, titulo: a.titulo })), roster: cfg.alunos, nomes, turmas: turmasVisiveis, pode: { chamada: ehOwner || !!mon || cargoPara('pr_chamada'), part: ehOwner || !!mon || cargoPara('pr_participacoes'), ativ: ehOwner || !!mon || ['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'].some((p) => cargoPara(p)), corr: ehOwner || !!mon || cargoPara('at_corrigir'), rank: ehOwner || !!mon || cargoPara('pr_ranking'), hist: ehOwner || !!mon || cargoPara('pr_historico') }, tipos: d.TIPOS, rotulos: d.ROTULOS, hoje: hoje() });
       }
       if (q.acao === 'sessao') {
         if (!validaSessao(q.turma, q.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida.' });
@@ -109,8 +115,7 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { sessao: dados, roster: alunosDe(q.turma) });
       }
       if (q.acao === 'historico') {
-        const permitidas = new Set(minhas.map((a) => a.chave));
-        const sessoes = (await d.listarSessoes()).filter((s) => permitidas.has(s.chave));
+        const sessoes = (await d.listarSessoes()).filter((s) => pode('pr_historico', s.turma) && cfg.turmas[s.turma] && aulas.some((a) => a.chave === s.chave) && (!u.escopoDe(cfg, usuario, 'pr_historico') || u.escopoDe(cfg, usuario, 'pr_historico').niveis.has(String(s.chave).split('/')[0]) || ehOwner || monTurma(s.turma)));
         return u.json(res, 200, { roster: cfg.alunos, sessoes: sessoes.map((s) => ({ turma: s.turma, chave: s.chave, titulo: titulos[s.chave] || s.chave, data: s.data || '',
           chamadas: Object.keys(s.chamadas || {}).length, resumo: d.resumoSessao(s) })) });
       }
@@ -137,13 +142,17 @@ module.exports = async (req, res) => {
       catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
       if (b.acao === 'copa_usar' || b.acao === 'copa_config' || b.acao === 'copa_chuva' || b.acao === 'copa_evento' || b.acao === 'copa_chefao') return require('../lib/copaapi').escrever(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
-    if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
+    if (!ehOwner && !mon && !geral) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (String(b.acao || '').startsWith('ativ_')) {
       if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
+      const NEC = { ativ_salvar: ['at_criar'], ativ_liberar: ['at_liberar'], ativ_recolher: ['at_liberar'], ativ_deslocar: ['at_prazos'], ativ_nota: ['at_corrigir'], ativ_notas_lote: ['at_corrigir'], ativ_conferir: ['at_corrigir'], ativ_entregas: ['at_corrigir'], ativ_avisar: ['at_avisar'], ativ_avisar_lote: ['at_avisar'], ativ_remover: ['at_remover'], ativ_painel: ['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'] };
+      if (!podeQualquer(NEC[b.acao] || ['at_criar'], b.turma)) return u.json(res, 403, { erro: 'Seu cargo não inclui esta ação nas atividades desta turma. Peça a um owner.' });
       const r = await A.tratar(b, { usuario, alunosDe }); return u.json(res, r.status, r.corpo);
     }
+    if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (!validaSessao(b.turma, b.chave)) return u.json(res, 400, { erro: 'Aula ou turma inválida (ou sem permissão para esta aula).' });
     const alunos = new Set(alunosDe(b.turma));
+    if (b.acao === 'recuperacao' && !pode('pr_chamada', b.turma)) return u.json(res, 403, { erro: 'Seu cargo não inclui fazer chamada nesta turma.' });
     if (b.acao === 'recuperacao') {
       // Sessão de recuperação (sábado, online, opcional): um membro de destaque ministra para quem perdeu a aula. Presença aqui vale como presença na aula perdida.
       const data = /^\d{4}-\d{2}-\d{2}$/.test(String(b.data || '')) ? b.data : hoje();
@@ -159,6 +168,8 @@ module.exports = async (req, res) => {
         return s; }, `Portal: ${usuario} salvou a recuperação de ${b.chave} em ${data} (turma ${b.turma}: ${Object.keys(estados).length} presentes)`);
       return u.json(res, 200, { ok: true, presentes: Object.keys(estados).length, pontuou: pontua });
     }
+    if (b.acao === 'chamada' && !pode('pr_chamada', b.turma)) return u.json(res, 403, { erro: 'Seu cargo não inclui fazer chamada nesta turma.' });
+    if (['participacao', 'remover_participacao', 'entregas'].includes(b.acao) && !pode(b.acao === 'entregas' ? 'at_corrigir' : 'pr_participacoes', b.turma)) return u.json(res, 403, { erro: 'Seu cargo não inclui esta ação nesta turma.' });
     if (b.acao === 'chamada') {
       const n = Number(b.n);
       if (![1, 2, 3].includes(n)) return u.json(res, 400, { erro: 'A chamada deve ser 1, 2 ou 3.' });

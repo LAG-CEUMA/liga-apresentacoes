@@ -16,14 +16,35 @@ module.exports = async (req, res) => {
     const aulas = await u.listarAulas();
     if (req.method === 'GET') {
       const v = { usuario, dono, papel: papelU, editor, titulo: u.tituloDe(cfg, usuario), permissoes: perm, fixos: dono ? u.admins() : [] };
-      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
+      const grupoP = u.GRUPOS.pessoas.filter((x) => perm.includes(x)), grupoPr = u.GRUPOS.presenca.filter((x) => perm.includes(x));
+      const escs = (ps) => (dono ? [null] : ps.map((x) => u.escopoDe(cfg, usuario, x)));
+      const uniao = (es, k) => new Set(es.flatMap((e) => [...e[k]]));
+      const limP = grupoP.length && !dono ? escs(grupoP) : null, limitadoP = !!limP && limP.every((e) => e !== null);
+      const limA = perm.includes('aulas') && !dono ? escs(['aulas']) : null;
+      let niveisOk = null; // aulas visíveis ao painel: só dos níveis do alcance, quando o cargo é limitado
+      { const es = [...(limP || []), ...(limA || [])]; if (!dono && es.length && es.every((e) => e !== null)) niveisOk = uniao(es, 'niveis'); }
+      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.filter((a) => !niveisOk || niveisOk.has(a.dir)).map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
-      if (!perm.includes('pessoas') && papelU === 'monitor') { // monitor: só as turmas que ele ministra (para os atalhos de chamada, atividades e ranking)
-        const m = cfg.monitores[usuario]; const ids = (m && m.turmas && m.turmas.length) ? m.turmas : Object.keys(cfg.turmas);
+      if (!perm.includes('pessoas') && (papelU === 'monitor' || grupoPr.length)) { // monitor ou cargo de presença: só as turmas dele (atalhos de chamada, atividades e ranking)
+        const m = cfg.monitores[usuario]; let ids = (m && m.turmas && m.turmas.length) ? m.turmas : (m ? Object.keys(cfg.turmas) : []);
+        if (grupoPr.length) { const es = escs(grupoPr); ids = es.some((e) => e === null) ? Object.keys(cfg.turmas) : [...new Set([...ids, ...uniao(es, 'turmas')])]; }
         v.turmas = Object.fromEntries(ids.filter((id) => cfg.turmas[id] && cfg.turmas[id].status !== 'arquivada').map((id) => [id, { nome: cfg.turmas[id].nome, status: cfg.turmas[id].status, nivel: cfg.turmas[id].nivel, inicio: cfg.turmas[id].inicio || '', fim: cfg.turmas[id].fim || '', alunos: cfg.turmas[id].alunos }]));
       }
-      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.planos = cfg.planos || {}; v.assuntos = cfg.assuntos || {}; v.arenaAtiva = cfg.arenaAtiva === true; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
-      if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
+      let permitidos = null; // usuários que o painel pode mostrar, quando o cargo é limitado
+      if (perm.includes('pessoas')) {
+        let tur = cfg.turmas, al = cfg.alunos, mon = cfg.monitores, own = cfg.owners, pl = cfg.planos || {}, ass = cfg.assuntos || {}, ac = cfg.acessos;
+        if (limitadoP) {
+          const ts = uniao(limP, 'turmas'); tur = Object.fromEntries(Object.entries(cfg.turmas).filter(([k]) => ts.has(k)));
+          al = cfg.alunos.filter((x) => Object.values(tur).some((t) => (t.alunos || []).includes(x)));
+          mon = Object.fromEntries(Object.entries(cfg.monitores).filter(([, m]) => (m.turmas || []).some((t) => ts.has(t))));
+          own = []; ac = {}; pl = Object.fromEntries(Object.entries(pl).map(([k, x]) => [k, { ...x, turmas: (x.turmas || []).filter((t) => ts.has(t)) }]).filter(([, x]) => x.turmas.length));
+          const as = uniao(limP, 'assuntos'); ass = Object.fromEntries(Object.entries(ass).filter(([k, x]) => as.has(k) || (x.niveis || []).some((d) => Object.values(tur).some((t) => t.nivel === d))));
+          permitidos = new Set([...al, ...Object.keys(mon)]);
+          v.limitado = true;
+        }
+        v.owners = own; v.alunos = al; v.monitores = mon; v.turmas = tur; v.planos = pl; v.assuntos = ass; v.arenaAtiva = cfg.arenaAtiva === true; v.cargos = cfg.cargos; v.acessos = ac; v.hoje = u.hojeBR();
+      }
+      if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.filter((x) => !permitidos || permitidos.has(x.usuario)).map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
       v.listaPermissoes = u.PERMISSOES;
@@ -131,15 +152,34 @@ module.exports = async (req, res) => {
     const existe = new Set(aulas.map((a) => a.chave));
     const dirs = new Set([...aulas.map((a) => a.dir), ...Object.values(cfg.assuntos || {}).flatMap((p) => p.niveis || [])]);
     let msg;
+    // Alcance dos cargos: quem tem cargo limitado a assuntos/turmas só age dentro deles.
+    const E = (p) => (dono ? null : u.escopoDe(cfg, usuario, p));
+    const negar = (m) => u.json(res, 403, { erro: m || 'Isso está fora do alcance do seu cargo. Peça a um owner.' });
+    { const A = b.acao, T = (x) => String(x || '').trim().toUpperCase();
+      const fora = (p, ...ts) => { const e = E(p); return e !== null && ts.some((t) => !e.turmas.has(T(t))); };
+      const naoLivre = (p) => E(p) !== null;
+      if (['listas', 'trocar_usuario', 'adicionar', 'remover_pessoa'].includes(A) && naoLivre(A === 'remover_pessoa' ? 'p_alunos_remover' : 'p_alunos_cadastrar')) return negar();
+      if (['plano', 'excluir_plano'].includes(A) && naoLivre('tr_gerir')) return negar();
+      if (['assunto', 'excluir_assunto', 'adotar_nivel'].includes(A) && naoLivre('n_gerir')) return negar();
+      if (A === 'novo_nivel') { const e = E('n_gerir'); if (e !== null && !e.assuntos.has(String(b.assunto))) return negar(); }
+      if (A === 'monitor') { if (naoLivre('p_monitores')) return negar(); }
+      if (A === 'remover_monitor') { const e = E('p_monitores'); if (e !== null) { const m = cfg.monitores[ler([b.usuario])[0]]; if (!m || !(m.turmas || []).length || !m.turmas.every((t) => e.turmas.has(t))) return negar(); } }
+      if (A === 'turma') { const id = T(b.id), e = E(novo.turmas[id] ? 't_editar' : 't_criar'); if (e !== null) { if (novo.turmas[id] ? !e.turmas.has(id) : !e.niveis.has(String(b.nivel || ''))) return negar('Turma fora do alcance do seu cargo.'); if (b.nivel && !e.niveis.has(String(b.nivel))) return negar('Nível fora do alcance do seu cargo.'); } }
+      if (A === 'renomear_turma' && fora('t_editar', b.de)) return negar();
+      if (A === 'excluir_turma' && fora('t_excluir', b.id)) return negar();
+      if (['promover', 'mover_turma'].includes(A) && fora('p_alunos_turma', b.de, b.para)) return negar();
+      if (A === 'pessoa' && Array.isArray(b.acessos) && naoLivre('p_alunos_cadastrar')) return negar();
+    }
     if (b.acao === 'acesso') {
       if (!perm.includes('aulas')) return nao();
       const chaves = Array.isArray(b.chaves) ? b.chaves : [b.chave];
       if (!chaves.length || chaves.length > 500 || !chaves.every((c) => existe.has(c)) || !u.NIVEIS.includes(b.nivel)) return u.json(res, 400, { erro: 'Aula ou nível inválido.' });
+      { const e = E('aulas'); if (e !== null && !chaves.every((c) => e.niveis.has(String(c).split('/')[0]))) return negar('Essas aulas estão fora do alcance do seu cargo.'); }
       if (!dono && papelU === 'monitor') { const meu = new Set([...((cfg.monitores[usuario] || {}).aulas || []), ...((cfg.monitores[usuario] || {}).roteiros || [])]); if (!chaves.every((c) => meu.has(c))) return u.json(res, 403, { erro: 'Monitor só mexe nas aulas que ministra.' }); }
       for (const c of chaves) { if (b.nivel === 'owners') delete novo.aulas[c]; else novo.aulas[c] = b.nivel; }
       msg = chaves.length === 1 ? `Portal: ${usuario} definiu ${chaves[0]} como ${b.nivel}` : `Portal: ${usuario} definiu ${chaves.length} aulas (${String(b.nivel_nome || 'várias').slice(0, 40)}) como ${b.nivel}`;
     } else if (b.acao === 'listas') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('p_alunos_cadastrar')) return nao();
       const alu = ler(b.alunos);
       let own = cfg.owners;
       if (dono) {
@@ -151,14 +191,14 @@ module.exports = async (req, res) => {
       novo.owners = own; novo.alunos = alu;
       msg = `Portal: ${usuario} atualizou as listas (${own.length} owners, ${alu.length} alunos)`;
     } else if (b.acao === 'monitor') {
-      if (!perm.includes('pessoas') || (!dono && papelU === 'monitor')) return nao();
+      if (!perm.includes('p_monitores') || (!dono && papelU === 'monitor')) return nao();
       const nome = ler([b.usuario])[0];
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
       novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (novo.monitores[nome] || {}).turmas || [] };
       msg = `Portal: ${usuario} definiu permissões do monitor ${nome} (${novo.monitores[nome].aulas.length} aulas, ${novo.monitores[nome].roteiros.length} roteiros)`;
     } else if (b.acao === 'remover_monitor') {
-      if (!perm.includes('pessoas') || (!dono && papelU === 'monitor')) return nao();
+      if (!perm.includes('p_monitores') || (!dono && papelU === 'monitor')) return nao();
       const nome = ler([b.usuario])[0];
       if (!nome || !novo.monitores[nome]) return u.json(res, 400, { erro: 'Monitor não encontrado.' });
       delete novo.monitores[nome];
@@ -177,16 +217,24 @@ module.exports = async (req, res) => {
       delete novo.equipe[nome];
       msg = `Portal: ${usuario} removeu ${nome} da equipe`;
     } else if (b.acao === 'pessoa') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!['p_alunos_cadastrar', 'p_alunos_turma', 'p_monitores'].some((x) => perm.includes(x))) return nao();
+      const podeDados = perm.includes('p_alunos_cadastrar') || perm.includes('p_monitores');
       const nome = nomeGh(b.usuario || '');
       if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
-      { const PDp = require('../lib/pendentes'); const ex = (await PDp.ler()).lista.find((x) => x.usuario === nome); const nm = String(b.nome || (ex && ex.nome) || '').replace(/[\u200b-\u200d\u2060\ufeff]/g, '').replace(/[\s\u00a0]+/g, ' ').trim();
+      if (podeDados) { const PDp = require('../lib/pendentes'); const ex = (await PDp.ler()).lista.find((x) => x.usuario === nome); const nm = String(b.nome || (ex && ex.nome) || '').replace(/[\u200b-\u200d\u2060\ufeff]/g, '').replace(/[\s\u00a0]+/g, ' ').trim();
         if (!nm) return u.json(res, 400, { erro: 'Falta o nome da pessoa (campo Nome, em Dados da pessoa).' });
         const em = String(b.email || '').replace(/[\s\u200b-\u200d\u2060\ufeff\u00a0]/g, '') || (ex && ex.email) || '';
         try { await PDp.salvar({ usuario: nome, nome: nm, email: em, curso: b.curso !== undefined ? b.curso : (ex && ex.curso), cargo: b.cargo !== undefined ? b.cargo : (ex && ex.cargo), emailPessoal: b.emailPessoal, anterior: b.anterior || (ex ? (ex.email || ('@' + ex.usuario)) : '') }, usuario); } catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; } }
       const filtro = (l) => (Array.isArray(l) ? l : []).filter((c) => existe.has(c));
       const turmasOk = (Array.isArray(b.turmas) ? b.turmas : []).map(String).filter((t) => novo.turmas[t]);
-      if (b.aluno !== undefined) {
+      const limT = E('p_alunos_turma'); // alcance do cargo: só mexe nas turmas dele
+      if (b.aluno !== undefined && !perm.includes('p_alunos_turma')) return nao();
+      if (b.aluno !== undefined && limT) {
+        if (b.aluno && (!turmasOk.length || !turmasOk.every((t) => limT.turmas.has(t)))) return negar('Escolha turmas do seu alcance.');
+        for (const t of Object.keys(novo.turmas)) if (limT.turmas.has(t)) novo.turmas[t].alunos = novo.turmas[t].alunos.filter((a) => a !== nome);
+        if (b.aluno) { if (!novo.alunos.includes(nome)) novo.alunos.push(nome); for (const t of turmasOk) novo.turmas[t].alunos.push(nome); }
+        else if (!Object.values(novo.turmas).some((t) => t.alunos.includes(nome))) novo.alunos = novo.alunos.filter((a) => a !== nome);
+      } else if (b.aluno !== undefined) {
         novo.alunos = novo.alunos.filter((a) => a !== nome);
         for (const t of Object.values(novo.turmas)) t.alunos = t.alunos.filter((a) => a !== nome);
         if (b.aluno) {
@@ -200,6 +248,8 @@ module.exports = async (req, res) => {
         const alvoPapel = u.papel(cfg, nome); if (!['aluno', 'visitante'].includes(alvoPapel)) return u.json(res, 403, { erro: 'Monitor só mexe em alunos. Para monitores, equipe ou owners, peça a um owner.' });
         if (b.monitor !== undefined && !!b.monitor !== !!(cfg.monitores || {})[nome]) return u.json(res, 403, { erro: 'Monitor só atribui alunos. Para criar ou remover monitores, peça a um owner.' });
       }
+      if (b.monitor !== undefined && !perm.includes('p_monitores')) return nao();
+      if (b.monitor !== undefined) { const limM = E('p_monitores'); if (limM) { const ts = b.monitor ? (Array.isArray(b.monitor_turmas) ? b.monitor_turmas.map(String) : []) : ((cfg.monitores[nome] || {}).turmas || []); if (!ts.length || !ts.every((t) => limM.turmas.has(t))) return negar('Monitor precisa de turmas do seu alcance.'); } }
       if (b.monitor !== undefined) {
         if (b.monitor) novo.monitores[nome] = { aulas: filtro(b.aulas), roteiros: filtro(b.roteiros), turmas: (Array.isArray(b.monitor_turmas) ? b.monitor_turmas : []).map(String).filter((t) => novo.turmas[t]) };
         else delete novo.monitores[nome];
@@ -226,7 +276,7 @@ module.exports = async (req, res) => {
       }
       msg = `Portal: ${usuario} atualizou a ficha de ${nome}`;
     } else if (b.acao === 'trocar_usuario') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('p_alunos_cadastrar')) return nao();
       const velho = nomeGh(b.usuario || ''), nv = nomeGh(b.novo || '');
       if (!velho || !nv || !u.USER_RE.test(velho) || !u.USER_RE.test(nv)) return u.json(res, 400, { erro: 'Usuário inválido.' });
       if (velho === nv) return u.json(res, 400, { erro: 'O usuário novo é igual ao atual.' });
@@ -239,7 +289,7 @@ module.exports = async (req, res) => {
       for (const k of ['monitores', 'acessos', 'editores']) if (novo[k] && novo[k][velho] !== undefined) { novo[k][nv] = novo[k][velho]; delete novo[k][velho]; }
       msg = `Portal: ${usuario} corrigiu o usuário do GitHub de ${velho} para ${nv}`;
     } else if (b.acao === 'adicionar') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('p_alunos_cadastrar')) return nao();
       const papelNovo = String(b.papel || 'aluno');
       if (!['aluno', 'monitor', 'equipe'].includes(papelNovo) || (papelNovo === 'equipe' && !dono)) return nao();
       const turma = novo.turmas[b.turma] ? b.turma : (Object.keys(novo.turmas).find((k) => novo.turmas[k].status === 'andamento') || Object.keys(novo.turmas)[0]);
@@ -255,7 +305,7 @@ module.exports = async (req, res) => {
       }
       msg = `Portal: ${usuario} adicionou ${validos.length} pessoa(s) como ${papelNovo}`;
     } else if (b.acao === 'remover_pessoa') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('p_alunos_remover')) return nao();
       const nome = nomeGh(b.usuario || '');
       if (!nome || novo.owners.includes(nome) || u.admins().includes(nome)) return u.json(res, 400, { erro: 'Esta pessoa não pode ser removida por aqui (owner).' });
       if (!dono && novo.equipe[nome]) return u.json(res, 400, { erro: 'Esta pessoa é da equipe; só owners podem remover o acesso dela.' });
@@ -270,7 +320,8 @@ module.exports = async (req, res) => {
       if (!nomeC) return u.json(res, 400, { erro: 'Dê um nome ao cargo.' });
       const id = /^[a-z0-9][a-z0-9-]{0,29}$/.test(String(b.id || '')) ? b.id : nomeC.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
       if (!id) return u.json(res, 400, { erro: 'Nome inválido.' });
-      novo.cargos[id] = { nome: nomeC, descricao: String(b.descricao || '').trim().slice(0, 100), permissoes: (Array.isArray(b.permissoes) ? b.permissoes : []).filter((x) => u.PERMISSOES.includes(x)) };
+      novo.cargos[id] = { nome: nomeC, descricao: String(b.descricao || '').trim().slice(0, 100), permissoes: (Array.isArray(b.permissoes) ? b.permissoes : []).filter((x) => u.PERMISSOES.includes(x)),
+        alcance: b.alcance === undefined ? (novo.cargos[id] || {}).alcance || { assuntos: [], turmas: [] } : { assuntos: (Array.isArray(b.alcance && b.alcance.assuntos) ? b.alcance.assuntos : []).map(String).filter((x) => (novo.assuntos || {})[x]), turmas: (Array.isArray(b.alcance && b.alcance.turmas) ? b.alcance.turmas : []).map(String).filter((x) => novo.turmas[x]) } };
       msg = `Portal: ${usuario} definiu o cargo ${nomeC} (${novo.cargos[id].permissoes.join(', ') || 'sem permissões'})`;
     } else if (b.acao === 'cargo_atribuir') { // dá ou tira um cargo de uma pessoa (só owners)
       if (!dono) return nao();
@@ -288,7 +339,7 @@ module.exports = async (req, res) => {
       for (const e of Object.values(novo.equipe)) e.cargos = (e.cargos || []).filter((c) => c !== b.id);
       msg = `Portal: ${usuario} removeu o cargo ${b.id}`;
     } else if (b.acao === 'turma') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes(novo.turmas[String(b.id || '').trim().toUpperCase()] ? 't_editar' : 't_criar')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
       if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código da turma: até 20 letras, números, ponto ou traço, sem espaço (ex.: 2026.2-N0).' });
       const atual = novo.turmas[id] || { alunos: [] };
@@ -307,7 +358,7 @@ module.exports = async (req, res) => {
       if (status !== 'arquivada') delete novo.turmas[id].rankingFinal;
       msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
     } else if (b.acao === 'plano') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('tr_gerir')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
       if (!/^[A-Za-z0-9._-]{1,20}$/.test(id)) return u.json(res, 400, { erro: 'Código do plano: até 20 letras, números, ponto ou traço (ex.: 2026.2-2027.1).' });
       const data = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? v : '');
@@ -323,7 +374,7 @@ module.exports = async (req, res) => {
       novo.planos[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao), diaSemana, horario, semanasSemAula };
       msg = `Portal: ${usuario} salvou o plano ${id}`;
     } else if (b.acao === 'assunto') { // cria ou renomeia um assunto (Artes, Música…); os níveis pertencem a ele
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('n_gerir')) return nao();
       const nome = String(b.nome || '').replace(/\s+/g, ' ').trim().slice(0, 30); if (!nome) return u.json(res, 400, { erro: 'Informe o nome do assunto.' });
       novo.assuntos = novo.assuntos || {};
       const id = String(b.id || '').trim() || (nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'assunto');
@@ -331,13 +382,13 @@ module.exports = async (req, res) => {
       novo.assuntos[id] = { nome, niveis: (novo.assuntos[id] || {}).niveis || [] };
       msg = `Portal: ${usuario} salvou o assunto ${id}`; b.__resp = { ok: true, id };
     } else if (b.acao === 'excluir_assunto') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('n_gerir')) return nao();
       const id = String(b.id || ''); const as = (novo.assuntos || {})[id]; if (!as) return u.json(res, 400, { erro: 'Assunto não encontrado.' });
       const uso = Object.values(novo.turmas).filter((t) => (as.niveis || []).includes(t.nivel)).length;
       if (uso) return u.json(res, 400, { erro: `Há ${uso} turma(s) usando níveis deste assunto. Troque o nível delas antes.` });
       delete novo.assuntos[id]; msg = `Portal: ${usuario} excluiu o assunto ${id}`;
     } else if (b.acao === 'novo_nivel') { // cria um nível (pasta de aulas) dentro de um assunto
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('n_gerir')) return nao();
       const as = (novo.assuntos || {})[String(b.assunto || '')]; if (!as) return u.json(res, 400, { erro: 'Escolha o assunto.' });
       const n = Math.round(Number(b.numero));
       if ((as.niveis || []).some((x) => Number(x.slice(6, 8)) === n)) return u.json(res, 400, { erro: `O assunto ${as.nome} já tem o Nível ${n}.` });
@@ -347,21 +398,21 @@ module.exports = async (req, res) => {
       msg = `Portal: ${usuario} criou o nível ${dir} no assunto ${b.assunto}`;
       b.__resp = { ok: true, dir };
     } else if (b.acao === 'adotar_nivel') { // liga um nível já existente (sem dono) a um assunto
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('n_gerir')) return nao();
       const as = (novo.assuntos || {})[String(b.assunto || '')]; const dir = String(b.dir || '');
       if (!as || !/^nivel-\d{2}-[a-z0-9-]{1,40}$/.test(dir)) return u.json(res, 400, { erro: 'Assunto ou nível inválido.' });
       for (const [k, v] of Object.entries(novo.assuntos)) if ((v.niveis || []).includes(dir) && k !== b.assunto) v.niveis = v.niveis.filter((x) => x !== dir);
       if ((as.niveis || []).some((x) => x.slice(6, 8) === dir.slice(6, 8) && x !== dir)) return u.json(res, 400, { erro: 'Este assunto já tem um nível com esse número.' });
       as.niveis = [...new Set([...(as.niveis || []), dir])].sort(); msg = `Portal: ${usuario} ligou ${dir} ao assunto ${b.assunto}`;
     } else if (b.acao === 'excluir_plano') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('tr_gerir')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
       if (!(novo.planos || {})[id]) return u.json(res, 400, { erro: 'Plano não encontrado.' });
       delete novo.planos[id];
       msg = `Portal: ${usuario} excluiu o plano ${id}`;
     } else if (b.acao === 'renomear_turma') {
       // Trocar o código é seguro só se ainda não há presença gravada (os arquivos de presença usam o código).
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('t_editar')) return nao();
       const de = String(b.de || '').trim().toUpperCase(), para = String(b.para || '').trim().toUpperCase();
       if (!novo.turmas[de] || !/^[A-Za-z0-9._-]{1,20}$/.test(para)) return u.json(res, 400, { erro: 'Código inválido (até 20 letras, números, ponto ou traço, sem espaço).' });
       if (para === de) return u.json(res, 200, { ok: true });
@@ -372,7 +423,7 @@ module.exports = async (req, res) => {
       for (const m of Object.values(novo.monitores)) m.turmas = m.turmas.map((x) => (x === de ? para : x));
       msg = `Portal: ${usuario} renomeou a turma ${de} para ${para}`;
     } else if (b.acao === 'excluir_turma') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('t_excluir')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
       if (!novo.turmas[id]) return u.json(res, 400, { erro: 'Turma não encontrada.' });
       if (Object.keys(novo.turmas).length <= 1) return u.json(res, 400, { erro: 'Precisa existir pelo menos uma turma.' });
@@ -432,14 +483,14 @@ module.exports = async (req, res) => {
       }
     } else if (b.acao === 'promover') {
       // Promover = copiar: os escolhidos entram na turma nova e continuam na de origem (que guarda o histórico e o acesso ao material).
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('p_alunos_turma')) return nao();
       if (!novo.turmas[b.de] || !novo.turmas[b.para] || b.de === b.para) return u.json(res, 400, { erro: 'Turmas inválidas.' });
       const quem = ler(Array.isArray(b.usuarios) ? b.usuarios : []).filter((a) => novo.turmas[b.de].alunos.includes(a));
       if (!quem.length) return u.json(res, 400, { erro: 'Escolha pelo menos um aluno.' });
       for (const a of quem) if (!novo.turmas[b.para].alunos.includes(a)) novo.turmas[b.para].alunos.push(a);
       msg = `Portal: ${usuario} promoveu ${quem.length} aluno(s) da turma ${b.de} para ${b.para}`;
     } else if (b.acao === 'mover_turma') {
-      if (!perm.includes('pessoas')) return nao();
+      if (!perm.includes('p_alunos_turma')) return nao();
       if (!novo.turmas[b.de] || !novo.turmas[b.para] || b.de === b.para) return u.json(res, 400, { erro: 'Turmas inválidas.' });
       const quem = Array.isArray(b.usuarios) && b.usuarios.length ? new Set(ler(b.usuarios)) : new Set(novo.turmas[b.de].alunos);
       const mover = novo.turmas[b.de].alunos.filter((a) => quem.has(a));

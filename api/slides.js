@@ -11,6 +11,10 @@ module.exports = async (req, res) => {
     const pode = (dir, id) => u.podeEditarSlides(cfg, usuario, dir, id);
     const erro = (c, m) => u.json(res, c, { erro: m });
     const algum = dono || u.permissoes(cfg, usuario).includes('slides') || ((cfg.editores || {})[usuario] || []).length > 0; // pode usar o editor em algum lugar
+    const permU = u.permissoes(cfg, usuario);
+    const noAlcance = (p, dir) => { const e = u.escopoDe(cfg, usuario, p); return e === null || e.niveis.has(dir); };
+    const podePlano = (dir) => dono || (permU.includes('slides_plano') && noAlcance('slides_plano', dir)) || pode(dir, null);
+    const podeNovaAula = (dir, id) => dono || ((cfg.editores || {})[usuario] || []).some((x) => x === dir || x === `${dir}/${id}`) || (permU.includes('slides_criar') && noAlcance('slides_criar', dir));
     const validar = (dir, id) => S.DIR_RE.test(String(dir || '')) && S.AULA_ID_RE.test(String(id || ''));
     if (req.method === 'GET') {
       const q = req.query || {}; const acao = q.acao || 'lista';
@@ -18,15 +22,15 @@ module.exports = async (req, res) => {
         const aulas = await u.listarAulas(); const dirs = await S.listarNiveis();
         const donoTr = {}; for (const pl of Object.values(cfg.assuntos || {})) for (const x of pl.niveis || []) donoTr[x] = pl.nome;
         const todas = new Set([...dirs, ...aulas.map((a) => a.dir), ...Object.keys(donoTr)]);
-        const niveis = [...todas].sort().map((d) => ({ dir: d, nome: (/^nivel-(\d+)/.exec(d) ? `Nível ${Number(/^nivel-(\d+)/.exec(d)[1])}${donoTr[d] ? ' · ' + donoTr[d] : ''}` : d), podeCriar: pode(d, null),
+        const niveis = [...todas].sort().map((d) => ({ dir: d, podePlano: podePlano(d), podeNova: podeNovaAula(d, null), nome: (/^nivel-(\d+)/.exec(d) ? `Nível ${Number(/^nivel-(\d+)/.exec(d)[1])}${donoTr[d] ? ' · ' + donoTr[d] : ''}` : d), podeCriar: pode(d, null),
           aulas: aulas.filter((a) => a.dir === d).map((a) => ({ id: a.id, titulo: a.titulo, editavel: pode(d, a.id) })) }));
-        const visiveis = niveis.filter((n) => dono || n.podeCriar || n.aulas.some((a) => a.editavel));
+        const visiveis = niveis.filter((n) => dono || n.podeCriar || n.podePlano || n.aulas.some((a) => a.editavel));
         if (!visiveis.length && !dono) return erro(403, 'Você não tem permissão para editar slides. Peça a um owner.');
         return u.json(res, 200, { usuario, dono, repo: u.REPO(), branch: u.BRANCH(), niveis: visiveis });
       }
       if (acao === 'imagens') { if (!algum) return erro(403, 'Sem permissão.'); return u.json(res, 200, { imagens: await Site.listarImagensDo('slides'), todas: dono ? await Site.imagensComModulos() : undefined }); }
       if (acao === 'plano') {
-        if (!S.DIR_RE.test(String(q.dir || '')) || !pode(q.dir, null)) return erro(403, 'Sem permissão para ver o planejamento deste nível.');
+        if (!S.DIR_RE.test(String(q.dir || '')) || !podePlano(q.dir)) return erro(403, 'Sem permissão para ver o planejamento deste nível.');
         return u.json(res, 200, { plano: await S.lerPlano(q.dir) });
       }
       if (!validar(q.dir, q.id)) return erro(400, 'Aula inválida.');
@@ -53,12 +57,13 @@ module.exports = async (req, res) => {
     let b = req.body; if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = null; } }
     if (!b || typeof b !== 'object') return erro(400, 'Corpo inválido.');
     if (b.acao === 'plano_salvar') {
-      if (!S.DIR_RE.test(String(b.dir || '')) || !pode(b.dir, null)) return erro(403, 'Sem permissão para editar o planejamento deste nível.');
+      if (!S.DIR_RE.test(String(b.dir || '')) || !podePlano(b.dir)) return erro(403, 'Sem permissão para editar o planejamento deste nível.');
       try { return u.json(res, 200, { ok: true, plano: await S.salvarPlano(b.dir, b.plano, usuario) }); } catch (e) { if (e && e.status) return erro(e.status, e.message); throw e; }
     }
     if (b.acao === 'salvar') {
       if (!validar(b.dir, b.id)) return erro(400, 'Aula inválida.');
       if (!pode(b.dir, b.id)) return erro(403, 'Sem permissão para editar esta aula.');
+      if (!b.base && !b.substituir && !podeNovaAula(b.dir, b.id)) return erro(403, 'Seu cargo não inclui criar aulas novas neste nível. Peça a um owner.');
       if (b.substituir && !dono) return erro(403, 'Só owners podem substituir uma aula que já existia fora do editor.');
       try {
         const r = await S.salvarAula(b.dir, b.id, b.modelo, usuario, b.base || null, SUBSTITUIR_IMPORTADA && !!b.substituir);

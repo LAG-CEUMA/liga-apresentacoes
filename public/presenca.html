@@ -127,9 +127,14 @@ function seletores(){
   if(!precisaAula)return h('div',{class:'linha',style:'display:flex;gap:12px;align-items:center;padding:10px 14px'},h('span',{class:'sub'},'Turma'),turma);
   return h('div',{class:'linha seletores'},h('label',{},h('span',{},'Turma'),turma),h('label',{},h('span',{},'Aula'),sel),h('label',{},h('span',{},'Data'),data))}
 const GRUPOS=[['chamada','Chamada',['chamada','part']],['atividades','Atividades',['ativ','corr']],['alunos','Alunos',['acomp','hist']],['rank','Ranking',['rank']]];
+const PODE_K={chamada:'chamada',part:'part',ativ:'ativ',corr:'corr',acomp:'hist',hist:'hist',rank:'rank'};
+const permiteAba=k=>!CTX||!CTX.pode||CTX.pode[PODE_K[k]]!==false;
 function aba(){
-  const gAtual=GRUPOS.find(g=>g[2].includes(ABA))||GRUPOS[0];
-  const topo=h('div',{class:'tabs'},...GRUPOS.map(g=>h('button',{type:'button','data-aba':g[0],class:g===gAtual?'on':'',onclick:()=>{ABA=g[2][0];desenhar()}},g[1],g[0]==='atividades'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA));
+  const G=GRUPOS.map(g=>[g[0],g[1],g[2].filter(permiteAba)]).filter(g=>g[2].length);
+  if(!G.length)return h('p',{class:'sub'},'Seu cargo não inclui nenhuma função desta página.');
+  if(!G.some(g=>g[2].includes(ABA))){ABA=G[0][2][0]}
+  const gAtual=G.find(g=>g[2].includes(ABA))||G[0];
+  const topo=h('div',{class:'tabs'},...G.map(g=>h('button',{type:'button','data-aba':g[0],class:g===gAtual?'on':'',onclick:()=>{ABA=g[2][0];desenhar()}},g[1],g[0]==='atividades'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA));
   if(gAtual[2].length<2)return topo;
   const sub=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px'},...gAtual[2].map(k=>h('button',{type:'button','data-aba':k,class:'btn '+(ABA===k?'':'sec'),style:'padding:6px 14px;font-size:14px',onclick:()=>{ABA=k;desenhar()}},TITA[k],k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')));
   return h('div',{},topo,sub)}

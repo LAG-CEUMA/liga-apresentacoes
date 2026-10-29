@@ -71,8 +71,8 @@ async function lista() {
     if (!n.aulas.length) c.append(h('p', { class: 'sub' }, 'Nenhuma aula ainda.'));
     for (const a of n.aulas) c.append(h('div', { class: 'al' }, h('span', { class: 't' }, h('b', {}, a.titulo), h('br'), h('small', { class: 'sub' }, a.id)),
       a.editavel ? h('a', { class: 'b pri', href: `/editor?dir=${n.dir}&id=${a.id}` }, 'Editar slides') : h('span', { class: 'sub' }, 'sem permissão'), h('a', { class: 'b', href: `/aula/${n.dir}/${a.id}`, target: '_blank' }, 'Ver'), a.editavel ? h('button', { class: 'b perigo', title: 'Como excluir esta aula', onclick: () => { REPO_INFO = { repo: d.repo, branch: d.branch }; modalExcluir(n.dir, a.id, a.titulo); } }, 'Excluir…') : null));
-    if (n.podeCriar) c.append(h('div', { style: 'margin:8px 0' }, h('button', { class: 'b', title: 'Objetivo, materiais, avaliação e as aulas previstas deste nível', onclick: () => modalPlano(n.dir, n.nome) }, 'Planejamento do nível')));
-    if (n.podeCriar) {
+    if (n.podePlano) c.append(h('div', { style: 'margin:8px 0' }, h('button', { class: 'b', title: 'Objetivo, materiais, avaliação e as aulas previstas deste nível', onclick: () => modalPlano(n.dir, n.nome) }, 'Planejamento do nível')));
+    if (n.podeCriar && n.podeNova) {
       const tit = h('input', { type: 'text', placeholder: 'Título da nova aula', style: 'flex:1;min-width:220px' });
       const copia = h('select', { style: 'width:260px' }, h('option', { value: '' }, 'Começar do zero'), ...todas.map((a) => h('option', { value: a.dir + '/' + a.id }, `Copiar de: ${a.nome} · ${a.titulo}`)));
       c.append(h('div', { style: 'display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center' }, tit, copia,
