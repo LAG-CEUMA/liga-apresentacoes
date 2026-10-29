@@ -260,10 +260,10 @@ function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
   if(D.dono)p.append(h('div',{style:'margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:auditoriaRepos},'Auditar repositórios e contas (GitHub)'),h('span',{class:'sub',style:'margin-left:8px'},'acha repositórios órfãos, contas que trocaram de nome e acessos estranhos')));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Uma turma é um grupo de alunos que percorre os níveis junto. A chamada, a presença e os certificados sempre pertencem a uma turma. O conteúdo das aulas é o mesmo para todas.'));
-  const g=h('div',{class:'grade'});const ROT={andamento:'Em andamento',planejada:'Planejada',arquivada:'Arquivada'};
+  const g=h('div',{class:'grade'});const CARDS={};const ROT={andamento:'Em andamento',planejada:'Planejada',arquivada:'Arquivada'};
   for(const id of Object.keys(D.turmas)){const t=D.turmas[id];const mons=Object.keys(D.monitores).filter(n=>D.monitores[n].turmas.includes(id)).length;
     const trocar=async(status)=>{try{await enviar({acao:'turma',id,nome:t.nome,status});aviso('Turma atualizada');await carregar()}catch(e){aviso(e.message,1)}};
-    g.append(h('div',{class:'cartao2'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h3',{},t.nome),h('span',{class:'st '+t.status},ROT[t.status])),
+    CARDS[id]=(h('div',{class:'cartao2'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h3',{},t.nome),h('span',{class:'st '+t.status},ROT[t.status])),
       h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
@@ -275,27 +275,54 @@ function desenharTurmas(){
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',
         t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
         h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'),ajuda('turma_botoes'))))}
-  g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalTurma('')},'+ Nova turma'),h('div',{class:'sub'},'Dê um código curto (ex.: 2027.2). Alunos novos entram na turma em andamento ou na que você escolher.')));
-  const pg=h('div',{class:'grade'});const dd=v=>v?v.split('-').reverse().join('/'):'sem data';
+  const dd=v=>v?v.split('-').reverse().join('/'):'sem data';
+  const grade='display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px';
+  const emTrilha=new Set();
+  // Trilha > turmas: cada trilha é um bloco que reúne as turmas (níveis) dela
   for(const id of Object.keys(D.planos)){const pl=D.planos[id];
-    pg.append(h('div',{class:'cartao2'},h('h3',{},pl.nome),h('div',{class:'sub'},`${pl.trilha} · ${dd(pl.inicio)} a ${dd(pl.fim)}`+(pl.premiacao?' · premiação '+dd(pl.premiacao):'')),
-      h('div',{style:'margin:6px 0'},...(pl.turmas.length?pl.turmas.map(t=>h('span',{class:'pill m'},(D.turmas[t]||{}).nome||t)):[h('span',{class:'sub'},'nenhuma turma ainda')])),
-      h('button',{class:'btn sec',type:'button',onclick:()=>modalPlano(id)},'Editar plano')))}
-  pg.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Novo plano'),h('div',{class:'sub'},'Plano = calendário (ex.: 2026.2 a 2027.1) com as turmas/níveis dele. O ranking do plano soma os pontos das turmas, e a Copa passa a valer para o plano inteiro.')));
-  g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px';
-  p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'));
-  const pl=h('details',{class:'nivel'},h('summary',{},h('span',{class:'nvt'},'Planos (calendários)'),h('span',{class:'nvc'},Object.keys(D.planos).length+' plano(s)'),ajuda('plano')),h('p',{class:'sub',style:'max-width:760px'},'Cada trilha tem o seu plano. A Arena Global (comparar trilhas) já está pronta, mas fica desligada até existirem trilhas paralelas (previsto para 2027.2).'),pg);
-  p.append(pl)}
+    const ts=(pl.turmas||[]).filter(t=>CARDS[t]);ts.forEach(t=>emTrilha.add(t));
+    const quando=[pl.diaSemana!==undefined&&pl.diaSemana!==''?DIAS[pl.diaSemana]+'s':'',pl.horario||''].filter(Boolean).join(' · ');
+    const det=h('details',{class:'nivel',open:true},h('summary',{},h('span',{class:'nvt'},pl.trilha||pl.nome),h('span',{class:'nvc'},[quando,dd(pl.inicio)+' a '+dd(pl.fim),ts.length+' turma(s)'].filter(Boolean).join(' · ')),ajuda('plano')),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:()=>modalPlano(id)},'Editar trilha'),h('span',{class:'sub'},pl.nome+(pl.premiacao?' · premiação '+dd(pl.premiacao):'')+((pl.semanasSemAula||[]).length?' · sem aula: '+pl.semanasSemAula.map(x=>dd(x).slice(0,5)).join(', '):''))));
+    const gr=h('div',{style:grade});for(const t of ts)gr.append(CARDS[t]);if(!ts.length)gr.append(h('p',{class:'sub'},'Nenhuma turma nesta trilha ainda. Clique em Editar trilha e use "Criar turma deste nível".'));
+    det.append(gr);p.append(det)}
+  const soltas=Object.keys(D.turmas).filter(t=>!emTrilha.has(t));
+  if(soltas.length){const det=h('details',{class:'nivel',open:true},h('summary',{},h('span',{class:'nvt'},'Turmas sem trilha'),h('span',{class:'nvc'},soltas.length+' turma(s)')));const gr=h('div',{style:grade});for(const t of soltas)gr.append(CARDS[t]);det.append(gr);p.append(det)}
+  p.append(h('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin:16px 0'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Nova trilha'),h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma('')},'+ Nova turma avulsa'),h('span',{class:'sub'},'Trilha = dia da semana, horário e calendário, com os níveis (turmas) dentro. Alunos novos entram na turma que você escolher.')));
+  p.append(h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
+const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const dmy=v=>v?v.split('-').reverse().join('/'):'';
+const lerDatas=t=>String(t||'').split(/[\s,;]+/).map(x=>{const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):''}).filter(Boolean);
 function modalPlano(id){
-  const pl=id?D.planos[id]:{nome:'',trilha:'Trilha 1',inicio:'',fim:'',turmas:[],premiacao:''};
-  const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-2027.1',style:'text-transform:uppercase',disabled:!!id,oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:pl.nome,maxLength:40,placeholder:'ex.: Plano 2026.2 a 2027.1'}),tr=h('input',{type:'text',value:pl.trilha,maxLength:30}),ini=h('input',{type:'date',value:pl.inicio}),fim=h('input',{type:'date',value:pl.fim}),pre=h('input',{type:'date',value:pl.premiacao||''});
+  const pl=id?D.planos[id]:{nome:'',trilha:'Trilha',inicio:'',fim:'',turmas:[],premiacao:'',diaSemana:'',horario:'',semanasSemAula:[]};
+  const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-2027.1-QUI',style:'text-transform:uppercase',disabled:!!id,oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),
+    tr=h('input',{type:'text',value:pl.trilha,maxLength:30,placeholder:'ex.: Trilha Quinta'}),
+    nome=h('input',{type:'text',value:pl.nome,maxLength:40,placeholder:'ex.: Calendário 2026.2/2027.1 · Quinta'}),
+    dia=h('select',{},h('option',{value:''},'Escolha…'),...DIAS.map((x,i)=>h('option',{value:String(i)},x))),
+    hor=h('input',{type:'text',value:pl.horario||'',maxLength:30,placeholder:'ex.: 19:00 às 20:00'}),
+    ini=h('input',{type:'date',value:pl.inicio}),fim=h('input',{type:'date',value:pl.fim}),pre=h('input',{type:'date',value:pl.premiacao||''}),
+    sem=h('input',{type:'text',value:(pl.semanasSemAula||[]).map(dmy).join(', '),placeholder:'ex.: 23/03/2027, 29/06/2027'});
+  dia.value=pl.diaSemana===undefined||pl.diaSemana===''?'':String(pl.diaSemana);
   const sel=new Set(pl.turmas);const usadas={};for(const [k,o] of Object.entries(D.planos))if(k!==id)for(const t of o.turmas)usadas[t]=o.nome;
   const lista=h('div',{style:'max-height:30vh;overflow:auto;border:1px solid #fff2;border-radius:10px;padding:6px 12px'});
-  for(const t of Object.keys(D.turmas))lista.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:sel.has(t),disabled:!!usadas[t],onchange:e=>{e.target.checked?sel.add(t):sel.delete(t)}}),D.turmas[t].nome+(usadas[t]?' (já está em '+usadas[t]+')':'')));
-  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir o plano "${pl.nome}"? As turmas continuam; a Copa volta a ser por turma.`))return;try{await enviar({acao:'excluir_plano',id});aviso('Plano excluído');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir plano'):'';
-  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar plano':'Novo plano'),h('div',{class:'form'},h('label',{},'Código',cod),h('label',{},'Nome',nome),h('label',{},'Trilha',tr),h('label',{},'Início',ini),h('label',{},'Fim',fim),h('label',{},'Premiação (opcional)',pre)),
-    h('p',{class:'sub'},'Turmas deste plano (cada turma fica em um plano só):'),lista,
-    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,turmas:[...sel]});aviso('Plano salvo');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
+  const itemTurma=(t,nm)=>h('label',{class:'ck'},h('input',{type:'checkbox',checked:sel.has(t),disabled:!!usadas[t],onchange:e=>{e.target.checked?sel.add(t):sel.delete(t)}}),nm+(usadas[t]?' (já está em '+usadas[t]+')':''));
+  for(const t of Object.keys(D.turmas))lista.append(itemTurma(t,D.turmas[t].nome));
+  // Adicionar nível: cria a turma daquele nível já dentro desta trilha
+  const nvSel=h('select',{},h('option',{value:''},'Escolha o nível…'),...niveisLista().map(([k,x])=>h('option',{value:k},x)));
+  const criarNivel=h('button',{class:'btn sec',type:'button',onclick:async()=>{
+    const nv=nvSel.value;if(!nv){aviso('Escolha o nível.',1);return}
+    const base=(id||cod.value||'').toUpperCase();if(!base){aviso('Preencha o código da trilha antes.',1);return}
+    const partes=base.split('-'),prefixo=partes[0],suf=partes.length>2?'-'+partes[partes.length-1]:'';const n=(/nivel-(\d+)/.exec(nv)||[])[1];
+    let codT=(prefixo+'-N'+(n!==undefined?parseInt(n,10):'X')+suf).slice(0,20),i=2;while(D.turmas[codT]){codT=(prefixo+'-N'+(n!==undefined?parseInt(n,10):'X')+suf).slice(0,17)+'-'+i++}
+    const rot=(niveisLista().find(x=>x[0]===nv)||[,nv])[1];
+    const nomeT=(rot+' · '+tr.value.replace(/^Trilha\s*/i,'')+' · '+prefixo).slice(0,40);
+    try{await enviar({acao:'turma',id:codT,nome:nomeT,status:'planejada',inicio:ini.value,fim:'',nivel:nv});D.turmas[codT]={nome:nomeT,status:'planejada',inicio:ini.value,fim:'',nivel:nv,alunos:[]};sel.add(codT);lista.append(itemTurma(codT,nomeT));aviso('Turma criada nesta trilha: '+nomeT+'. Clique em Salvar para concluir.')}catch(e){aviso(e.message,1)}}},'Criar turma deste nível');
+  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir a trilha "${pl.nome}"? As turmas continuam; a Copa volta a ser por turma.`))return;try{await enviar({acao:'excluir_plano',id});aviso('Trilha excluída');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir trilha'):'';
+  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar trilha':'Nova trilha'),
+    h('div',{class:'form'},h('label',{},'Nome da trilha',tr),h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome do calendário',nome),h('label',{},'Dia da semana',dia),h('label',{},'Horário',hor),h('label',{},'Início',ini),h('label',{},'Fim',fim),h('label',{},'Premiação (opcional)',pre),h('label',{},'Semanas sem aula (datas dd/mm/aaaa, separadas por vírgula)',sem)),
+    h('p',{class:'sub',style:'margin-top:14px'},h('b',{},'Níveis e turmas desta trilha'),' (cada turma fica em uma trilha só):'),lista,
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center'},nvSel,criarNivel),
+    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,diaSemana:dia.value,horario:hor.value,semanasSemAula:lerDatas(sem.value),turmas:[...sel]});aviso('Trilha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
 function modalTurma(id){
   const t=id?D.turmas[id]:{nome:'',status:'planejada',inicio:'',fim:'',nivel:'',acessoApos:true,acessoAte:''};
   const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-N0',style:'text-transform:uppercase',oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:t.nome,maxLength:40,placeholder:'ex.: Nível 0 · 2026.2'}),ini=h('input',{type:'date',value:t.inicio}),fim=h('input',{type:'date',value:t.fim||''}),
@@ -473,7 +500,7 @@ function desenharInicio(){
   const tem=x=>dono||pm.includes(x);
   const T=Object.values(D.turmas||{}),and=T.filter(t=>t.status==='andamento'),alAnd=and.reduce((n,t)=>n+(t.alunos||[]).length,0);
   const ST={
-    turmas:[[and.length,'em andamento'],[alAnd,'alunos nelas'],[Object.keys(D.planos||{}).length,'plano(s)']],
+    turmas:[[and.length,'em andamento'],[alAnd,'alunos nelas'],[Object.keys(D.planos||{}).length,'trilha(s)']],
     pessoas:[[(D.alunos||[]).length,'alunos'],[Object.keys(D.monitores||{}).length,'monitores'],[Object.keys(D.equipe||{}).length,'equipe']],
     cargos:[[Object.keys(D.cargos||{}).length,'perfis']],
     aulas:[[(D.aulas||[]).length,'aulas']],
@@ -482,7 +509,7 @@ function desenharInicio(){
   };
   const G=[
     ['Turmas (dia a dia)',[
-      [pm.includes('pessoas'),'#turmas','Todas as turmas e planos','Criar turmas, matricular alunos, repositórios, promover e arquivar.','turmas'],
+      [pm.includes('pessoas'),'#turmas','Trilhas e turmas','Criar trilhas (dia, horário, níveis), turmas, alunos, repositórios, promover e arquivar.','turmas'],
     ]],
     ['Conteúdo',[
       [!!D.editor,'/editor','Editor de slides','Criar e editar as aulas, roteiros e atividades.'],

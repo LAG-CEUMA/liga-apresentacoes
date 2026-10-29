@@ -298,7 +298,10 @@ module.exports = async (req, res) => {
       const turmas = (Array.isArray(b.turmas) ? b.turmas : (atual.turmas || [])).map(String).filter((t) => novo.turmas[t]);
       for (const [oid, op] of Object.entries(novo.planos || {})) if (oid !== id) { const dup = turmas.find((t) => (op.turmas || []).includes(t)); if (dup) return u.json(res, 400, { erro: `A turma ${dup} já está no plano ${oid}. Tire-a de lá primeiro.` }); }
       novo.planos = novo.planos || {};
-      novo.planos[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao) };
+      const diaSemana = b.diaSemana === undefined ? (atual.diaSemana === undefined ? '' : atual.diaSemana) : (/^[0-6]$/.test(String(b.diaSemana)) ? Number(b.diaSemana) : '');
+      const horario = String(b.horario === undefined ? (atual.horario || '') : b.horario).trim().slice(0, 30);
+      const semanasSemAula = (Array.isArray(b.semanasSemAula) ? b.semanasSemAula : (atual.semanasSemAula || [])).map(data).filter(Boolean).slice(0, 60).sort();
+      novo.planos[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao), diaSemana, horario, semanasSemAula };
       msg = `Portal: ${usuario} salvou o plano ${id}`;
     } else if (b.acao === 'excluir_plano') {
       if (!perm.includes('pessoas')) return nao();
