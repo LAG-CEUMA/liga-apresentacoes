@@ -279,6 +279,18 @@ async function telaAtiv(alvo){
   if(!r.ok){alvo.textContent='Não consegui carregar as atividades desta turma.';return}
   ATV=await r.json();ATV.roster=ord(ATV.roster);alvo.textContent='';
   alvo.append(h('p',{class:'sub'},'Cada atividade é um exercício com peso, prazo e entrega próprios. Você decide quando liberar (para todos ou só alguns) e as respostas chegam separadas, cada uma na sua Issue.'));
+  {const GK='liga_guia_ativ';let esc=false;try{esc=localStorage.getItem(GK)==='1'}catch{}
+   const mod="## Objetivo\n(uma frase: o que o aluno vai fazer)\n\n## Passo a passo\n1. \n2. \n3. \n\n## Deu certo se\n\n\n## Se deu erro\n- \n\n## O que entregar\n\n\n## Como entregar\nComente **nesta Issue** (botão *Comment*). Uma atividade, uma resposta. Arraste o print para a caixa de comentário. Travou? Escreva a dúvida aqui mesmo.\n";
+   const g=h('details',{class:'box',style:'border-left:4px solid #f5b83d;margin:10px 0'},h('summary',{style:'cursor:pointer;font-weight:700'},'Como criar uma atividade (passo a passo)'),
+    h('ol',{style:'line-height:1.6;margin:10px 0'},
+     h('li',{},h('b',{},'Antes:'),' crie a aula no Editor de slides, para a atividade ficar ligada a ela.'),
+     h('li',{},'Abra ',h('b',{},'+ Nova atividade'),' e preencha: código (ex.: A1.1·E1), título, peso, nota máxima e prazo.'),
+     h('li',{},h('b',{},'Texto da atividade'),' (vai na Issue do aluno): objetivo, passo a passo, "deu certo se", "se deu erro", o que entregar e como entregar. Use o modelo abaixo.'),
+     h('li',{},h('b',{},'Salve.'),' Ainda não aparece para os alunos (fica "não liberada"). Releia com calma.'),
+     h('li',{},h('b',{},'Liberar:'),' "Liberar para todos" cria uma Issue no repositório de cada aluno; ou escolha só alguns alunos.'),
+     h('li',{},'Os alunos respondem comentando na Issue. Acompanhe e corrija na aba ',h('b',{},'Correção'),'.')),
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn sec',type:'button',onclick:async()=>{try{await navigator.clipboard.writeText(mod.replace(/\\n/g,'\n'));aviso('Modelo copiado. Cole no texto da atividade.')}catch{aviso('Não consegui copiar.',1)}}},'Copiar modelo de texto'),h('button',{class:'btn sec',type:'button',onclick:()=>{g.open=false;try{localStorage.setItem(GK,'1')}catch{}}},'Entendi, recolher')));
+   g.open=!esc;alvo.append(g)}
   alvo.append(h('div',{class:'leg'},
     h('div',{class:'tg E',style:'border:1px solid #fff2'},h('span',{class:'letra'},'E'),h('span',{},h('b',{},'Exercício (Exercise)'),h('br'),h('span',{class:'expl'},'Feito em sala, durante a aula, com o instrutor.'))),
     h('div',{class:'tg T',style:'border:1px solid #fff2'},h('span',{class:'letra'},'T'),h('span',{},h('b',{},'Tarefa (Task)'),h('br'),h('span',{class:'expl'},'Dever de casa, depois da aula: T1, T2, T3 e T4 (T4 é opcional, pontos extras).'))),

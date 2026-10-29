@@ -45,6 +45,17 @@ async function lista() {
   box.textContent = '';
   box.append(h('div', { class: 'topo' }, h('div', {}, h('p', { class: 'tag' }, 'LIGA ACADÊMICA DE GAMES · CEUMA'), h('h1', {}, 'Editor de slides')), h('div', { class: 'acoes' }, h('a', { class: 'btn sec', href: '/' }, '← Início'), d.dono ? h('a', { class: 'btn sec', href: '/admin' }, 'Painel') : null)),
     h('p', { class: 'sub' }, 'Crie e edite as aulas sem mexer em código. Cada nível tem suas aulas. Aulas novas começam como "Só owners": para liberar aos alunos, use o Painel → Níveis das aulas.'));
+  const GK = 'liga_guia_editor'; let escondido = false; try { escondido = localStorage.getItem(GK) === '1'; } catch { /* sem armazenamento */ }
+  const guia = h('details', { class: 'nv', style: 'border-left:4px solid #f5b83d' }, h('summary', { style: 'cursor:pointer;font-weight:700' }, 'Como criar uma aula (passo a passo)'),
+    h('ol', { style: 'line-height:1.6;margin:10px 0' },
+      h('li', {}, h('b', {}, 'Escolha o nível'), ' abaixo e escreva o título da aula no campo "Título da nova aula". Para partir de uma aula pronta, escolha "Copiar de".'),
+      h('li', {}, 'Clique em ', h('b', {}, '+ Nova aula'), '. Abre o editor: cada slide é um modelo; clique nos textos para trocar.'),
+      h('li', {}, h('b', {}, 'Roteiro:'), ' em cada slide, escreva na caixa "Roteiro do apresentador" (uma ideia por linha). O que for para ler em voz alta vai entre aspas; o resto é só orientação sua. O roteiro nunca aparece para os alunos.'),
+      h('li', {}, h('b', {}, 'Salve'), '. O portal gera os slides e o roteiro no GitHub sozinho. Aula nova começa como "Só owners"; um owner libera para a turma no Painel.'),
+      h('li', {}, h('b', {}, 'Exercícios e atividades:'), ' depois da aula pronta, crie no Painel → Turmas → sua turma → "Atividades e correção" → "+ Nova atividade".'),
+      h('li', {}, h('b', {}, 'Planejamento:'), ' o botão "Planejamento do nível" guarda objetivo, materiais e as aulas previstas; ajuda a decidir o que montar primeiro.')),
+    h('button', { class: 'b', onclick: () => { guia.open = false; try { localStorage.setItem(GK, '1'); } catch { /* ok */ } } }, 'Entendi, recolher'));
+  guia.open = !escondido; box.append(guia);
   if (d.dono) {
     box.append(h('div', { class: 'nv' }, h('b', {}, 'Novo nível'), h('p', { class: 'sub' }, 'Os níveis pertencem a uma trilha (assunto). Crie em Painel → Turmas → Editar trilha → "Criar nível"; ele aparece aqui para você montar as aulas.'), h('a', { class: 'btn sec', href: '/admin#turmas' }, 'Ir para o Painel')));
   }
