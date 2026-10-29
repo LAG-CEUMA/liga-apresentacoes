@@ -164,11 +164,11 @@ function abrirGaveta(nome,contato){
       box.append(bl)}
     if(E.equipe&&dono){
       const cs=Object.keys(D.cargos);
-      const bl=h('div',{class:'sec'},h('h3',{},'Perfis de permissão (pode ter vários; vale a soma: prevalece o que dá mais acesso)',ajuda('pes_perfis')),...cs.map(c=>chip(D.cargos[c].nome,E.cargos.has(c),()=>{E.cargos.has(c)?E.cargos.delete(c):E.cargos.add(c);desenhar()},'cargo')),
-        cs.length?'':h('p',{class:'sub'},'Ainda não há perfis. Crie na aba Perfis.'),h('div',{class:'sub'},'Precisa de uma permissão a mais? Crie um perfil na aba Perfis com ela e marque aqui. Não há permissão avulsa por pessoa.'));
+      const bl=h('div',{class:'sec'},h('h3',{},'Cargos (pode ter vários; vale a soma: prevalece o que dá mais acesso)',ajuda('pes_perfis')),...cs.map(c=>chip(D.cargos[c].nome,E.cargos.has(c),()=>{E.cargos.has(c)?E.cargos.delete(c):E.cargos.add(c);desenhar()},'cargo')),
+        cs.length?'':h('p',{class:'sub'},'Ainda não há cargos. Crie na aba Cargos e funções.'),h('div',{class:'sub'},'Precisa de uma permissão a mais? Crie um cargo na aba Cargos e funções com ela e marque aqui. Não há permissão avulsa por pessoa.'));
       const x=rascunhoInfo();
       for(const p of Object.keys(PERM_INFO)){const on=x.perms.includes(p);bl.append(h('div',{class:'permlinha'},h('span',{class:on?'on':'off'},on?'✓':'–'),h('span',{class:on?'':'off'},h('b',{},PERM_INFO[p][0]),' · '+PERM_INFO[p][1]),h('span',{class:'src'},on&&x.origem[p]?'por '+x.origem[p].join(', '):'')))}
-      if(E.extras.size)bl.append(h('div',{style:'background:#3a2a10;border:1px solid #b66d00;border-radius:10px;padding:10px 14px;margin-top:10px'},h('b',{},'Permissões individuais antigas: '+[...E.extras].map(p=>PERM_INFO[p][0]).join(', ')),h('div',{class:'sub'},'Não são mais usadas. Crie um perfil na aba Perfis com essas permissões, marque-o acima e remova as individuais.'),h('button',{class:'chipx',type:'button',style:'margin-top:6px',onclick:()=>{E.extras.clear();desenhar()}},'Remover permissões individuais')));
+      if(E.extras.size)bl.append(h('div',{style:'background:#3a2a10;border:1px solid #b66d00;border-radius:10px;padding:10px 14px;margin-top:10px'},h('b',{},'Permissões individuais antigas: '+[...E.extras].map(p=>PERM_INFO[p][0]).join(', ')),h('div',{class:'sub'},'Não são mais usadas. Crie um cargo na aba Cargos e funções com essas permissões, marque-o acima e remova as individuais.'),h('button',{class:'chipx',type:'button',style:'margin-top:6px',onclick:()=>{E.extras.clear();desenhar()}},'Remover permissões individuais')));
       box.append(bl)}
     if(dono&&(E.monitor||E.equipe)&&!E.owner){const bl=h('details',{class:'sec'},h('summary',{style:'cursor:pointer;font-weight:700'},'Permissão para editar slides (opcional)',ajuda('pes_editor')),h('div',{class:'sub'},'Só para quem vai criar/editar aulas no editor. Escolha o nível (ou uma aula) e clique em Liberar.'));bl.open=E.editor.size>0;
       const rot=(v)=>{const [d,i]=v.split('/');const a=(D.aulas||[]).find(x=>x.dir===d&&(!i||x.id===i));const n=rotuloNivel(d);return i?`${n} · ${a?a.titulo:i}`:`${n} (todas as aulas)`};
@@ -212,12 +212,14 @@ async function verComo(i){
 // ---------- aba Cargos ----------
 function desenharCargos(){
   const p=$('p-cargos');p.textContent='';
-  p.append(h('p',{class:'sub',style:'max-width:760px'},'Um perfil (cargo) é um conjunto de permissões: você cria uma vez e depois só marca quem o recebe, na ficha da pessoa. Não existe permissão avulsa. Uma pessoa pode ter vários perfis; vale a soma e prevalece o que dá mais acesso. Só owners criam perfis.'));
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Um cargo é um conjunto de permissões: você cria uma vez e dá a quem precisar, aqui mesmo (campo "Dar cargo") ou na ficha da pessoa. Não existe permissão avulsa. Uma pessoa pode ter vários perfis; vale a soma e prevalece o que dá mais acesso. Só owners criam perfis.'));
   const g=h('div',{class:'grade'});
   for(const id of Object.keys(D.cargos)){const c=D.cargos[id];const ocup=Object.keys(D.equipe||{}).filter(n=>(D.equipe[n].cargos||[]).includes(id));
     const nome=h('input',{type:'text',value:c.nome,maxLength:40,style:'width:100%;font-weight:700'}),desc=h('input',{type:'text',value:c.descricao||'',maxLength:100,placeholder:'descrição curta',style:'width:100%;margin:6px 0'});
     const cx=Object.keys(PERM_INFO).map(k=>h('label',{class:'ck'},h('input',{type:'checkbox',checked:c.permissoes.includes(k),'data-k':k}),h('b',{},PERM_INFO[k][0]),h('span',{class:'sub'},PERM_INFO[k][1])));
-    g.append(h('div',{class:'cartao2'},nome,desc,...cx,h('div',{class:'sub',style:'margin-top:10px'},`Quem ocupa (${ocup.length})`),h('div',{},...ocup.map(n=>h('span',{class:'pill e'},'@'+n))),
+    g.append(h('div',{class:'cartao2'},nome,desc,...cx,h('div',{class:'sub',style:'margin-top:10px'},`Quem ocupa (${ocup.length})`),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;margin:4px 0'},...ocup.map(n=>h('span',{class:'pill e'},'@'+n+' ',h('button',{type:'button',title:'Tirar este cargo de @'+n,style:'background:none;border:0;color:inherit;cursor:pointer;font-size:15px',onclick:async()=>{if(!confirm('Tirar o cargo "'+c.nome+'" de @'+n+'?'))return;try{await enviar({acao:'cargo_atribuir',id,usuario:n,dar:false});aviso('Cargo removido');await carregar()}catch(e){aviso(e.message,1)}}},'×'))),ocup.length?'':h('span',{class:'sub'},'Ninguém ainda.')),
+      (()=>{const nomes=[...new Set([...(D.contatos||[]).map(x=>x.usuario),...(D.alunos||[]),...Object.keys(D.monitores||{}),...Object.keys(D.equipe||{})].filter(Boolean))].filter(n=>!ocup.includes(n)).sort((a,b)=>a.localeCompare(b));const dl='dl-'+id,inp=h('input',{type:'text',placeholder:'Dar este cargo a… (usuário)',list:dl,style:'flex:1;min-width:150px'});
+        return h('div',{style:'display:flex;gap:6px;align-items:center;margin-top:6px'},inp,h('datalist',{id:dl},...nomes.map(n=>h('option',{value:n}))),h('button',{class:'btn sec',type:'button',onclick:async()=>{const n=inp.value.trim().replace(/^@/,'').toLowerCase();if(!n)return;try{await enviar({acao:'cargo_atribuir',id,usuario:n,dar:true});aviso('Cargo dado a @'+n);await carregar()}catch(e){aviso(e.message,1)}}},'Dar cargo'))})(),
       h('div',{style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'cargo',id,nome:nome.value,descricao:desc.value,permissoes:cx.map(l=>l.querySelector('input')).filter(x=>x.checked).map(x=>x.dataset.k)});aviso('Cargo salvo');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'),
         h('button',{class:'btn sec',type:'button',onclick:async()=>{const ocup=Object.entries(D.equipe||{}).filter(([k,v])=>(v.cargos||[]).includes(id)).map(([k])=>'@'+k);if(!await confirmar({titulo:'Apagar o cargo "'+c.nome+'"?',corpo:[h('p',{class:'sub'},ocup.length?'Estas pessoas perdem as permissões deste cargo: '+ocup.join(', ')+'.':'Ninguém ocupa este cargo agora.'),h('p',{class:'sub'},'Nada é alterado no GitHub.')],digitar:c.nome,botao:'Apagar cargo'}))return;try{await enviar({acao:'remover_cargo',id});aviso('Cargo apagado');await carregar()}catch(e){aviso(e.message,1)}}},'Apagar'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:async()=>{const n=prompt('Nome do novo cargo (ex.: Secretaria, Vice-presidência):');if(!n)return;try{await enviar({acao:'cargo',nome:n,permissoes:[]});aviso('Cargo criado: marque as permissões e salve');await carregar()}catch(e){aviso(e.message,1)}}},'+ Novo cargo'),h('div',{class:'sub'},'Ex.: Vice-presidência, Eventos, Monitoria geral')));
@@ -540,7 +542,7 @@ function desenharWiki(){
 
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 // ---------- abas ----------
-function abasDisponiveis(){const a=[['inicio','Início']];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[['inicio','Início']];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos e funções']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
 function desenharInicio(){
   const p=$('p-inicio');p.textContent='';const pm=D.permissoes||[];const dono=!!D.dono;
   const tem=x=>dono||pm.includes(x);
@@ -570,7 +572,7 @@ function desenharInicio(){
     ]],
     ['Acesso',[
       [pm.includes('pessoas'),'#pessoas','Pessoas','Cadastrar e ordenar alunos, monitores e equipe.','pessoas'],
-      [dono,'#cargos','Perfis','O que cada tipo de pessoa pode fazer.','cargos'],
+      [dono,'#cargos','Cargos e funções','Criar cargos, definir o que cada um pode fazer e dar a pessoas.','cargos'],
     ]],
     ['Ajuda',[
       [true,'#guia','Guia do Painel','Como usar cada área, em linguagem simples. Serve também para novos owners.'],

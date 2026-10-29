@@ -272,6 +272,15 @@ module.exports = async (req, res) => {
       if (!id) return u.json(res, 400, { erro: 'Nome inválido.' });
       novo.cargos[id] = { nome: nomeC, descricao: String(b.descricao || '').trim().slice(0, 100), permissoes: (Array.isArray(b.permissoes) ? b.permissoes : []).filter((x) => u.PERMISSOES.includes(x)) };
       msg = `Portal: ${usuario} definiu o cargo ${nomeC} (${novo.cargos[id].permissoes.join(', ') || 'sem permissões'})`;
+    } else if (b.acao === 'cargo_atribuir') { // dá ou tira um cargo de uma pessoa (só owners)
+      if (!dono) return nao();
+      const id = String(b.id || ''); const nome = ler([b.usuario])[0];
+      if (!novo.cargos[id]) return u.json(res, 400, { erro: 'Cargo não encontrado.' });
+      if (!nome || !u.USER_RE.test(nome)) return u.json(res, 400, { erro: 'Usuário inválido.' });
+      const atual = novo.equipe[nome] || { titulo: '', permissoes: [], cargos: [] };
+      const cs = new Set(atual.cargos || []); if (b.dar === false) cs.delete(id); else cs.add(id);
+      if (!cs.size && !(atual.permissoes || []).length) delete novo.equipe[nome]; else novo.equipe[nome] = { ...atual, cargos: [...cs] };
+      msg = `Portal: ${usuario} ${b.dar === false ? 'tirou' : 'deu'} o cargo ${id} ${b.dar === false ? 'de' : 'a'} ${nome}`;
     } else if (b.acao === 'remover_cargo') {
       if (!dono) return nao();
       if (!novo.cargos[b.id]) return u.json(res, 400, { erro: 'Cargo não encontrado.' });
