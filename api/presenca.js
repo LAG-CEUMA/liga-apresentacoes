@@ -62,9 +62,12 @@ module.exports = async (req, res) => {
       }
       if (q.acao === 'minhasatividades') {
         const todas = await A.listar(); const out = [];
+        let resp = {}; if (todas.some((a) => a.liberada && ((a.disparos || {})[usuario] || {}).numero)) { try { resp = await A.respostasDoAluno(usuario); } catch { resp = {}; } }
         for (const a of todas) { const t = cfg.turmas[a.turma]; if (!a.liberada || !t || !t.alunos.includes(usuario) || !A.aplica(a, usuario)) continue;
           const e = (a.entregas || {})[usuario] || {}; const dsp = (a.disparos || {})[usuario] || {};
-          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, notaMax: a.notaMax || 10, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, aguardando: (e.estado === 'prazo' || e.estado === 'atraso') && typeof e.nota !== 'number', issue: dsp.url || '' }); }
+          out.push({ turma: a.turma, id: a.id, codigo: a.codigo, titulo: a.titulo, peso: a.peso, notaMax: a.notaMax || 10, opcional: !!a.opcional, prazo: a.prazo, estado: e.estado || '', nota: e.nota === undefined ? null : e.nota, aguardando: (e.estado === 'prazo' || e.estado === 'atraso') && typeof e.nota !== 'number', issue: dsp.url || '',
+            // resposta já enviada no GitHub, ainda sem correção: o aluno vê "respondida" e se foi no prazo ou com atraso
+            ...(!e.estado && dsp.numero && resp[dsp.numero] ? { respondida: true, respondidaEm: resp[dsp.numero].primeira, respondidaAtraso: !!(a.prazo && new Date(resp[dsp.numero].primeira).getTime() > new Date(a.prazo).getTime()) } : {}) }); }
         return u.json(res, 200, { usuario, atividades: out, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
     if (!minhas.length) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
