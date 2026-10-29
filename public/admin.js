@@ -592,7 +592,7 @@ function desenharInicio(){
           bt('Chamada',abrirPresenca(id,'chamada')),
           bt('Atividades e correção',abrirPresenca(id,'corr'),h('span',{class:'bdg',id:'corr-'+id,style:'margin-left:8px;background:#ff5d5d;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px',hidden:!((window.CORR_POR||{})[id])},String((window.CORR_POR||{})[id]||''))),
           bt('Ranking',abrirPresenca(id,'rank')),
-          bt('Aulas e materiais',()=>materiaisDaTurma(id)))))}
+          ...(D.aulas?[bt('Aulas e materiais',()=>materiaisDaTurma(id))]:[]))))}
     for(const [,alvo,t,d,id,sk] of L){const sts=(ST[sk||id]||[]);const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),sts.length?h('div',{class:'kv',style:'margin-top:10px'},...sts.map(([n,l],i)=>h('div',{},h('div',{class:'num',...((sk||id)==='corr'?{id:'stat-corr'}:{}),style:typeof n==='string'&&n.length>6?'font-size:18px':''},String(n)),h('div',{class:'sub'},l)))):'',h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
       if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
       if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}

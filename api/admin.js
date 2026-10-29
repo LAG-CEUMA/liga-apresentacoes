@@ -18,6 +18,10 @@ module.exports = async (req, res) => {
       const v = { usuario, dono, papel: papelU, editor, titulo: u.tituloDe(cfg, usuario), permissoes: perm, fixos: dono ? u.admins() : [] };
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
+      if (!perm.includes('pessoas') && papelU === 'monitor') { // monitor: só as turmas que ele ministra (para os atalhos de chamada, atividades e ranking)
+        const m = cfg.monitores[usuario]; const ids = (m && m.turmas && m.turmas.length) ? m.turmas : Object.keys(cfg.turmas);
+        v.turmas = Object.fromEntries(ids.filter((id) => cfg.turmas[id] && cfg.turmas[id].status !== 'arquivada').map((id) => [id, { nome: cfg.turmas[id].nome, status: cfg.turmas[id].status, nivel: cfg.turmas[id].nivel, inicio: cfg.turmas[id].inicio || '', fim: cfg.turmas[id].fim || '', alunos: cfg.turmas[id].alunos }]));
+      }
       if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.planos = cfg.planos || {}; v.assuntos = cfg.assuntos || {}; v.arenaAtiva = cfg.arenaAtiva === true; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
