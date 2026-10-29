@@ -255,6 +255,7 @@ function materiaisDaTurma(id){
     corpo.append(h('div',{style:'border-top:1px solid #fff2;padding:10px 0'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('b',{},a.titulo),h('span',{class:'pill m'},'Quem vê: '+ac)),h('div',{class:'sub',style:'font-size:12px'},a.chave),
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},lk('Slides (projetar)',a.url,'btn'),a.roteiro?lk('Roteiro (não projetar)',a.roteiro):'',D.editor?lk('Editar slides','/editor'):'',bt('Chamada desta aula',ir('/presenca#chamada',id,a.chave)),bt('Atividades',ir('/presenca#ativ',id,a.chave)),(D.permissoes||[]).includes('aulas')||D.dono?bt('Quem vê',()=>{FECHA();mostrar('aulas')}):'')))}
   FECHA=camada([h('h2',{style:'margin:0 0 8px'},'Aulas e materiais · '+t.nome),corpo],'gaveta').fechar}
+function abrirPresenca(id,aba){return()=>{try{localStorage.setItem('liga_turma',id)}catch{}window.open('/presenca#'+aba,'liga-presenca')}}
 function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
   if(D.dono)p.append(h('div',{style:'margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:auditoriaRepos},'Auditar repositórios e contas (GitHub)'),h('span',{class:'sub',style:'margin-left:8px'},'acha repositórios órfãos, contas que trocaram de nome e acessos estranhos')));
@@ -266,11 +267,13 @@ function desenharTurmas(){
       h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
-      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais'),h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
+      (D.permissoes.includes('presenca')||D.dono||D.papel==='monitor')?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'},
+        h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'chamada')},'Chamada'),h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'corr')},'Atividades e correção'),h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'rank')},'Ranking'),h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')):h('div',{style:'margin-bottom:8px'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',
-        t.alunos.length?h('button',{class:'btn',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
+        t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
         h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'),ajuda('turma_botoes'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalTurma('')},'+ Nova turma'),h('div',{class:'sub'},'Dê um código curto (ex.: 2027.2). Alunos novos entram na turma em andamento ou na que você escolher.')));
   const pg=h('div',{class:'grade'});const dd=v=>v?v.split('-').reverse().join('/'):'sem data';
@@ -279,8 +282,10 @@ function desenharTurmas(){
       h('div',{style:'margin:6px 0'},...(pl.turmas.length?pl.turmas.map(t=>h('span',{class:'pill m'},(D.turmas[t]||{}).nome||t)):[h('span',{class:'sub'},'nenhuma turma ainda')])),
       h('button',{class:'btn sec',type:'button',onclick:()=>modalPlano(id)},'Editar plano')))}
   pg.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Novo plano'),h('div',{class:'sub'},'Plano = calendário (ex.: 2026.2 a 2027.1) com as turmas/níveis dele. O ranking do plano soma os pontos das turmas, e a Copa passa a valer para o plano inteiro.')));
-  p.append(h('h2',{style:'margin:22px 0 6px'},'Planos (calendários)',ajuda('plano')),h('p',{class:'sub',style:'max-width:760px'},'Cada trilha tem o seu plano. A Arena Global (comparar trilhas) já está pronta, mas fica desligada até existirem trilhas paralelas (previsto para 2027.2).'),pg);
-  p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
+  g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px';
+  p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'));
+  const pl=h('details',{class:'nivel'},h('summary',{},h('span',{class:'nvt'},'Planos (calendários)'),h('span',{class:'nvc'},Object.keys(D.planos).length+' plano(s)'),ajuda('plano')),h('p',{class:'sub',style:'max-width:760px'},'Cada trilha tem o seu plano. A Arena Global (comparar trilhas) já está pronta, mas fica desligada até existirem trilhas paralelas (previsto para 2027.2).'),pg);
+  p.append(pl)}
 function modalPlano(id){
   const pl=id?D.planos[id]:{nome:'',trilha:'Trilha 1',inicio:'',fim:'',turmas:[],premiacao:''};
   const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-2027.1',style:'text-transform:uppercase',disabled:!!id,oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:pl.nome,maxLength:40,placeholder:'ex.: Plano 2026.2 a 2027.1'}),tr=h('input',{type:'text',value:pl.trilha,maxLength:30}),ini=h('input',{type:'date',value:pl.inicio}),fim=h('input',{type:'date',value:pl.fim}),pre=h('input',{type:'date',value:pl.premiacao||''});
@@ -468,8 +473,8 @@ function desenharInicio(){
   const tem=x=>dono||pm.includes(x);
   const G=[
     ['Dia a dia',[
-      [tem('presenca')||D.papel==='monitor','/presenca#corr','Correção de atividades','Respostas dos alunos no GitHub esperando nota, dúvidas e quem não entregou.','corr'],
-      [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Fazer a chamada, registrar participação e ver o ranking das turmas.'],
+      [tem('presenca')||D.papel==='monitor','/presenca#corr','Correção de atividades','Respostas dos alunos esperando nota e dúvidas. Abre a turma em andamento.','corr'],
+      [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Chamada, participação e ranking. Cada turma também tem esses botões em Turmas.'],
       [pm.includes('pessoas'),'#turmas','Turmas e alunos','Criar turmas, matricular alunos, repositórios e planos.'],
     ]],
     ['Conteúdo',[
@@ -493,7 +498,8 @@ function desenharInicio(){
     p.append(h('h3',{style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7'},nome));
     const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
     for(const [,alvo,t,d,id] of L){const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
-      if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='_blank';
+      if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
+      if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}
       if(id==='corr'){const b=h('span',{id:'badge-corr',style:'margin-left:8px;vertical-align:middle;background:#ff5d5d;color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;font-size:13px'},'');b.hidden=!window.CORR_N;if(window.CORR_N)b.textContent=window.CORR_N+' a ver';a.firstChild.append(b)}else a.firstChild.append(b)
       g.append(a)}
     p.append(g)}}
