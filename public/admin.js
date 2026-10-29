@@ -503,14 +503,19 @@ function desenharInicio(){
     ]],
   ];
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo o que você pode fazer, agrupado por tarefa. Cada ação existe em um lugar só.'));
+  const nav=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px;position:sticky;top:0;z-index:5;padding:8px 0;background:var(--bg)'});const chips={};
+  p.append(nav);
   for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);if(!L.length)continue;
-    p.append(h('h3',{style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7'},nome));
+    const idG='grp-'+nome.replace(/\s+/g,'-');
+    const ch=h('button',{type:'button',class:'btn sec',style:'padding:6px 14px;font-size:14px',onclick:()=>document.getElementById(idG).scrollIntoView({behavior:'smooth',block:'start'})},nome+' ('+L.length+')');chips[idG]=ch;nav.append(ch);
+    p.append(h('h3',{id:idG,style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;scroll-margin-top:60px'},nome));
     const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
     for(const [,alvo,t,d,id,sk] of L){const sts=(ST[sk||id]||[]);const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),sts.length?h('div',{class:'kv',style:'margin-top:10px'},...sts.map(([n,l],i)=>h('div',{},h('div',{class:'num',...((sk||id)==='corr'?{id:'stat-corr'}:{}),style:typeof n==='string'&&n.length>6?'font-size:18px':''},String(n)),h('div',{class:'sub'},l)))):'',h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
       if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
       if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}
       g.append(a)}
-    p.append(g)}}
+    p.append(g)}
+  if('IntersectionObserver' in window){const marca=id=>{for(const k in chips){chips[k].className='btn '+(k===id?'':'sec')}};const first=Object.keys(chips)[0];if(first)marca(first);const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)marca(e.target.id)},{rootMargin:'-10% 0px -75% 0px'});for(const k in chips)io.observe(document.getElementById(k))}}
 function desenharFerramentas(){
   const p=$('p-ferramentas');p.textContent='';const pm=D.permissoes||[];
   const L=[[pm.includes('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques de ranking da tela inicial.'],
