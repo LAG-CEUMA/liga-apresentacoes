@@ -92,6 +92,7 @@ ativ_botoes:{t:'Botões da atividade',l:['Liberar a quem falta: cria a Issue par
 resp:{t:'Respostas e notas',l:['As respostas do GitHub são buscadas sozinhas ao abrir. Quem comentou na Issue já vem marcado como No prazo ou Atrasada, comparando com o prazo.','Você revisa, escolhe a nota de 0 a 10 e clica em Salvar entregas. Sem nota, o aluno fica “aguardando correção” e ainda não pontua.','No prazo vale 100% do peso, atrasada 50%, não entregou 0. A nota multiplica.','Dispensado: o aluno não faz esta atividade e ela não conta para ele.']},
 atualizar:{t:'Atualizar respostas do GitHub',l:['Busca de novo. Só precisa se um aluno comentou depois que você abriu esta tela (por exemplo, respondendo durante a aula).','Suas marcações ainda não salvas são mantidas. Só quem está como Não entregou recebe a sugestão.']},
 salvar_entregas:{t:'Salvar entregas',l:['Grava as marcas e notas desta atividade. Elas entram nos pontos (ranking e Meu progresso).','Pode salvar várias vezes: salvar de novo substitui o anterior.','Atenção: quem está como Não entregou fica com 0. Nas tarefas de casa, salve depois do prazo.']},
+lote:{t:'Liberar várias de uma vez',l:['Marque as caixas das atividades (ou use Marcar pendentes / Marcar todas) e clique em Liberar marcadas.','Cada atividade marcada é liberada para todos os alunos da turma que ainda não têm a Issue dela. Quem já tem não recebe de novo.','Marcar pendentes: marca só as que ainda têm aluno sem Issue (atividade não liberada, aluno novo ou repositório criado depois).']},
 lib:{t:'Liberar só alguns alunos',l:['Marque os alunos e clique em Liberar para os marcados. Serve para aluno que entrou depois, reposição, reforço ou teste.','Recolher: os alunos deixam de ver a atividade na plataforma (as Issues continuam no GitHub).','Copiar texto da Issue: copia o enunciado.']},
 edit:{t:'Editar atividade',l:['Código (ex.: N0.1-2·E1: nível, aula, E de exercício ou T de tarefa), título, peso e prazo.','O texto vai em Markdown na Issue dos alunos. Mudar depois de liberada não reescreve as Issues que já foram criadas.']}
 };
@@ -253,7 +254,7 @@ async function telaRank(alvo){
   const tb=h('tbody',{});for(const x of R.ranking)tb.append(h('tr',{style:x.posicao<=5?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},quem(x.usuario)),h('td',{},h('b',{},String(x.total))),h('td',{},String(x.partes.presenca)),h('td',{},String(x.partes.participacao)),h('td',{},String(x.partes.exercicios)),h('td',{style:x.partes.penalidades?'color:var(--err)':''},x.partes.penalidades?'−'+x.partes.penalidades:'0')));
   alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['#','Aluno','Total','Presença','Particip.','Exercícios','Penal.'].map(t=>h('th',{},t)))),tb)),h('p',{class:'sub'},'As linhas em destaque são o Top 5 da turma.'))}
 
-let ATV=null,ATV_SEL='',ATV_MODO='resp',CONF={},DRAFT={};
+let ATV=null,ATV_SEL='',ATV_MODO='resp',CONF={},DRAFT={},ATV_MARC=new Set();
 const aivToLocal=iso=>{if(!iso)return'';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
 const fmtD=iso=>iso?new Date(iso).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'sem prazo';
 async function postA(c){return api({...c,turma:TURMA})}
@@ -286,18 +287,39 @@ async function telaAtiv(alvo){
   const det=(chave,titulo,aberto,cls,extra)=>{const d=h('details',{class:cls||'ag'});const sm=h('summary',{});if(extra)sm.append(...extra);else sm.append(titulo);d.append(sm);d.open=aberto||ATV_OPEN.has(chave);d.addEventListener('toggle',()=>{d.open?ATV_OPEN.add(chave):ATV_OPEN.delete(chave)});return d};
   const destino=(a)=>{const m=/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(a.codigo||'');const aula=m?m[1].trim():'Sem aula',tp=m?m[2].toUpperCase():'O';
     if(!grupos[aula]){const n=ATV.atividades.filter(x=>((/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(x.codigo||'')||[0,'Sem aula'])[1].trim())===aula).length;grupos[aula]={d:det('a:'+aula,'',false,'ag',[h('span',{},aula),h('span',{class:'cnt'},n+' atividades')]),t:{}};lista.append(grupos[aula].d)}
-    const G=grupos[aula];if(!G.t[tp]){G.t[tp]=det('t:'+aula+tp,'',false,'tg '+tp,[h('span',{class:'letra'},tp==='O'?'·':tp),h('span',{},TIPOS[tp].split(':')[0].replace(/^[ET] · /,''),h('br'),h('span',{class:'expl'},TIPOS[tp].split(':')[1]||''))]);G.d.append(G.t[tp])}if(ATV_SEL===a.id){G.d.open=true;G.t[tp].open=true}return G.t[tp]};
+    const G=grupos[aula];if(!G.t[tp]){G.t[tp]=det('t:'+aula+tp,'',false,'tg '+tp,[h('span',{class:'letra'},tp==='O'?'·':tp),h('span',{},TIPOS[tp].split(':')[0].replace(/^[ET] · /,''),h('br'),h('span',{class:'expl'},TIPOS[tp].split(':')[1]||''))]);G.t[tp].ativs=[];G.t[tp].cks={};G.t[tp].append(barraLote(G.t[tp],tp,alvo));G.d.append(G.t[tp])}if(ATV_SEL===a.id){G.d.open=true;G.t[tp].open=true}return G.t[tp]};
   for(const a of ATV.atividades){
     const n=Object.values(a.disparos||{}).filter(x=>x.numero).length;
     const bt=(m,t,dica)=>h('button',{class:ATV_SEL===a.id&&ATV_MODO===m?'btn':'btn sec',type:'button',title:dica,onclick:()=>{if(ATV_SEL===a.id&&ATV_MODO===m)ATV_SEL='';else{ATV_SEL=a.id;ATV_MODO=m}telaAtiv(alvo)}},t);
-    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo),h('span',{class:'pill '+(a.liberada?'lib':'nao')},a.liberada?'liberada ('+n+')':'não liberada'),a.opcional?h('span',{class:'pill opc'},'opcional'):'',h('div',{class:'sub'},`${a.opcional?'pontos extras':'peso '+a.peso} · prazo ${fmtD(a.prazo)}`)),
+    const falta=faltamAtiv(a).length;const mc=h('input',{type:'checkbox',title:'Marcar para liberar em lote',onchange:e=>{e.target.checked?ATV_MARC.add(a.id):ATV_MARC.delete(a.id);atualizaLotes()}});mc.checked=ATV_MARC.has(a.id);
+    const el=h('div',{class:'linha',style:'flex-wrap:wrap;gap:8px'},mc,h('div',{class:'t',style:'min-width:220px'},h('b',{},(a.codigo?a.codigo+' · ':'')+a.titulo),h('span',{class:'pill '+(a.liberada?'lib':'nao')},a.liberada?'liberada ('+n+')':'não liberada'),a.opcional?h('span',{class:'pill opc'},'opcional'):'',a.liberada&&falta?h('span',{class:'pill nao',title:'Alunos da turma que ainda não receberam a Issue'},falta+' sem Issue'):'',h('div',{class:'sub'},`${a.opcional?'pontos extras':'peso '+a.peso} · prazo ${fmtD(a.prazo)}`)),
       h('button',{class:'btn',type:'button',title:'Cria a Issue desta atividade no repositório de cada aluno que ainda não a tem',onclick:async()=>{if(!confirm('Liberar "'+(a.codigo||a.titulo)+'" para TODOS os alunos da turma agora? Será criada uma Issue no repositório de cada um que ainda não tiver.'))return;try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:[]});aviso(`Issues criadas: ${r.criadas}${r.jaTinham?' · já tinham: '+r.jaTinham:''}${r.falhas.length?' · FALHAS: '+r.falhas.map(x=>x.usuario+' ('+x.erro+')').join(', '):''}`,r.falhas.length);telaAtiv(alvo)}catch(e){aviso(e.message,1)}}},a.liberada?'Liberar a quem falta':'Liberar'),
       ...(a.liberada?[bt('resp','Respostas e notas','Veja quem respondeu no GitHub, marque no prazo/atrasada e dê a nota')]:[]),bt('lib','Liberar só alguns','Escolha quais alunos recebem a atividade (ou recolha a atividade)'),bt('edit','Editar','Mude título, peso, prazo e texto da atividade'),...(a.liberada&&SOU_PROF()?[btnClaude(a)]:[]),ajuda('ativ_botoes'));
-    const D=destino(a);D.append(el);
+    const D=destino(a);D.ativs.push(a);D.cks[a.id]=mc;D.append(el);
     if(ATV_SEL===a.id)D.append(painelAtiv(a,alvo));
   }
-  alvo.append(lista,formAtiv(null,alvo));
+  alvo.append(lista,formAtiv(null,alvo));atualizaLotes();
 }
+// Liberar em lote: marque as atividades (exercícios ou tarefas) e libere todas de uma vez. Só cria Issue para quem ainda não tem.
+// Liberada só para alguns: "faltam" são só esses alguns (não espalha para a turma toda).
+const soAlguns=(a)=>a.liberada&&(a.alvo||[]).length>0;
+const faltamAtiv=(a)=>(soAlguns(a)?a.alvo:((ATV&&ATV.roster)||[])).filter(k=>!((a.disparos||{})[k]||{}).numero);
+let LOTES=[];const atualizaLotes=()=>LOTES=LOTES.filter(f=>f());
+function barraLote(D,tp,alvo){const nome=tp==='E'?'exercícios':tp==='T'?'tarefas':'atividades';
+  const btn=h('button',{class:'btn',type:'button',title:'Libera as atividades marcadas deste grupo. Para quem já tem a Issue, nada se repete.',onclick:async()=>{
+    const sel=D.ativs.filter(a=>ATV_MARC.has(a.id));if(!sel.length)return aviso('Marque ao menos uma atividade deste grupo.',1);
+    const nf=sel.reduce((s,a)=>s+faltamAtiv(a).length,0);if(!nf)return aviso('Todos os alunos já receberam as atividades marcadas.');
+    if(!confirm(`Liberar ${sel.length} atividade(s) marcada(s) (${nome}) para os alunos que ainda não receberam?\n\n${sel.map(a=>'• '+(a.codigo||a.titulo)+': '+faltamAtiv(a).length+' aluno(s)').join('\n')}\n\nQuem já tem a Issue não recebe de novo.`))return;
+    btn.disabled=true;let criadas=0;const falhas=[];
+    for(const [i,a] of sel.entries()){btn.textContent=`Liberando ${i+1} de ${sel.length}…`;
+      try{const r=await postA({acao:'ativ_liberar',id:a.id,alunos:soAlguns(a)?faltamAtiv(a):[]});criadas+=r.criadas;for(const x of r.falhas)falhas.push((a.codigo||a.id)+': '+x.usuario+' ('+x.erro+')')}catch(e){falhas.push((a.codigo||a.id)+': '+e.message)}}
+    for(const a of sel)ATV_MARC.delete(a.id);aviso(`Issues criadas: ${criadas}${falhas.length?' · FALHAS: '+falhas.join(', '):''}`,falhas.length);telaAtiv(alvo)}});
+  const marcar=(f)=>{for(const a of D.ativs){const v=!!f(a);v?ATV_MARC.add(a.id):ATV_MARC.delete(a.id);if(D.cks[a.id])D.cks[a.id].checked=v}atualizaLotes()};
+  LOTES.push(()=>{if(!D.isConnected)return false;const n=D.ativs.filter(a=>ATV_MARC.has(a.id)).length;if(!btn.disabled)btn.textContent=n?`Liberar ${n} marcada(s)`:`Liberar ${nome} marcad${tp==='E'?'os':'as'}`;return true});
+  return h('div',{class:'barra',style:'margin:2px 0 8px'},btn,
+    h('button',{class:'btn sec',type:'button',title:'Marca as atividades deste grupo que ainda têm aluno sem Issue',onclick:()=>marcar(a=>faltamAtiv(a).length>0)},'Marcar pendentes'),
+    h('button',{class:'btn sec',type:'button',onclick:()=>marcar(()=>true)},'Marcar todas'),
+    h('button',{class:'btn sec',type:'button',onclick:()=>marcar(()=>false)},'Desmarcar'),ajuda('lote'))}
 function formAtiv(a,alvo){
   const novo=!a;const opc=h('input',{type:'checkbox'});opc.checked=!!(a&&a.opcional);const f=h('details',{class:'box',open:!!a},h('summary',{},novo?'+ Nova atividade':'Editar dados da atividade'));
   const cod=h('input',{placeholder:'Código (ex.: N0.1-2·E1)',value:a?a.codigo:'',style:'width:200px'}),tit=h('input',{placeholder:'Título',value:a?a.titulo:'',style:'width:min(360px,100%)'}),peso=h('input',{type:'number',min:1,max:100,step:1,value:a?a.peso:10,style:'width:80px'}),nmax=h('input',{type:'number',min:1,max:100,step:1,value:a?(a.notaMax||10):10,style:'width:80px'}),prazo=h('input',{type:'datetime-local',value:a?aivToLocal(a.prazo):''}),
