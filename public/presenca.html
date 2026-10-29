@@ -126,7 +126,13 @@ function seletores(){
   const precisaAula=ABA==='chamada'||ABA==='part';
   if(!precisaAula)return h('div',{class:'linha',style:'display:flex;gap:12px;align-items:center;padding:10px 14px'},h('span',{class:'sub'},'Turma'),turma);
   return h('div',{class:'linha seletores'},h('label',{},h('span',{},'Turma'),turma),h('label',{},h('span',{},'Aula'),sel),h('label',{},h('span',{},'Data'),data))}
-function aba(){return h('div',{class:'tabs'},...[['chamada','Chamada'],['part','Participações'],['ativ','Atividades'],['corr','Correção'],['acomp','Acompanhamento'],['rank','Ranking'],['hist','Histórico']].map(([k,t])=>h('button',{type:'button','data-aba':k,class:ABA===k?'on':'',onclick:()=>{ABA=k;desenhar()}},t,k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA))}
+const GRUPOS=[['chamada','Chamada',['chamada','part']],['atividades','Atividades',['ativ','corr']],['alunos','Alunos',['acomp','hist']],['rank','Ranking',['rank']]];
+function aba(){
+  const gAtual=GRUPOS.find(g=>g[2].includes(ABA))||GRUPOS[0];
+  const topo=h('div',{class:'tabs'},...GRUPOS.map(g=>h('button',{type:'button','data-aba':g[0],class:g===gAtual?'on':'',onclick:()=>{ABA=g[2][0];desenhar()}},g[1],g[0]==='atividades'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA));
+  if(gAtual[2].length<2)return topo;
+  const sub=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px'},...gAtual[2].map(k=>h('button',{type:'button','data-aba':k,class:'btn '+(ABA===k?'':'sec'),style:'padding:6px 14px;font-size:14px',onclick:()=>{ABA=k;desenhar()}},TITA[k],k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')));
+  return h('div',{},topo,sub)}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
   if(!CTX.roster.length)return h('p',{},'Esta turma ainda não tem alunos. Um owner ou alguém com a permissão "Pessoas" cadastra os alunos no Painel.');
@@ -388,7 +394,7 @@ const pedidoClaude=a=>'Corrigir a atividade "'+(a.codigo?a.codigo+' · ':'')+a.t
 async function copiarTexto(t){try{await navigator.clipboard.writeText(t);return true}catch{try{const x=document.createElement('textarea');x.value=t;x.style.cssText='position:fixed;opacity:0';document.body.append(x);x.select();const ok=document.execCommand('copy');x.remove();return ok}catch{return false}}}
 function btnClaude(a){return h('button',{class:'btn sec',type:'button',title:'Copia o pedido de correção e abre o Claude: é só colar e enviar',onclick:async()=>{const ok=await copiarTexto(pedidoClaude(a));window.open('https://claude.ai/code','liga-claude');aviso(ok?'Pedido copiado. Na conversa do Claude, cole (Ctrl+V) e envie.':'Não consegui copiar. No Claude, peça: corrigir a atividade '+a.id+' da turma '+TURMA+'.',!ok)}},'Corrigir com Claude')}
 let BADGE=0,CORR_FORCAR=false;
-function atualizaBadge(n){if(n!==undefined)BADGE=n;const b=document.querySelector('[data-aba=corr]');if(b){let x=b.querySelector('.bdg');if(BADGE>0){if(!x){x=h('span',{class:'bdg'});b.append(x)}x.textContent=String(BADGE)}else if(x)x.remove()}document.title=(BADGE>0?'('+BADGE+') ':'')+'Chamada e presença'}
+function atualizaBadge(n){if(n!==undefined)BADGE=n;for(const k of ['corr','atividades']){const b=document.querySelector('[data-aba='+k+']');if(!b)continue;let x=b.querySelector('.bdg');if(BADGE>0){if(!x){x=h('span',{class:'bdg'});b.append(x)}x.textContent=String(BADGE)}else if(x)x.remove()}document.title=(BADGE>0?'('+BADGE+') ':'')+document.title.replace(/^\(\d+\) /,'')}
 const vistos=()=>{try{return JSON.parse(ls.get('liga_corr_visto','{}'))}catch{return{}}};
 // Conta o que realmente espera o professor: dúvidas já marcadas como "vistas" neste navegador não contam, e o número da aba vale só para a turma aberta.
 const pendDe=x=>{const V=vistos();return x.acorrigir+x.novas+x.revisadas+(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length};
