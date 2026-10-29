@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
       const q = req.query || {}; const acao = q.acao || 'lista';
       if (acao === 'lista') {
         const aulas = await u.listarAulas(); const dirs = await S.listarNiveis();
-        const donoTr = {}; for (const pl of Object.values(cfg.planos || {})) for (const x of pl.niveis || []) donoTr[x] = pl.trilha || pl.nome;
+        const donoTr = {}; for (const pl of Object.values(cfg.assuntos || {})) for (const x of pl.niveis || []) donoTr[x] = pl.nome;
         const todas = new Set([...dirs, ...aulas.map((a) => a.dir), ...Object.keys(donoTr)]);
         const niveis = [...todas].sort().map((d) => ({ dir: d, nome: (/^nivel-(\d+)/.exec(d) ? `Nível ${Number(/^nivel-(\d+)/.exec(d)[1])}${donoTr[d] ? ' · ' + donoTr[d] : ''}` : d), podeCriar: pode(d, null),
           aulas: aulas.filter((a) => a.dir === d).map((a) => ({ id: a.id, titulo: a.titulo, editavel: pode(d, a.id) })) }));

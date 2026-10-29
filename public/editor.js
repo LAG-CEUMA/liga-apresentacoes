@@ -46,7 +46,7 @@ async function lista() {
   box.append(h('div', { class: 'topo' }, h('div', {}, h('p', { class: 'tag' }, 'LIGA ACADÊMICA DE GAMES · CEUMA'), h('h1', {}, 'Editor de slides')), h('div', { class: 'acoes' }, h('a', { class: 'btn sec', href: '/' }, '← Início'), d.dono ? h('a', { class: 'btn sec', href: '/admin' }, 'Painel') : null)),
     h('p', { class: 'sub' }, 'Crie e edite as aulas sem mexer em código. Cada nível tem suas aulas. Aulas novas começam como "Só owners": para liberar aos alunos, use o Painel → Níveis das aulas.'));
   if (d.dono) {
-    box.append(h('div', { class: 'nv' }, h('b', {}, 'Novo nível'), h('p', { class: 'sub' }, 'Os níveis pertencem a uma trilha (assunto). Crie em Painel → Turmas → Editar trilha → "Criar nível"; ele aparece aqui para você montar as aulas.'), h('a', { class: 'btn sec', href: '/admin#turmas' }, 'Ir para as trilhas')));
+    box.append(h('div', { class: 'nv' }, h('b', {}, 'Novo nível'), h('p', { class: 'sub' }, 'Os níveis pertencem a uma trilha (assunto). Crie em Painel → Turmas → Editar trilha → "Criar nível"; ele aparece aqui para você montar as aulas.'), h('a', { class: 'btn sec', href: '/admin#turmas' }, 'Ir para o Painel')));
   }
   const todas = d.niveis.flatMap((n) => n.aulas.map((a) => ({ dir: n.dir, nome: n.nome, ...a })));
   const lembra = (k, pad) => { try { const v = localStorage.getItem('liga_ed_' + k); return v === null ? pad : v === '1'; } catch { return pad; } };

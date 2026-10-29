@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
       const v = { usuario, dono, papel: papelU, editor, titulo: u.tituloDe(cfg, usuario), permissoes: perm, fixos: dono ? u.admins() : [] };
       if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
-      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.planos = cfg.planos || {}; v.arenaAtiva = cfg.arenaAtiva === true; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
+      if (perm.includes('pessoas')) { v.owners = cfg.owners; v.alunos = cfg.alunos; v.monitores = cfg.monitores; v.turmas = cfg.turmas; v.planos = cfg.planos || {}; v.assuntos = cfg.assuntos || {}; v.arenaAtiva = cfg.arenaAtiva === true; v.cargos = cfg.cargos; v.acessos = cfg.acessos; v.hoje = u.hojeBR(); }
       if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
@@ -125,7 +125,7 @@ module.exports = async (req, res) => {
     }
     const novo = JSON.parse(JSON.stringify(cfg));
     const existe = new Set(aulas.map((a) => a.chave));
-    const dirs = new Set([...aulas.map((a) => a.dir), ...Object.values(cfg.planos || {}).flatMap((p) => p.niveis || [])]);
+    const dirs = new Set([...aulas.map((a) => a.dir), ...Object.values(cfg.assuntos || {}).flatMap((p) => p.niveis || [])]);
     let msg;
     if (b.acao === 'acesso') {
       if (!perm.includes('aulas')) return nao();
@@ -301,22 +301,39 @@ module.exports = async (req, res) => {
       const diaSemana = b.diaSemana === undefined ? (atual.diaSemana === undefined ? '' : atual.diaSemana) : (/^[0-6]$/.test(String(b.diaSemana)) ? Number(b.diaSemana) : '');
       const horario = String(b.horario === undefined ? (atual.horario || '') : b.horario).trim().slice(0, 30);
       const semanasSemAula = (Array.isArray(b.semanasSemAula) ? b.semanasSemAula : (atual.semanasSemAula || [])).map(data).filter(Boolean).slice(0, 60).sort();
-      const niveis = [...new Set((Array.isArray(b.niveis) ? b.niveis : (atual.niveis || [])).map(String).filter((x) => /^nivel-\d{2}-[a-z0-9-]{1,40}$/.test(x)))].slice(0, 30);
-      for (const [oid, op] of Object.entries(novo.planos || {})) if (oid !== id) { const dup = niveis.find((x) => (op.niveis || []).includes(x)); if (dup) return u.json(res, 400, { erro: `O nível ${dup} já pertence à trilha ${op.trilha || oid}.` }); }
-      const nums = niveis.map((x) => x.slice(6, 8)); if (new Set(nums).size !== nums.length) return u.json(res, 400, { erro: 'Esta trilha já tem um nível com esse número.' });
-      novo.planos[id] = { niveis, nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao), diaSemana, horario, semanasSemAula };
+      novo.planos[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, trilha: String(b.trilha === undefined ? (atual.trilha || 'Trilha 1') : b.trilha).trim().slice(0, 30) || 'Trilha 1', inicio, fim, turmas, premiacao: b.premiacao === undefined ? (atual.premiacao || '') : data(b.premiacao), diaSemana, horario, semanasSemAula };
       msg = `Portal: ${usuario} salvou o plano ${id}`;
-    } else if (b.acao === 'novo_nivel') { // cria um nível (pasta de aulas) já dentro de uma trilha
+    } else if (b.acao === 'assunto') { // cria ou renomeia um assunto (Artes, Música…); os níveis pertencem a ele
       if (!perm.includes('pessoas')) return nao();
-      const id = String(b.trilha || '').trim().toUpperCase(); const pl = (novo.planos || {})[id];
-      if (!pl) return u.json(res, 400, { erro: 'Salve a trilha antes de criar níveis nela.' });
+      const nome = String(b.nome || '').replace(/\s+/g, ' ').trim().slice(0, 30); if (!nome) return u.json(res, 400, { erro: 'Informe o nome do assunto.' });
+      novo.assuntos = novo.assuntos || {};
+      const id = String(b.id || '').trim() || (nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20) || 'assunto');
+      if (Object.entries(novo.assuntos).some(([k, v]) => k !== id && String(v.nome).toLowerCase() === nome.toLowerCase())) return u.json(res, 400, { erro: 'Já existe um assunto com esse nome.' });
+      novo.assuntos[id] = { nome, niveis: (novo.assuntos[id] || {}).niveis || [] };
+      msg = `Portal: ${usuario} salvou o assunto ${id}`; b.__resp = { ok: true, id };
+    } else if (b.acao === 'excluir_assunto') {
+      if (!perm.includes('pessoas')) return nao();
+      const id = String(b.id || ''); const as = (novo.assuntos || {})[id]; if (!as) return u.json(res, 400, { erro: 'Assunto não encontrado.' });
+      const uso = Object.values(novo.turmas).filter((t) => (as.niveis || []).includes(t.nivel)).length;
+      if (uso) return u.json(res, 400, { erro: `Há ${uso} turma(s) usando níveis deste assunto. Troque o nível delas antes.` });
+      delete novo.assuntos[id]; msg = `Portal: ${usuario} excluiu o assunto ${id}`;
+    } else if (b.acao === 'novo_nivel') { // cria um nível (pasta de aulas) dentro de um assunto
+      if (!perm.includes('pessoas')) return nao();
+      const as = (novo.assuntos || {})[String(b.assunto || '')]; if (!as) return u.json(res, 400, { erro: 'Escolha o assunto.' });
       const n = Math.round(Number(b.numero));
-      if ((pl.niveis || []).some((x) => Number(x.slice(6, 8)) === n)) return u.json(res, 400, { erro: `A trilha já tem o Nível ${n}.` });
+      if ((as.niveis || []).some((x) => Number(x.slice(6, 8)) === n)) return u.json(res, 400, { erro: `O assunto ${as.nome} já tem o Nível ${n}.` });
       const S = require('../lib/slides'); let dir;
-      try { dir = await S.novoNivel(b.numero, b.nome, usuario, true); } catch (e) { return u.json(res, 400, { erro: e.message }); }
-      pl.niveis = [...(pl.niveis || []), dir].sort();
-      msg = `Portal: ${usuario} criou o nível ${dir} na trilha ${id}`;
+      try { dir = await S.novoNivel(b.numero, b.nome || as.nome, usuario, true); } catch (e) { return u.json(res, 400, { erro: e.message }); }
+      as.niveis = [...(as.niveis || []), dir].sort();
+      msg = `Portal: ${usuario} criou o nível ${dir} no assunto ${b.assunto}`;
       b.__resp = { ok: true, dir };
+    } else if (b.acao === 'adotar_nivel') { // liga um nível já existente (sem dono) a um assunto
+      if (!perm.includes('pessoas')) return nao();
+      const as = (novo.assuntos || {})[String(b.assunto || '')]; const dir = String(b.dir || '');
+      if (!as || !/^nivel-\d{2}-[a-z0-9-]{1,40}$/.test(dir)) return u.json(res, 400, { erro: 'Assunto ou nível inválido.' });
+      for (const [k, v] of Object.entries(novo.assuntos)) if ((v.niveis || []).includes(dir) && k !== b.assunto) v.niveis = v.niveis.filter((x) => x !== dir);
+      if ((as.niveis || []).some((x) => x.slice(6, 8) === dir.slice(6, 8) && x !== dir)) return u.json(res, 400, { erro: 'Este assunto já tem um nível com esse número.' });
+      as.niveis = [...new Set([...(as.niveis || []), dir])].sort(); msg = `Portal: ${usuario} ligou ${dir} ao assunto ${b.assunto}`;
     } else if (b.acao === 'excluir_plano') {
       if (!perm.includes('pessoas')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
