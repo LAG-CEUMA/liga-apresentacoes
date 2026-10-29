@@ -501,6 +501,9 @@ function desenharInicio(){
       [pm.includes('pessoas'),'#pessoas','Pessoas','Cadastrar e ordenar alunos, monitores e equipe.','pessoas'],
       [dono,'#cargos','Perfis','O que cada tipo de pessoa pode fazer.','cargos'],
     ]],
+    ['Ajuda',[
+      [true,'#guia','Guia do Painel','Como usar cada área, em linguagem simples. Serve também para novos owners.'],
+    ]],
   ];
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo o que você pode fazer, agrupado por tarefa. Cada ação existe em um lugar só.'));
   const nav=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px;position:sticky;top:0;z-index:5;padding:8px 0;background:var(--bg)'});const chips={};
@@ -528,8 +531,15 @@ function desenharFerramentas(){
   if(!L.length)p.append(h('p',{class:'sub'},'Nenhuma ferramenta liberada ainda.'));p.append(g)}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
-  $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  $('abas').append(ajuda('adm_'+k));
+  // Menu enxuto: o Início é o centro; dentro de uma área só aparecem "← Início" e as áreas irmãs do mesmo grupo.
+  const GRUPO={turmas:'Dia a dia',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
+  const A=$('abas');A.textContent='';
+  if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',onclick:()=>mostrar('inicio')},'← Início'));
+    const gr=GRUPO[k],irm=disp.filter(x=>GRUPO[x[0]]===gr);
+    if(gr)A.append(h('span',{class:'sub',style:'align-self:center;margin:0 4px 0 8px;text-transform:uppercase;letter-spacing:.06em;font-size:12px'},gr));
+    if(irm.length>1)for(const [id,t] of irm)A.append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
+    else A.append(h('button',{type:'button',class:'on'},(disp.find(x=>x[0]===k)||[,k])[1]))}
+  A.append(ajuda('adm_'+k));
   for(const [id] of [['inicio'],['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
   if(k==='inicio')desenharInicio();else if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
