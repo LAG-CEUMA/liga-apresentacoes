@@ -462,7 +462,41 @@ function desenharWiki(){
 
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(!D.dono&&!D.permissoes.includes('pessoas')&&!D.permissoes.includes('aulas'))a.push(['ferramentas','Ferramentas']);if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function abasDisponiveis(){const a=[['inicio','Início']];if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function desenharInicio(){
+  const p=$('p-inicio');p.textContent='';const pm=D.permissoes||[];const dono=!!D.dono;
+  const tem=x=>dono||pm.includes(x);
+  const G=[
+    ['Dia a dia',[
+      [tem('presenca')||D.papel==='monitor','/presenca#corr','Correção de atividades','Respostas dos alunos no GitHub esperando nota, dúvidas e quem não entregou.','corr'],
+      [tem('presenca')||D.papel==='monitor','/presenca','Chamada e presença','Fazer a chamada, registrar participação e ver o ranking das turmas.'],
+      [pm.includes('pessoas'),'#turmas','Turmas e alunos','Criar turmas, matricular alunos, repositórios e planos.'],
+    ]],
+    ['Conteúdo',[
+      [!!D.editor,'/editor','Editor de slides','Criar e editar as aulas, roteiros e atividades.'],
+      [pm.includes('aulas'),'#aulas','Níveis das aulas','Quem enxerga cada aula (só owners, membros ou público).'],
+      [dono,'#imagens','Banco de imagens','Imagens usadas nos slides e no site.'],
+      [dono||['owner','monitor','equipe'].includes(D.papel),dono?'#wiki':'/wiki','Guias e dúvidas','Tutoriais e respostas para a equipe.'],
+    ]],
+    ['Site',[
+      [tem('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques da tela inicial.'],
+      [dono,'#pontos','Pontuação','Pesos de presença, participação e exercícios no ranking.'],
+      [dono,'#reservadas','Páginas reservadas','Endereços protegidos e redirecionamentos.'],
+    ]],
+    ['Acesso',[
+      [pm.includes('pessoas'),'#pessoas','Pessoas','Cadastrar e ordenar alunos, monitores e equipe.'],
+      [dono,'#cargos','Perfis','O que cada tipo de pessoa pode fazer.'],
+    ]],
+  ];
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo o que você pode fazer, agrupado por tarefa. Cada ação existe em um lugar só.'));
+  for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);if(!L.length)continue;
+    p.append(h('h3',{style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7'},nome));
+    const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
+    for(const [,alvo,t,d,id] of L){const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
+      if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='_blank';
+      if(id==='corr'){const b=h('span',{id:'badge-corr',style:'margin-left:8px;vertical-align:middle;background:#ff5d5d;color:#fff;border-radius:99px;padding:2px 9px;font-weight:700;font-size:13px'},'');b.hidden=!window.CORR_N;if(window.CORR_N)b.textContent=window.CORR_N+' a ver';a.firstChild.append(b)}else a.firstChild.append(b)
+      g.append(a)}
+    p.append(g)}}
 function desenharFerramentas(){
   const p=$('p-ferramentas');p.textContent='';const pm=D.permissoes||[];
   const L=[[pm.includes('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques de ranking da tela inicial.'],
@@ -477,20 +511,20 @@ function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
   $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
   $('abas').append(ajuda('adm_'+k));
-  for(const [id] of [['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+  for(const [id] of [['inicio'],['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='inicio')desenharInicio();else if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
   D=await r.json();D.turmas=D.turmas||{};D.planos=D.planos||{};D.cargos=D.cargos||{};D.equipe=D.equipe||(D.dono?{}:undefined);
   const pm=D.permissoes||[],ver=(id,ok)=>{const e=$(id);if(e)e.hidden=!ok};
   const soFerr=!D.dono&&!pm.includes('pessoas')&&!pm.includes('aulas');ver('f-site',!soFerr&&(D.dono||pm.includes('site')));ver('f-pres',!soFerr&&(D.dono||pm.includes('presenca')||D.papel==='monitor'));ver('f-ed',!soFerr&&!!D.editor);ver('f-wiki',!soFerr&&!D.dono&&['owner','monitor','equipe'].includes(D.papel));
-  mostrar(ABA||location.hash.slice(1)||(()=>{try{return localStorage.getItem('liga_admin_aba')}catch{return ''}})()||'pessoas')}
+  mostrar(ABA||location.hash.slice(1)||'inicio')}
 // aviso: respostas dos alunos no GitHub esperando correção (só para quem usa a Presença)
 async function avisoCorrecao(){
   if(typeof D==='undefined'||!D||!(D.dono||(D.permissoes||[]).includes('presenca')||D.papel==='monitor'))return;
   try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);if(n<=0)return;
     const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.revisadas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.revisadas?x.revisadas+' fechada(s) no GitHub sem nota':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
     const b=h('a',{href:'/presenca#corr',target:'liga-presenca',id:'aviso-corr',style:'display:block;text-decoration:none;color:inherit;background:#f5b83d22;border:1px solid var(--ouro);border-left:6px solid var(--ouro);border-radius:12px;padding:12px 16px;margin:12px 0'},h('b',{},'Alunos responderam no GitHub: '+n+' item(ns) esperando você'),h('div',{class:'sub'},t+'. Abrir a Correção →'));
-    $('abas').before(b);const f=$('f-pres');if(f&&!f.hidden)f.textContent='Presença e atividades ('+n+')'}catch{}}
+    window.CORR_N=n;const bd=$('badge-corr');if(bd){bd.hidden=false;bd.textContent=n+' a ver'}$('abas').before(b)}catch{}}
 carregar().then(()=>{if(D&&D.dono&&window.ligaCota){const a=document.querySelector('.topo .acoes');if(a){const sp=document.createElement('span');a.prepend(sp);ligaCota(sp)}}return avisoCorrecao()});

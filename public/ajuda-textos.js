@@ -1,6 +1,7 @@
 /* Textos das janelas de ajuda "?" das telas (menos a Presença, que tem os seus na própria página). */
 window.AJUDA = Object.assign(window.AJUDA || {}, {
   /* ---- Painel ---- */
+  adm_inicio: { t: 'Início do Painel', l: ['Todas as ações do Painel, agrupadas por tarefa: dia a dia, conteúdo, site e acesso.', 'Cada ação aparece em um lugar só. O selo vermelho no cartão de Correção mostra quantas respostas de alunos esperam você.', 'As abas logo acima levam direto a cada área, caso você já saiba onde ir.'] },
   adm_ferramentas: { t: 'Ferramentas', l: ['Atalhos das ferramentas liberadas para o seu perfil: Personalizar site, Presença e atividades, Editor de slides e Guias.', 'Se faltar alguma, peça a um owner para ajustar o seu perfil em Pessoas.'] },
   adm_pessoas: { t: 'Pessoas', l: ['Cadastro único de todos: owners, monitores, equipe e alunos. Cadastre cada pessoa uma vez só, aqui.', 'Clique em uma pessoa para abrir a ficha: dados, papel, turma e permissões.', 'Na ficha, o botão Ver como mostra o site do jeito que aquela pessoa vê, só para olhar (nada é alterado).'] },
   adm_cargos: { t: 'Perfis (cargos)', l: ['Um perfil é um conjunto de permissões, como Marketing ou Design. Uma pessoa pode ter vários e vale a soma.', 'Crie o perfil aqui e atribua em Pessoas.'] },
