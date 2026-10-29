@@ -652,8 +652,23 @@ async function telaCorr(alvo){
   const barraG=h('div',{style:'position:sticky;top:0;z-index:6;display:none;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin:10px 0;border-radius:12px;background:#1d2130;border:1px solid var(--ouro);border-left:6px solid var(--ouro)'},h('span',{class:'sub'},'Notas alteradas e ainda não salvas'),btnG);
   const atG=()=>{const n=REG.reduce((m,g)=>m+g.sujos.size,0);barraG.style.display=n?'flex':'none';btnG.disabled=!n;btnG.textContent='Salvar todas as alterações ('+n+')';alvo.dataset.sujo=n?'1':''};
   alvo.append(barraG);
+  // Agrupa: Nível > Aula (semana) > atividades, para não confundir exercícios e atividades de semanas diferentes
+  const GR=new Map();
+  const infoAula=ch=>(CTX.aulas||[]).find(x=>x.chave===ch);
+  const nomeNivel=ch=>{const i=(CTX.aulas||[]).find(x=>String(x.chave).split('/')[0]===ch);return (i&&i.nivel)||ch.replace(/^nivel-/,'Nível ').replace(/-/g,' ')};
+  const abre=(chave,pend)=>ATV_OPEN.has(chave)||(pend>0&&!ATV_OPEN.has('x:'+chave));
+  const pasta=(a,pend)=>{
+    const ak=a.aula||'sem-aula',nk=ak.includes('/')?ak.split('/')[0]:'outras';
+    let N=GR.get('n:'+nk);
+    if(!N){const d=h('details',{class:'ag'});const cnt=h('span',{class:'cnt'});d.append(h('summary',{},h('span',{},nomeNivel(nk)),cnt));N={d,cnt,pend:0,n:0,txt:()=>(N.pend?N.pend+' a corrigir · ':'')+N.n+' atividade(s)'};GR.set('n:'+nk,N);N.open0=false;
+      d.addEventListener('toggle',()=>{if(d.open)ATV_OPEN.add('n:'+nk);else{ATV_OPEN.delete('n:'+nk);ATV_OPEN.add('x:n:'+nk)}});alvo.append(d)}
+    let A=GR.get('a:'+ak);
+    if(!A){const i=infoAula(ak);const d=h('details',{class:'tg O'});const cnt=h('span',{class:'cnt',style:'margin-left:auto;font-size:13px;opacity:.75'});d.append(h('summary',{},h('span',{},(i&&i.titulo)||(ak.split('/')[1]||'Atividades')),cnt));A={d,cnt,pend:0,n:0,txt:()=>(A.pend?A.pend+' a corrigir · ':'')+A.n+' atividade(s)'};GR.set('a:'+ak,A);
+      d.addEventListener('toggle',()=>{if(d.open)ATV_OPEN.add('a:'+ak);else{ATV_OPEN.delete('a:'+ak);ATV_OPEN.add('x:a:'+ak)}});N.d.append(d)}
+    A.pend+=pend;A.n++;N.pend+=pend;N.n++;A.d.open=abre('a:'+ak,A.pend);N.d.open=abre('n:'+nk,N.pend);
+    return A.d};
   for(const a of [...P.atividades].sort((x,y)=>(x.prazo||'').localeCompare(y.prazo||''))){
-    const cont=st=>Object.values(a.linhas).filter(l=>l.status===st).length;
+    const cont=st=>Object.values(a.linhas).filter(l=>l.status===st).length;const pend=cont('acorrigir')+cont('novamsg')+cont('revisada');
     const det=h('details',{class:'ag'});det.dataset.id=a.id;det.dataset.st=[...new Set(Object.values(a.linhas).map(l=>l.status))].join(' ');const key='c:'+a.id;
     const mx=a.notaMax,pas=mx>10?1:0.5;
     det.append(h('summary',{},h('span',{},(a.codigo?a.codigo+' · ':'')+a.titulo),cont('acorrigir')?h('span',{class:'st acorrigir'},cont('acorrigir')+' a corrigir'):'',cont('revisada')?h('span',{class:'st revisada'},cont('revisada')+' falta(m) nota'):'',cont('novamsg')?h('span',{class:'st novamsg'},cont('novamsg')+' nova(s) msg'):'',h('span',{class:'cnt'},'prazo '+fmtD(a.prazo)+' · '+cont('corrigida')+' corrigida(s) · '+cont('semresposta')+' sem resposta')));
@@ -687,8 +702,9 @@ async function telaCorr(alvo){
     if(SOU_PROF())det.children[0].after(h('div',{class:'barra',style:'padding:8px 6px'},btnClaude(a),ajuda('corr_claude'),h('span',{class:'sub'},'Copia o pedido e abre o Claude: cole e envie.')));
     if(!mostrou&&ver.value==='corrigir')continue; // modo "só o que falta corrigir": atividade sem pendência some da lista
     if(!mostrou)det.append(h('p',{class:'sub',style:'padding:10px 6px'},ver.value==='at'?'Nada pendente nesta atividade. Mude o filtro para ver todos.':'Nenhum aluno nesta atividade.'));
-    alvo.append(det)}
-  if(ver.value==='corrigir'&&!alvo.querySelector('details.ag[data-id]'))alvo.append(h('p',{class:'sub',style:'padding:10px 6px'},'✔ Nada esperando correção. Mude o filtro para ver todos os alunos.'));
+    pasta(a,pend).append(det)}
+  for(const g of GR.values()){g.cnt.textContent=g.txt()}
+  if(ver.value==='corrigir'&&!alvo.querySelector('details[data-id]'))alvo.append(h('p',{class:'sub',style:'padding:10px 6px'},'✔ Nada esperando correção. Mude o filtro para ver todos os alunos.'));
   // dúvidas avulsas: Issues que o próprio aluno abriu no repositório dele
   const dd=h('details',{class:'ag'});dd.append(h('summary',{},h('span',{},'Dúvidas e mensagens avulsas'),visiveis.length?h('span',{class:'st novamsg'},visiveis.length+' nova(s)'):'',h('span',{class:'cnt'},P.duvidas.length+' aberta(s) no GitHub')));
   dd.open=visiveis.length>0&&!ATV_OPEN.has('x:duv');dd.addEventListener('toggle',()=>{if(!dd.open)ATV_OPEN.add('x:duv')});
