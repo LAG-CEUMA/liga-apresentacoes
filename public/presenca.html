@@ -579,7 +579,7 @@ function imagemCopa(c,nome,turma){
   let pl=(c.placar||[]).slice(0,14);if(nev)pl=pl.slice().sort((x,y)=>String(nome(x.usuario)).localeCompare(String(nome(y.usuario)),'pt-BR'));
   const cur=x=>String(nome(x.usuario)).split(' ').slice(0,2).join(' ');
   const W=1080,max=Math.max(1,...pl.map(x=>x.copa)),sw=(c.inicio&&c.fim)?Math.max(1,Math.round((new Date(c.fim)-new Date(c.inicio))/6048e5)):0;
-  const dest=(c.narracao||'').split('\n').slice(1).filter(Boolean).slice(0,5);
+  const dest=(c.narracao||'').split('\n').slice(1).filter(t=>t&&!t.startsWith('🏁 Entregou')).slice(0,5);
   const tem=!nev&&pl.length>=3,PODH=tem?390:0,LANE=64,LH=pl.length*LANE+60;
   const medida=document.createElement('canvas').getContext('2d');medida.font='22px sans-serif';
   const quebra=(g,t,w)=>{const o=[];let l='';for(const p of t.split(' ')){const x=l?l+' '+p:p;if(g.measureText(x).width>w&&l){o.push(l);l=p}else l=x}if(l)o.push(l);return o};

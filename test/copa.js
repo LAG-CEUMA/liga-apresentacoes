@@ -90,7 +90,7 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   // troféus e narração
   const eg = C.normalizar({ log: [{ em: new Date(AG).toISOString(), de: 'bia', item: 'banana', faixa: 'critico', dado: 10, vit: 'ana' }, { em: new Date(AG).toISOString(), de: 'caio', item: 'turbo', faixa: 'falha_critica', dado: 1, vit: 'caio' }, { em: new Date(AG).toISOString(), de: 'bia', item: 'casco', faixa: 'normal', dado: 8, bloq: true, vit: 'ana' }] });
   const tf = C.trofeus(eg, AG); assert(tf.some((x) => x.id === 'rei' && x.quem[0] === 'bia')); assert(tf.some((x) => x.id === 'azarado' && x.quem[0] === 'caio')); assert(tf.some((x) => x.id === 'escudo' && x.quem[0] === 'ana'));
-  const tx = C.narracao(eg, AG, (k) => k.toUpperCase(), 3); assert(/CAIO tirou 1/.test(tx) && /acertou a si mesmo/.test(tx)); assert(!/BIA acertou/.test(tx) && /Crítico! Alguém acertou ANA/.test(tx)); // quem acerta não é citado
+  const tx = C.narracao(eg, AG, (k) => k.toUpperCase(), 3); assert(/CAIO tirou 1/.test(tx) && /em si mesmo/.test(tx)); assert(!/BIA (tirou|rolou|mandou|acertou)/.test(tx) && /CRÍTICO/.test(tx) && /ANA/.test(tx)); // quem acerta não é citado
 }
 // ---------- recuperação (sábado) ----------
 { const base = { chamadas: { 1: { estados: { ana: 'p', bia: 'a', caio: 'a' } } }, participacoes: [] };
