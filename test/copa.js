@@ -30,7 +30,7 @@ assert(C.usar(E, 'bia', 'c1', 'caio', rank, INI, AG).erro); // casco só acerta 
 let r = C.usar(E, 'bia', 'c1', 'ana', rank, INI, AG); assert(r.ok, JSON.stringify(r)); // casco no líder
 assert(C.usar(E, 'bia', 'b2', 'caio', rank, INI, AG).erro); // 1 uso por semana
 assert.equal(C.placar(E, rank, AG).find((x) => x.usuario === 'ana').copa, 75); assert.equal(C.placar(E, rank, AG).find((x) => x.usuario === 'ana').oficial, 80); // só a Copa muda
-assert.equal(C.placar(E, rank, AG + 8 * 864e5).find((x) => x.usuario === 'ana').copa, 80); // efeito expira em 7 dias
+const cp = (d) => C.placar(E, rank, AG + d * 864e5).find((x) => x.usuario === 'ana').copa; assert.equal(cp(8), 76.3); assert.equal(cp(15), 77.5); assert.equal(cp(22), 78.8); assert.equal(cp(29), 80); // efeito perde força a cada semana (100/75/50/25%) e some em 4 semanas
 // ataque seguido ao mesmo alvo e limite de ataque por dia
 assert(C.usar(E, 'caio', 'k2', 'ana', rank, INI, AG).erro); // ana já recebeu um ataque hoje
 r = C.usar(E, 'caio', 'k1', 'bia', rank, INI, AG); assert(r.ok, JSON.stringify(r)); // bia está à frente de caio

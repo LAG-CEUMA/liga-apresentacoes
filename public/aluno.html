@@ -191,11 +191,11 @@ function guiaCopa(c){
   t('3. Os itens');
   for(const [k,it] of Object.entries(c.itens||{}))p(`${it.ic} ${it.nome}: ${it.txt}`);
   t('4. Proteções (ninguém é massacrado)');p('🛡️ O Escudo bloqueia 1 ataque e some. Quem está em último lugar fica protegido. Cada aluno recebe no máximo 1 ataque por dia. Ninguém vê quem lançou o item em você.');
-  t('5. Duração');p('Ataques e turbos duram '+(c.diasEfeito||7)+' dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial.');
+  t('5. Duração');p('Ataques e turbos duram 4 semanas, mas perdem força a cada semana (100%, 75%, 50%, 25%): uma pancada forte vai sendo recuperada aos poucos, então dá para virar o jogo! Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial.');
   t('6. Eventos e Chefão');p('Toda semana pode ter um evento (nevoeiro, dado em dobro, semana da paz, chuva de itens). O professor joga como 👹 Chefão da Liga, inimigo de todos: 1 item por semana. Quando todos entregam no prazo, o Chefão cai e todo mundo ganha 1 item.');
   t('Dúvidas comuns');
   p('🐢 Posso jogar o Casco em quem está na minha frente? Sim, o Casco só acerta quem está à sua frente no ranking. Escolha a pessoa e jogue o dado.');
-  p('🎰 O que faz a Roleta maluca? Ela não fica guardada: cai sozinha em quem a sorteou, tira 2 pontos da Copa por 7 dias, a não ser que você tenha escudo (aí o escudo gasta e protege). É raríssima!');
+  p('🎰 O que faz a Roleta maluca? Ela não fica guardada: cai sozinha em quem a sorteou, tira 2 pontos da Copa por 4 semanas (diminuindo a cada semana), a não ser que você tenha escudo (aí o escudo gasta e protege). É raríssima!');
   return d}
 function tabCopa(C){
   if(PREV&&!COPA)return previa(C,'copa');
@@ -236,7 +236,7 @@ function tabCopa(C){
   for(const [k,d] of Object.entries(c.itens))reg.append(el('p','',`${d.ic} ${d.nome}: ${d.txt}`));
   reg.append(el('p','sub','🎲 Todo item é decidido no dado (d10): você aperta o botão e o resultado vem da sorte. Quanto mais forte o item, mais difícil acertar em cheio. 1 = falha crítica (pode virar contra você ou cair em outro colega) · falha = nada acontece · fraco = metade do efeito · normal = efeito inteiro · 10 = crítico (50% a mais). Três falhas críticas seguidas dão um Escudo de consolo.'));
   if(c.dado){const tb=el('p','sub','');const nm=(k)=>((c.itens[k]||{}).ic||'')+' '+((c.itens[k]||{}).nome||k);tb.innerHTML='';for(const [k,t] of Object.entries(c.dado)){const f=(a,b)=>a>b?'—':(a===b?a:a+'–'+b);tb.append(document.createTextNode(`${nm(k)}: falha crítica ${f(1,t[0])} · falha ${f(t[0]+1,t[1])} · fraco ${f(t[1]+1,t[2])} · normal ${f(t[2]+1,t[3])} · crítico 10`),document.createElement('br'))}reg.append(tb)}
-  reg.append(el('p','sub',`Efeitos duram ${c.diasEfeito} dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
+  reg.append(el('p','sub',`Efeitos duram 4 semanas, perdendo força a cada semana (100%, 75%, 50%, 25%). Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
 }
 function vidaChefao(m){const w=el('div','');w.style.cssText='margin:8px 0';const v=Math.max(0,Math.min(100,m.vida));
   const barra=el('div','');barra.style.cssText='height:14px;border-radius:8px;background:#ffffff22;overflow:hidden;max-width:420px';const f=el('div','');f.style.cssText='height:100%;width:'+v+'%;background:linear-gradient(90deg,#e4572e,#f5b83d)';barra.append(f);
