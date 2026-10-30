@@ -141,7 +141,7 @@ module.exports = async (req, res) => {
       try { const c = await require('../lib/pendentes').salvarPerfil(usuario, b); return u.json(res, 200, { ok: true, email: c.email || '', emailPessoal: c.emailPessoal || '', curso: c.curso || '', cpf: c.cpf || '' }); }
       catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
-      if (b.acao === 'copa_usar' || b.acao === 'copa_config' || b.acao === 'copa_chuva' || b.acao === 'copa_evento' || b.acao === 'copa_chefao') return require('../lib/copaapi').escrever(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
+      if (b.acao === 'copa_usar' || b.acao === 'copa_aliar' || b.acao === 'copa_aliar_resp' || b.acao === 'copa_config' || b.acao === 'copa_chuva' || b.acao === 'copa_evento' || b.acao === 'copa_chefao') return require('../lib/copaapi').escrever(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
     if (!ehOwner && !mon && !geral) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (String(b.acao || '').startsWith('ativ_')) {
       if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });

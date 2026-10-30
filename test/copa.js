@@ -130,4 +130,32 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
 { const e = C.normalizar({ ativa: true, inventario: { bia: [{ id: 'b1', tipo: 'banana', semana: 3 }] } }); const r = C.usar(e, 'bia', 'b1', '__sorteio', rank, INI, AG);
   assert(r.ok, JSON.stringify(r)); const alvo = e.efeitos[0].para; assert(alvo !== 'davi'); // nunca no último colocado (você mesmo pode)
   const e2 = C.normalizar({ ativa: true }); const r2 = C.usarChefao(e2, 'prof', '__sorteio', rank, INI, AG, '2999-01-01'); assert(r2.ok, JSON.stringify(r2)); assert(e2.efeitos.length === 1); }
+// ---------- aliança e traição ----------
+{ const mk = () => C.normalizar({ ativa: true, inventario: { ana: [{ id: 'a1', tipo: 'banana', semana: 3 }, { id: 'a2', tipo: 'turbo', semana: 3, bonus: true }], bia: [{ id: 'b1', tipo: 'banana', semana: 3 }], davi: [{ id: 'd1', tipo: 'banana', semana: 3 }] } });
+  const rk4 = [{ usuario: 'ana', total: 80, posicao: 1 }, { usuario: 'bia', total: 70, posicao: 2 }, { usuario: 'caio', total: 60, posicao: 3 }, { usuario: 'davi', total: 50, posicao: 4 }];
+  const e = mk(); let r = C.convidarAlianca(e, 'ana', 'bia', rk4, INI, AG, '2999-01-01'); assert(r.ok, JSON.stringify(r));
+  assert(C.convidarAlianca(e, 'ana', 'bia', rk4, INI, AG, '2999-01-01').erro); // convite repetido
+  assert(C.responderAlianca(e, 'caio', e.convites[0].id, true, rk4, INI, AG, '2999-01-01').erro); // só o convidado responde
+  r = C.responderAlianca(e, 'bia', e.convites[0].id, true, rk4, INI, AG, '2999-01-01'); assert(r.ok, JSON.stringify(r)); assert.equal(C.aliadoDe(e, 'ana', AG), 'bia'); assert.equal(C.aliadoDe(e, 'bia', AG), 'ana');
+  assert(C.convidarAlianca(e, 'ana', 'caio', rk4, INI, AG, '2999-01-01').erro); // já tem aliança
+  // aliados não se atacam; trair quebra a aliança e castiga
+  C.setDado(() => 8);
+  assert(C.usar(e, 'ana', 'a1', 'bia', rk4, INI, AG, '2999-01-01').erro.includes('aliado'));
+  // perda dividida: davi (aliado de ninguém) ataca ana -> ana e bia perdem metade
+  const e2 = mk(); C.convidarAlianca(e2, 'ana', 'bia', rk4, INI, AG, '2999-01-01'); C.responderAlianca(e2, 'bia', e2.convites[0].id, true, rk4, INI, AG, '2999-01-01');
+  r = C.usar(e2, 'davi', 'd1', 'ana', rk4, INI, AG, '2999-01-01'); assert(r.ok, JSON.stringify(r));
+  const pl = C.placar(e2, rk4, AG, '2999-01-01'); assert.equal(pl.find((x) => x.usuario === 'ana').copa, 78); assert.equal(pl.find((x) => x.usuario === 'bia').copa, 68); // -4 dividido: -2 cada
+  // ganho dividido: turbo da ana dá +50% à bia
+  C.usar(e2, 'ana', 'a2', null, rk4, INI, AG, '2999-01-01'); const pl2 = C.placar(e2, rk4, AG, '2999-01-01'); assert.equal(pl2.find((x) => x.usuario === 'ana').copa, 80); assert.equal(pl2.find((x) => x.usuario === 'bia').copa, 69);
+  // traição: dobra o dano, quebra a aliança, castiga 2 semanas
+  const e3 = mk(); C.convidarAlianca(e3, 'ana', 'bia', rk4, INI, AG, '2999-01-01'); C.responderAlianca(e3, 'bia', e3.convites[0].id, true, rk4, INI, AG, '2999-01-01');
+  assert(C.usar(e3, 'ana', 'a1', 'caio', rk4, INI, AG, '2999-01-01', { trair: true }).erro); // só trai o aliado
+  C.setDado(() => 10); r = C.usar(e3, 'bia', 'b1', 'ana', rk4, INI, AG, '2999-01-01', { trair: true }); assert(r.ok, JSON.stringify(r)); assert(/TRAIÇÃO/.test(r.resultado)); C.setDado(() => 8);
+  assert.equal(C.aliadoDe(e3, 'ana', AG), null); assert(e3.traidores.bia);
+  assert(C.convidarAlianca(e3, 'bia', 'caio', rk4, INI, AG, '2999-01-01').erro); // traidor de castigo
+  assert(/TRAIÇÃO/.test(C.narracao(e3, AG, (k) => k, 3)) && !/bia.*traiu|traiu.*bia/i.test(C.narracao(e3, AG, (k) => k, 3)));
+  // falha crítica: item volta em outro colega e quem tirou 1 também perde 2 pontos
+  C.setDado(() => 1); const e4 = mk(); r = C.usar(e4, 'bia', 'b1', 'ana', rk4, INI, AG, '2999-01-01'); assert.equal(r.faixa, 'falha_critica'); assert(e4.efeitos.some((x) => x.para === 'bia' && x.delta < 0)); C.setDado(() => 8);
+  const e5 = mk(); e5.escudos.ana = true; C.setDado(() => 10); r = C.usar(e5, 'bia', 'b1', 'ana', rk4, INI, AG, '2999-01-01'); assert(r.bloqueado); C.setDado(() => 8);
+}
 console.log('Copa: todos os testes passaram.');
