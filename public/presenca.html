@@ -575,18 +575,50 @@ function textoIncentivo(D,op,v){
   return L.join('\n')}
 
 function imagemCopa(c,nome,turma){
-  const pl=(c.placar||[]).slice(0,12),nev=c.evento&&/nevoeiro/i.test(c.evento.nome||'');const W=900,H=200+pl.length*58+60;
+  const nev=!!(c.evento&&/nevoeiro/i.test(c.evento.nome||''));
+  let pl=(c.placar||[]).slice(0,14);if(nev)pl=pl.slice().sort((x,y)=>String(nome(x.usuario)).localeCompare(String(nome(y.usuario)),'pt-BR'));
+  const cur=x=>String(nome(x.usuario)).split(' ').slice(0,2).join(' ');
+  const W=1080,max=Math.max(1,...pl.map(x=>x.copa)),sw=(c.inicio&&c.fim)?Math.max(1,Math.round((new Date(c.fim)-new Date(c.inicio))/6048e5)):0;
+  const dest=(c.narracao||'').split('\n').slice(1).filter(Boolean).slice(0,5);
+  const tem=!nev&&pl.length>=3,PODH=tem?390:0,LANE=64,LH=pl.length*LANE+60;
+  const medida=document.createElement('canvas').getContext('2d');medida.font='22px sans-serif';
+  const quebra=(g,t,w)=>{const o=[];let l='';for(const p of t.split(' ')){const x=l?l+' '+p:p;if(g.measureText(x).width>w&&l){o.push(l);l=p}else l=x}if(l)o.push(l);return o};
+  const dl=dest.flatMap(t=>quebra(medida,t,W-130));const DH=dl.length?90+dl.length*32:0;
+  const H=190+PODH+LH+DH+70;
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
-  const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#1b1f3a');gr.addColorStop(1,'#0e1020');g.fillStyle=gr;g.fillRect(0,0,W,H);
-  g.fillStyle='#ffd34d';g.font='800 44px sans-serif';g.fillText('🏆 Copa da Liga',40,70);
-  g.fillStyle='#fff';g.font='24px sans-serif';g.fillText('Turma '+turma+(c.evento?' · '+c.evento.ic+' '+c.evento.nome:''),40,110);
-  g.fillStyle='#fff9';g.font='20px sans-serif';g.fillText(nev?'Nevoeiro: pontos escondidos esta semana':'Pontos da Copa (oficial + efeitos dos itens)',40,145);
-  const med=['🥇','🥈','🥉'],max=Math.max(1,...pl.map(x=>x.copa));
-  pl.forEach((x,i)=>{const y=180+i*58;g.fillStyle='#ffffff14';g.fillRect(40,y,W-80,46);
-    if(!nev){g.fillStyle='#7b2ff7';g.fillRect(40,y,Math.max(8,(W-80)*x.copa/max),46);g.globalAlpha=.55;g.fillStyle='#0e1020';g.fillRect(40,y,0,0);g.globalAlpha=1}
-    g.fillStyle='#fff';g.font='700 24px sans-serif';g.fillText((med[(x.posCopa||i+1)-1]||(x.posCopa||i+1)+'º')+'  '+String(nome(x.usuario)).split(' ').slice(0,2).join(' '),56,y+32);
-    if(!nev){g.textAlign='right';g.fillText(String(x.copa),W-56,y+32);if(x.efeito){g.font='18px sans-serif';g.fillStyle=x.efeito<0?'#ff8a80':'#a5f3b0';g.fillText((x.efeito>0?'+':'')+x.efeito,W-130,y+31)}g.textAlign='left'}});
-  g.fillStyle='#fff7';g.font='18px sans-serif';g.fillText('Liga de Games · Ceuma',40,H-24);
+  const rr=(x,y,w,h,r,f)=>{g.beginPath();g.roundRect(x,y,w,h,r);g.fillStyle=f;g.fill()};
+  const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#2a1670');gr.addColorStop(.45,'#1a1442');gr.addColorStop(1,'#0b0c1d');g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.globalAlpha=.07;g.fillStyle='#fff';for(let i=0;i<40;i++){g.beginPath();g.arc((i*173)%W,(i*97)%H,1+(i%3),0,7);g.fill()}g.globalAlpha=1;
+  for(let i=0;i<W/24;i++){g.fillStyle=i%2?'#fff':'#111';g.fillRect(i*24,0,24,12)}
+  g.textBaseline='alphabetic';g.fillStyle='#ffd34d';g.font='900 60px sans-serif';g.fillText('🏁 COPA DA LIGA',40,92);
+  g.fillStyle='#fff';g.font='700 26px sans-serif';g.fillText('Turma '+turma+(sw?'  ·  Semana '+Math.max(1,c.semana||1)+' de '+sw:''),40,134);
+  if(c.evento){const t=c.evento.ic+' '+c.evento.nome;g.font='700 22px sans-serif';const w=g.measureText(t).width+36;rr(W-40-w,60,w,44,22,'#ffd34d');g.fillStyle='#2a1670';g.fillText(t,W-40-w+18,90)}
+  g.fillStyle='#fff9';g.font='19px sans-serif';g.fillText(nev?'🌫️ Nevoeiro: pontos escondidos esta semana. Ninguém sabe quem lidera!':'Pontos da Copa = pontos oficiais + efeitos dos itens',40,168);
+  let y=190;
+  if(tem){const ordem=[1,0,2],alt=[190,250,150],cor=[['#cfd8e6','#8d9bb0'],['#ffd34d','#e0a800'],['#e0a070','#a8683a']],med=['🥈','🥇','🥉'];
+    const bw=300,gap=20,x0=(W-(bw*3+gap*2))/2;
+    ordem.forEach((pi,k)=>{const x=pl[pi],bx=x0+k*(bw+gap),h=alt[k],by=y+PODH-h;
+      const gg=g.createLinearGradient(0,by,0,by+h);gg.addColorStop(0,cor[k][0]);gg.addColorStop(1,cor[k][1]);rr(bx,by,bw,h,[16,16,0,0],gg);
+      g.textAlign='center';g.fillStyle='#1b1442';g.font='900 64px sans-serif';g.fillText(String(pi+1),bx+bw/2,by+h-24);
+      g.font='54px sans-serif';g.fillText(med[k],bx+bw/2,by-70+(pi===0?-14:0));if(pi===0){g.font='40px sans-serif';g.fillText('👑',bx+bw/2,by-132)}
+      g.fillStyle='#fff';g.font='800 28px sans-serif';g.fillText(cur(x),bx+bw/2,by-34+(pi===0?-14:0)+0);
+      g.fillStyle='#ffd34d';g.font='700 24px sans-serif';g.fillText(x.copa+' pts',bx+bw/2,by-8+(pi===0?-14:0));g.textAlign='left'});
+    y+=PODH}
+  g.fillStyle='#fff';g.font='800 26px sans-serif';g.fillText('🏎️ A corrida',40,y+30);y+=46;
+  const tx=40,tw=W-80,pad=250,faixa=tw-pad-230;
+  pl.forEach((x,i)=>{const ly=y+i*LANE;rr(tx,ly,tw,LANE-10,14,'#232844');
+    g.setLineDash([14,12]);g.strokeStyle='#ffffff33';g.lineWidth=2;g.beginPath();g.moveTo(tx+pad,ly+(LANE-10)/2);g.lineTo(tx+tw-175,ly+(LANE-10)/2);g.stroke();g.setLineDash([]);
+    g.font='30px sans-serif';g.fillText('🏁',tx+tw-190,ly+40);
+    const pos=nev?0:Math.max(0,Math.min(1,x.copa/max));const kx=tx+pad+pos*faixa;
+    if(!nev){const gg=g.createLinearGradient(tx+pad,0,kx+30,0);gg.addColorStop(0,'#7b2ff700');gg.addColorStop(1,'#a66bff');g.fillStyle=gg;g.fillRect(tx+pad,ly+(LANE-10)/2-5,Math.max(0,kx-tx-pad+14),10)}
+    g.fillStyle=nev?'#fff9':'#fff';g.font='34px sans-serif';if(nev)g.fillText('🌫️',kx,ly+44);else{g.save();g.translate(kx+34,ly+44);g.scale(-1,1);g.fillText('🏎️',0,0);g.restore()}
+    const p=x.posCopa||i+1;g.fillStyle='#fff';g.font='800 20px sans-serif';g.fillText((nev?'':p<=3?['🥇','🥈','🥉'][p-1]:p+'º')+' '+cur(x),tx+14,ly+22);
+    const it=(c.inventario&&c.inventario[x.usuario]||[]).slice(0,4).map(v=>(c.itens&&c.itens[v.tipo]||{}).ic||'').join('');g.font='18px sans-serif';g.fillText((x.escudo?'🛡️ ':'')+it,tx+14,ly+46);
+    if(!nev){g.textAlign='right';g.fillStyle='#ffd34d';g.font='800 26px sans-serif';g.fillText(String(x.copa),tx+tw-14,ly+30);
+      if(x.efeito){g.font='700 17px sans-serif';g.fillStyle=x.efeito<0?'#ff8a80':'#a5f3b0';g.fillText((x.efeito<0?'🍌 ':'🍄 ')+(x.efeito>0?'+':'')+x.efeito,tx+tw-14,ly+50)}g.textAlign='left'}});
+  y+=pl.length*LANE+14;
+  if(dl.length){rr(40,y,W-80,DH-14,18,'#ffffff12');g.fillStyle='#ffd34d';g.font='800 24px sans-serif';g.fillText('🎙️ O narrador conta',62,y+40);g.fillStyle='#fff';g.font='22px sans-serif';dl.forEach((t,i)=>g.fillText(t,62,y+78+i*32));y+=DH}
+  g.fillStyle='#fff8';g.font='18px sans-serif';g.fillText('Liga de Games · Ceuma  ·  entregou no prazo, subiu na pista! 🚀',40,H-26);
   document.querySelectorAll('.imgjan').forEach(x=>x.remove());
   const bg=h('div',{class:'imgjan',style:'position:fixed;inset:0;background:#000c;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px'});
   const cx=h('div',{style:'background:#171a26;border:1px solid var(--ouro);border-radius:16px;max-width:760px;width:100%;max-height:94vh;overflow:auto;padding:16px'});
