@@ -182,10 +182,26 @@ async function jogar(b,chamar,tab,ic){
   const [r]=await Promise.all([chamar(),new Promise(z=>setTimeout(z,modo==='dado'?900:0))]);if(giro)clearInterval(giro);
   if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent=rotuloJogo();b.disabled=false;return null}
   if(modo==='roleta'&&r.dado)await girarRoleta(r.dado,tab);await mostrarResultado(r,ic);return r}
+function guiaCopa(c){
+  const d=el('details','item');d.append(el('summary','','❓ Como funciona a Copa (regras e dúvidas)'));
+  const p=(t)=>d.append(el('p','sub',t)),t=(x)=>d.append(el('b','',x));
+  t('O que é');p('Um joguinho em cima do ranking. Ele mexe só nos pontos da COPA. Sua nota e o ranking oficial nunca mudam por causa dele.');
+  t('1. Como ganho itens');p('Presença na aula, participação e entregas no prazo rendem itens. Você guarda até 3 por vez. Quando a turma inteira entrega no prazo, todo mundo ganha 1 item extra (missão da turma).');
+  t('2. Como uso um item');p('Escolha o item, escolha o alvo (se precisar) e clique em Jogar: o dado (d10) decide o resultado. 1 é falha crítica, números baixos erram ou enfraquecem, 10 é CRÍTICO (efeito 50% maior). Cada aluno joga 1 item por semana e não ataca a mesma pessoa duas vezes seguidas.');
+  t('3. Os itens');
+  for(const [k,it] of Object.entries(c.itens||{}))p(`${it.ic} ${it.nome}: ${it.txt}`);
+  t('4. Proteções (ninguém é massacrado)');p('🛡️ O Escudo bloqueia 1 ataque e some. Quem está em último lugar fica protegido. Cada aluno recebe no máximo 1 ataque por dia. Ninguém vê quem lançou o item em você.');
+  t('5. Duração');p('Ataques e turbos duram '+(c.diasEfeito||7)+' dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial.');
+  t('6. Eventos e Chefão');p('Toda semana pode ter um evento (nevoeiro, dado em dobro, semana da paz, chuva de itens). O professor joga como 👹 Chefão da Liga, inimigo de todos: 1 item por semana. Quando todos entregam no prazo, o Chefão cai e todo mundo ganha 1 item.');
+  t('Dúvidas comuns');
+  p('🐢 Posso jogar o Casco em quem está na minha frente? Sim, o Casco só acerta quem está à sua frente no ranking. Escolha a pessoa e jogue o dado.');
+  p('🎰 O que faz a Roleta maluca? Ela não fica guardada: cai sozinha em quem a sorteou, tira 2 pontos da Copa por 7 dias, a não ser que você tenha escudo (aí o escudo gasta e protege). É raríssima!');
+  return d}
 function tabCopa(C){
   if(PREV&&!COPA)return previa(C,'copa');
   const c=COPA,m=c.meu;
-  if(!m){C.append(el('p','sub','🏁 A Copa da Liga é o jogo de itens por cima do ranking: você ganha itens por presença, participação e entregas no prazo, joga o dado e atrapalha ou ajuda colegas. Ela só muda pontos da Copa, nunca a sua nota nem o ranking oficial.'));C.append(el('p','',c.foraDoRanking?'Você ainda não está no ranking desta turma.':'🔒 A Copa ainda não foi aberta pela sua turma. Assim que o professor abrir, ela aparece aqui.'));return}const turma=PONT.turmas.find(x=>x.turma===c.turma)||{};const max=turma.pesos?(turma.pesos.presenca+turma.pesos.participacao+turma.pesos.exercicios):100;
+  if(!m){C.append(el('p','sub','🏁 A Copa da Liga é o jogo de itens por cima do ranking: você ganha itens por presença, participação e entregas no prazo, joga o dado e atrapalha ou ajuda colegas. Ela só muda pontos da Copa, nunca a sua nota nem o ranking oficial.'));C.append(guiaCopa(c));C.append(el('p','',c.foraDoRanking?'Você ainda não está no ranking desta turma.':'🔒 A Copa ainda não foi aberta pela sua turma. Assim que o professor abrir, ela aparece aqui.'));return}const turma=PONT.turmas.find(x=>x.turma===c.turma)||{};const max=turma.pesos?(turma.pesos.presenca+turma.pesos.participacao+turma.pesos.exercicios):100;
+  C.append(guiaCopa(c));
   C.append(el('p','sub','A Copa da Liga é a parte divertida: itens ganhos por presença, participação e entregas no prazo mexem só nos pontos da Copa. Seu ranking oficial e suas notas nunca mudam por causa dela.'));
   const nev=!!(c.evento&&c.evento.tipo==='nevoeiro');
   if(c.evento)C.append(el('p','',`${c.evento.ic} Evento da semana: ${c.evento.nome}. ${c.evento.txt}`));
