@@ -29,10 +29,11 @@ assert(C.usar(E, 'bia', 'b1', 'davi', rank, INI, AG).erro); // último colocado 
 assert(C.usar(E, 'bia', 'c1', 'caio', rank, INI, AG).erro); // casco só acerta quem está à frente
 let r = C.usar(E, 'bia', 'c1', 'ana', rank, INI, AG); assert(r.ok, JSON.stringify(r)); // casco no líder
 assert(C.usar(E, 'bia', 'b2', 'caio', rank, INI, AG).erro); // 1 uso por semana
-assert.equal(C.placar(E, rank, AG).find((x) => x.usuario === 'ana').copa, 75); assert.equal(C.placar(E, rank, AG).find((x) => x.usuario === 'ana').oficial, 80); // só a Copa muda
-const cp = (d) => C.placar(E, rank, AG + d * 864e5).find((x) => x.usuario === 'ana').copa; assert.equal(cp(8), 76.3); assert.equal(cp(15), 77.5); assert.equal(cp(22), 78.8); assert.equal(cp(29), 80); // efeito perde força a cada semana (100/75/50/25%) e some em 4 semanas
+assert.equal(C.placar(E, rank, AG).find((x) => x.usuario === 'ana').copa, 73); assert.equal(C.placar(E, rank, AG).find((x) => x.usuario === 'ana').oficial, 80); // só a Copa muda
+const cp = (d) => C.placar(E, rank, AG + d * 864e5).find((x) => x.usuario === 'ana').copa; assert.equal(cp(8), 74.8); assert.equal(cp(15), 76.5); assert.equal(cp(22), 78.3); assert.equal(cp(29), 80); // efeito perde força a cada semana (100/75/50/25%) e some em 4 semanas
 // ataque seguido ao mesmo alvo e limite de ataque por dia
-assert(C.usar(E, 'caio', 'k2', 'ana', rank, INI, AG).erro); // ana já recebeu um ataque hoje
+E.efeitos.push({ id: 'x1', tipo: 'banana', de: 'zed', para: 'ana', delta: -1, em: new Date(AG).toISOString(), ate: new Date(AG + 864e5).toISOString() }); // 2º ataque no dia
+assert(C.usar(E, 'caio', 'k2', 'ana', rank, INI, AG).erro); // ana já recebeu 2 ataques hoje (limite)
 r = C.usar(E, 'caio', 'k1', 'bia', rank, INI, AG); assert(r.ok, JSON.stringify(r)); // bia está à frente de caio
 // escudo bloqueia
 const E2 = C.normalizar({ inventario: { bia: [{ id: 'e1', tipo: 'escudo', semana: 3 }], caio: [{ id: 'k2', tipo: 'banana', semana: 3 }] } });
@@ -61,8 +62,8 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   const ef = (e, k) => e.efeitos.filter((x) => x.para === k && !x.bloqueado);
   assert.equal(C.faixaDe('banana', 1), 'falha_critica'); assert.equal(C.faixaDe('banana', 2), 'falha'); assert.equal(C.faixaDe('banana', 5), 'fraco'); assert.equal(C.faixaDe('banana', 6), 'normal'); assert.equal(C.faixaDe('banana', 10), 'critico');
   assert(C.faixaDe('turbo', 7) === 'normal' && C.faixaDe('turbo', 6) === 'fraco'); // item forte pede mais do dado
-  C.setDado(() => 10); let e = mk(); let r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert(r.ok && r.faixa === 'critico'); assert.equal(ef(e, 'ana')[0].delta, -4.5); // 150%
-  C.setDado(() => 5); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'fraco'); assert.equal(ef(e, 'ana')[0].delta, -1.5); // metade
+  C.setDado(() => 10); let e = mk(); let r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert(r.ok && r.faixa === 'critico'); assert.equal(ef(e, 'ana')[0].delta, -6); // 150%
+  C.setDado(() => 5); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'fraco'); assert.equal(ef(e, 'ana')[0].delta, -2); // metade
   C.setDado(() => 2); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'falha'); assert.equal(e.efeitos.length, 0); assert.equal(e.inventario.bia.length, 0); // gasta e nada acontece
   C.setDado(() => 1); e = mk(); r = C.usar(e, 'bia', 'b1', 'ana', rank, INI, AG); assert.equal(r.faixa, 'falha_critica'); assert.equal(e.efeitos.length, 1); assert(['bia', 'caio'].includes(e.efeitos[0].para) && e.efeitos[0].para !== 'ana'); assert(e.efeitos[0].para !== 'davi'); // cai em você ou em outro, nunca no alvo nem no último
   r = C.usar(mk(), 'caio', 'k1', null, rank, INI, AG); assert.equal(r.faixa, 'falha_critica'); // turbo com 1 vira penalidade em si

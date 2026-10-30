@@ -190,7 +190,7 @@ function guiaCopa(c){
   t('2. Como uso um item');p('Escolha o item, escolha o alvo (se precisar) e clique em Jogar: o dado (d10) decide o resultado. 1 é falha crítica, números baixos erram ou enfraquecem, 10 é CRÍTICO (efeito 50% maior). Cada aluno joga 1 item por semana e não ataca a mesma pessoa duas vezes seguidas.');
   t('3. Os itens');
   for(const [k,it] of Object.entries(c.itens||{}))p(`${it.ic} ${it.nome}: ${it.txt}`);
-  t('4. Proteções (ninguém é massacrado)');p('🛡️ O Escudo bloqueia 1 ataque e some. Quem está em último lugar fica protegido. Cada aluno recebe no máximo 1 ataque por dia. Ninguém vê quem lançou o item em você.');
+  t('4. Proteções (ninguém é massacrado)');p('🏴‍☠️ Roubo: quando seu ataque acerta, você ganha 25% do que o colega perdeu. Atacar compensa!');p('🛡️ O Escudo bloqueia 1 ataque e some. Quem está em último lugar fica protegido. Cada aluno recebe no máximo 2 ataques por dia. Ninguém vê quem lançou o item em você.');
   t('5. Duração');p('Ataques e turbos duram 4 semanas, mas perdem força a cada semana (100%, 75%, 50%, 25%): uma pancada forte vai sendo recuperada aos poucos, então dá para virar o jogo! Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial.');
   t('6. Eventos e Chefão');p('Toda semana pode ter um evento (nevoeiro, dado em dobro, semana da paz, chuva de itens). O professor joga como 👹 Chefão da Liga, inimigo de todos: 1 item por semana. Quando todos entregam no prazo, o Chefão cai e todo mundo ganha 1 item.');
   t('Dúvidas comuns');
@@ -255,7 +255,7 @@ async function previa(C,qual){
     const ol=el('div','pont-top');for(const x of r.ranking.filter(x=>x.posicao>3)){const l=el('div','pont-lin');l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome',nome(x.usuario)),el('span','pont-pts',x.total+' pts'));ol.append(l)}corpo.append(ol);return}
   const c=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(PREVT));corpo.textContent='';
   if(!c||c.erro){corpo.append(el('p','sub','Não consegui carregar a Copa desta turma.'));return}
-  if(c.chefao&&c.chefao.def){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 1 ataque por dia, trégua).'));
+  if(c.chefao&&c.chefao.def){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 2 ataques por dia, trégua).'));
     const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
     let sel=null;if(d.alvo==='outro'&&!ch.aleatorio){sel=el('select','');const o1=el('option','','🎲 Aleatório');o1.value='__sorteio';sel.append(o1);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
     const b=el('button','btn',rotuloJogo());b.type='button';if(ch.usado||ch.tregua){b.disabled=true}
