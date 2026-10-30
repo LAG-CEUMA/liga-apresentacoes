@@ -28,19 +28,19 @@ function pista(o){
   svg.append(hud);
   // pace car e karts
   const karts=[];
-  const mkKart=(u,voltas,eh,pos)=>{const g=E('g',{class:'kart'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':(o.nome?o.nome(u):u)+' · '+pos+'º · '+Math.round(voltas*10)/10+' de '+N+' voltas'));
+  const mkKart=(u,voltas,eh,pos,pts)=>{const g=E('g',{class:'kart'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':(o.nome?o.nome(u):u)+' · '+pos+'º · '+pts+' ponto'+(pts===1?'':'s')));
     if(eh){g.append(E('circle',{r:15,fill:'#f5b83d',stroke:'#fff','stroke-width':2}),E('text',{y:5,'text-anchor':'middle','font-size':'16'},'🚓'));return{g,voltas,eh,off:0,u:null}}
     const cid='cp'+u.replace(/\W/g,'');defs.append(E('clipPath',{id:cid},E('circle',{r:15})));
     g.append(E('circle',{r:eu===u?20:17,fill:'#2a2e42',stroke:eu===u?'#4aa3ff':(pos===1?'#ffd54a':'#f5b83d'),'stroke-width':eu===u||pos===1?4:2.5}),E('text',{y:5,'text-anchor':'middle','font-size':'15',fill:'#fff','font-weight':'800'},u[0].toUpperCase()));
     const im=E('image',{href:'https://github.com/'+encodeURIComponent(u)+'.png?size=64',x:-15,y:-15,width:30,height:30,'clip-path':'url(#'+cid+')',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.remove());g.append(im);
     if(eu===u)g.append(E('text',{y:-24,'text-anchor':'middle','font-size':'11',fill:'#4aa3ff','font-weight':'800',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'VOCÊ'));else if(pos===1)g.append(E('text',{y:-22,'text-anchor':'middle','font-size':'15'},'👑'));
-    g.append(E('text',{y:32,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'700',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'V'+Math.floor(voltas+1)));
+    g.append(E('text',{y:32,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'700',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},pos+'º'));
     const its=(porU[u]&&porU[u].icones)||[];its.forEach((it,i)=>{g.append(E('text',{x:22+i*15,y:-8,'font-size':'14'},it.ic))});
     if(its.length)g.querySelector('title').append(' · '+its.map(it=>it.ic+' '+it.tx).join(' · '));
     return{g,voltas,eh,off:((pos%3)-1)*12,u,turbo:its.some(it=>it.ic==='🍄')}};
   const mov=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
   if(dec!==null)karts.push(mkKart(null,dec,true,0));
-  lista.forEach(x=>karts.push(mkKart(x.usuario,Math.max(0,Math.min(1,x.pontos/max))*N,false,x.posicao)));
+  lista.forEach(x=>karts.push(mkKart(x.usuario,Math.max(0,Math.min(1,x.pontos/max))*N,false,x.posicao,x.pontos)));
   const trail=E('g',{});svg.append(trail);for(const k of karts)svg.append(k.g);
   const gaps=karts.filter(k=>!k.eh).map(k=>k.voltas-(dec===null?0:dec));const M=Math.max(1,...gaps.map(Math.abs));
   for(const k of karts)k.f=k.eh?0:(dec===null?Math.max(0,Math.min(1,k.voltas/N))*.9:((k.voltas-dec)/(2*M))*.9);
