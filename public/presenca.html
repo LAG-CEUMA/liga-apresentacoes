@@ -60,7 +60,7 @@ rank_chuva:{t:'Chuva de itens',l:['Dá 1 item extra sorteado a cada aluno da tur
 rank_itens:{t:'Itens da corrida',l:['Os itens aparecem ao lado do kart do aluno e nascem de fatos reais, nunca de sorteio.','🍄 Turbo: 2 ou mais entregas seguidas no prazo. Deixa um rastro de fogo na largada.','⭐ Estrela: entregou com 1 dia ou mais de folga.','🐢 Casco: foi o primeiro a entregar a atividade mais recente.','🎁 Caixa: presença completa.','🍌 Banana: o líder ainda tem atividade vencida sem entrega. É só um lembrete.','Itens nunca tiram nem dão pontos ou nota. São só visuais.','Passe o mouse sobre o kart para ver o motivo de cada item.']},
 rank_corrida:{t:'Corrida da Liga',l:['Cada aluno é um kart com a foto do GitHub dele, num circuito. Cada volta é uma semana da turma (do início ao fim previstos). Quanto mais pontos no ranking (presença, participação e atividades), mais voltas ele já completou. O 🚓 (na linha de largada) é o ritmo ideal da semana atual: os karts à frente dele estão adiantados; os que estão antes da linha estão devendo. A distância na pista mostra o tamanho da diferença.','Os 3 primeiros aparecem no pódio. A pista é só para você por enquanto; depois você poderá escolher se os alunos veem.','Se a foto do GitHub não carregar, aparece a inicial do nome.','Em breve: turbo por entregar no prazo e troféus de constância.','Use a Tabela para ver o detalhe de cada parte da pontuação.']},
 acomp_extras:{t:'Ordem, lembrete e planilha',l:['Ordem: muda a ordem dos alunos (alfabética, mais pendências, mais entregas ou maior média). Fica salva neste navegador.','Copiar lembrete dos pendentes: monta um texto pronto com as atividades vencidas e os nomes de quem falta, para você colar no grupo. O portal não envia nada sozinho.','Planilha (Excel): baixa um arquivo CSV com todos os alunos e o estado de cada atividade.','Média: soma das notas já dadas dividida pela soma das notas máximas dessas atividades. Atividades ainda sem nota não entram.','Novo: o aluno respondeu nas últimas 24 horas.']},
-acomp_imagem:{t:'Imagem para o WhatsApp',l:['Cria uma imagem do quadro de entregas da turma, pronta para colar no grupo e estimular os alunos.','Motivacional: mostra o progresso da turma, os destaques e quem entregou, sem usar vermelho. Quem ainda não entregou aparece com um círculo vazio (dá tempo!). Completo: mostra também as atividades vencidas em vermelho e quantas faltam.','Por padrão aparece só o primeiro nome e a inicial do sobrenome. Marque Nome completo se quiser o nome todo.','Copiar imagem coloca a figura na área de transferência: abra o WhatsApp Web e cole com Ctrl+V. Se o navegador não permitir, use Baixar PNG e envie o arquivo.','Os números são os de agora, vindos do GitHub. Clique em Atualizar agora antes, se quiser o dado mais recente.']},
+acomp_imagem:{t:'Imagem e texto para o WhatsApp',l:['Cria a imagem e o texto prontos para colar no grupo. Em Grupo você escolhe de quem é: Todos, Em dia, Com pendência, Entregas atrasadas, Aguardando correção ou Sumidos. Cada grupo tem imagem, título e texto próprios (tom de parabéns, lembrete, acolhimento...). A janela abre já no grupo do filtro que você está vendo.','Motivacional: mostra o progresso da turma, os destaques e quem entregou, sem usar vermelho. Quem ainda não entregou aparece com um círculo vazio (dá tempo!). Completo: mostra também as atividades vencidas em vermelho e quantas faltam.','Por padrão aparece só o primeiro nome e a inicial do sobrenome. Marque Nome completo se quiser o nome todo.','Copiar imagem coloca a figura na área de transferência: abra o WhatsApp Web e cole com Ctrl+V. Se o navegador não permitir, use Baixar PNG e envie o arquivo.','Os números são os de agora, vindos do GitHub. Clique em Atualizar agora antes, se quiser o dado mais recente.']},
 aba_acomp:{t:'Acompanhamento',l:['Quadro para acompanhar a turma inteira: uma linha por aluno e uma coluna por atividade. É só leitura: aqui você olha, e para dar nota usa a aba Correção.','Os dados vêm sozinhos das Atividades e do GitHub, então não há nada para digitar nem botão de salvar. A tela se atualiza sozinha.','Clique no nome de um aluno para abrir a ficha dele (pontos, situação em cada atividade e lembrete pronto). Clique numa bolinha para abrir um menu: ver a resposta no GitHub, ir corrigir aquela atividade ou abrir a ficha do aluno. Clique no código de uma atividade (cabeçalho da coluna) para abrir essa atividade na aba Correção.','Os números coloridos no alto são atalhos: clique para filtrar só aquele grupo.']},
 acomp_legenda:{t:'Legenda das cores',l:['Verde ✓: entregou no prazo (ou adiantado) e já está corrigido.','Azul …: entregou e aguarda a sua correção. Nunca é vermelho: se a correção demora, o aluno não é prejudicado.','Amarelo !: entregou e foi corrigido, mas depois do prazo (vale 50%).','Vermelho ✕: o prazo já passou e não há resposta.','Cinza ·: ainda está dentro do prazo, sem resposta.','Traço –: dispensado ou a atividade não é para este aluno.','O símbolo ✉ pequeno na bolinha significa que o aluno escreveu de novo depois da correção.']},
 acomp_filtro:{t:'Filtros e alertas',l:['Com pendência: tem ao menos uma atividade com prazo vencido e sem entrega (opcionais não contam).','Entregas atrasadas: respondeu depois do prazo em alguma atividade.','Aguardando correção: entregou e você ainda não deu a nota.','Sumido (alerta): tem atividade vencida e nunca respondeu nada, ou está há 14 dias ou mais sem responder qualquer coisa. Serve para você procurar o aluno antes que ele desista.']},
@@ -462,7 +462,7 @@ async function telaAcomp(alvo){
   alvo.append(h('p',{class:'sub'},'Quadro de acompanhamento da turma: uma linha por aluno, uma coluna por atividade. Aqui você só olha; para dar nota, use a aba Correção. Clique no nome do aluno para abrir a ficha dele.'),
     h('div',{class:'chips'},chip(cont(i=>!i.pend),'Em dia','ok'),chip(cont(i=>i.pend),'Com pendência','pend'),chip(cont(i=>i.atr>0),'Entregas atrasadas','atr'),chip(cont(i=>i.agu>0),'Aguardando correção','agu'),chip(cont(i=>i.sumido),'Sumidos (alerta)','sumido')),
     legendaAcomp(),
-    h('div',{class:'barra livre'},h('button',{class:'btn sec',type:'button',onclick:()=>{ACOMP_FORCAR=true;refaz()}},'Atualizar agora'),fsel,ajuda('acomp_filtro'),h('button',{class:'btn',type:'button',title:'Cria uma imagem do quadro da turma para copiar e colar no WhatsApp',onclick:()=>janelaImagem({lista,info,ativs,rk,P})},'📸 Imagem para o WhatsApp'),ajuda('acomp_imagem'),h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm))),
+    h('div',{class:'barra livre'},h('button',{class:'btn sec',type:'button',onclick:()=>{ACOMP_FORCAR=true;refaz()}},'Atualizar agora'),fsel,ajuda('acomp_filtro'),h('button',{class:'btn',type:'button',title:'Cria a imagem e o texto para o WhatsApp do grupo que você está vendo (Todos, Em dia, Pendentes, Atrasados, Aguardando, Sumidos). Dá para trocar o grupo dentro da janela.',onclick:()=>janelaImagem({lista,info,ativs,rk,P,filtros,tipo:fsel.value})},'📸 Imagem e texto para o WhatsApp'),ajuda('acomp_imagem'),h('span',{class:'sub'},'Atualizado às '+hora(P.geradoEm))),
     h('div',{class:'barra livre'},h('span',{class:'sub'},'Ordem:'),osel,h('button',{class:'btn sec',type:'button',title:'Copia um texto pronto, com os nomes de quem tem atividade vencida, para colar no grupo. O portal não envia nada sozinho.',onclick:async()=>{const pe=lista.filter(k=>info[k].pend);if(!pe.length){aviso('Ninguém com pendência agora. 🎉');return}const ok=await copiarTexto(lembreteTurma(pe,info,ativs));aviso(ok?'Lembrete copiado. Cole (Ctrl+V) no grupo do WhatsApp.':'Não consegui copiar.',!ok)}},'📝 Copiar lembrete dos pendentes'),h('button',{class:'btn sec',type:'button',title:'Baixa uma planilha (CSV) que abre no Excel',onclick:()=>baixaCSV(lista,info,ativs)},'⬇ Planilha (Excel)'),ajuda('acomp_extras')));
   if(!ativs.length){alvo.append(h('p',{},'Nenhuma atividade liberada nesta turma ainda. Libere uma na aba Atividades.'));return}
   const f=filtros[fsel.value][1];const vis=lista.filter(k=>f(info[k]));
@@ -501,31 +501,38 @@ function baixaCSV(lista,info,ativs){const q=v=>'"'+String(v??'').replace(/"/g,'"
   const b=new Blob(['﻿'+l.join('\r\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='acompanhamento-'+TURMA+'-'+new Date().toISOString().slice(0,10)+'.csv';document.body.append(a);a.click();a.remove()}
 // ---------- Imagem do quadro (para colar no WhatsApp) ----------
 function nomeCurto(k,completo){const n=((CTX&&CTX.nomes)||{})[k];if(!n)return '@'+k;if(completo)return n;const p=n.trim().split(/\s+/);const pri=p[0];const ult=p.length>1?p[p.length-1]:'';return ult&&ult.length>2&&!/^(de|da|do|dos|das|e)$/i.test(ult)?pri+' '+ult[0]+'.':pri}
+const TIPO_IMG={
+  todos:{titulo:'Quadro de entregas',sub:()=>'',vazio:'',rodape:''},
+  ok:{titulo:'⭐ Em dia, parabéns!',sub:n=>n+' aluno(s) com tudo entregue ou dentro do prazo',vazio:'Ninguém em dia ainda. Bora começar! 🚀',rodape:'Constância é o que faz a diferença. Continue assim! 👏'},
+  pend:{titulo:'📌 Entregas pendentes',sub:n=>n+' aluno(s) com atividade vencida',vazio:'Ninguém com pendência. Que turma! 🎉',rodape:'Dá tempo: comente na Issue da atividade, no seu repositório aluno-<usuário>.'},
+  atr:{titulo:'⏳ Entregaram com atraso',sub:n=>n+' aluno(s) com entrega atrasada (vale 50%)',vazio:'Nenhuma entrega atrasada. 👏',rodape:'Atrasado vale 50%: melhor entregar depois do que não entregar.'},
+  agu:{titulo:'📥 Aguardando correção',sub:n=>n+' aluno(s) com entrega esperando nota',vazio:'Nada aguardando correção. ✅',rodape:'Entregas recebidas! A nota sai assim que o professor corrigir.'},
+  sumido:{titulo:'👀 Sentimos sua falta',sub:n=>n+' aluno(s) sem aparecer há um tempo',vazio:'Ninguém sumido. 🙌',rodape:'A porta está aberta: volte com uma entrega pequena e retome o ritmo.'}};
 function desenhaQuadro(D,op){
   const {lista,info,ativs,rk}=D;const W=1080,pad=48,linha=46,topo=330;
   const alvos=ativs.filter(a=>!a.opcional);const cols=ativs;const cw=Math.min(74,Math.floor((W-pad*2-300)/Math.max(1,cols.length)));
   const motiv=op.modo==='motiv';
-  const alunos=lista.filter(k=>info[k]);
-  const feitas=alunos.reduce((n,k)=>n+info[k].ent,0),total=alunos.reduce((n,k)=>n+info[k].tot,0);
-  const venc=alunos.reduce((n,k)=>n+(info[k].ent+info[k].verm),0);// entregas possíveis até agora
+  const tipo=op.tipo||'todos';const flt=(D.filtros&&D.filtros[tipo])?D.filtros[tipo][1]:()=>true;const todos=lista.filter(k=>info[k]);const alunos=tipo==='todos'?todos:todos.filter(k=>flt(info[k]));
+  const feitas=todos.reduce((n,k)=>n+info[k].ent,0),total=todos.reduce((n,k)=>n+info[k].tot,0);
+  const venc=todos.reduce((n,k)=>n+(info[k].ent+info[k].verm),0);// entregas possíveis até agora
   const pct=total?Math.round(100*feitas/total):0;
-  const completos=alunos.filter(k=>info[k].tot>0&&info[k].ent===info[k].tot);
-  const destaques=[...alunos].filter(k=>info[k].ent>0).sort((x,y)=>info[y].ent-info[x].ent||((rk[y]&&rk[y].total)||0)-((rk[x]&&rk[x].total)||0)).slice(0,5);
-  const H=topo+alunos.length*linha+170+(destaques.length?60:0);
+  const completos=todos.filter(k=>info[k].tot>0&&info[k].ent===info[k].tot);
+  const destaques=(tipo==='todos'||tipo==='ok')?[...alunos].filter(k=>info[k].ent>0).sort((x,y)=>info[y].ent-info[x].ent||((rk[y]&&rk[y].total)||0)-((rk[x]&&rk[x].total)||0)).slice(0,5):[];
+  const H=topo+Math.max(1,alunos.length)*linha+170+(destaques.length?60:0);
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
   g.fillStyle='#12141c';g.fillRect(0,0,W,H);
   const grad=g.createLinearGradient(0,0,W,0);grad.addColorStop(0,'#f5b83d');grad.addColorStop(1,'#ff7a45');g.fillStyle=grad;g.fillRect(0,0,W,10);
   const F=(w,t)=>`${w} ${t}px "DM Sans",system-ui,sans-serif`;
   g.fillStyle='#f5b83d';g.font=F(700,20);g.fillText('LIGA ACADÊMICA DE GAMES · CEUMA',pad,56);
-  g.fillStyle='#fff';g.font=F(800,44);g.fillText('Quadro de entregas',pad,108);
+  g.fillStyle='#fff';g.font=F(800,44);g.fillText(TIPO_IMG[tipo].titulo,pad,108);
   const turmaNome=(CTX&&CTX.turmas&&CTX.turmas[TURMA]&&CTX.turmas[TURMA].nome)||TURMA;
   g.fillStyle='#aab';g.font=F(500,22);g.fillText(turmaNome+' · '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}),pad,142);
   // progresso da turma
-  g.fillStyle='#fff';g.font=F(700,26);g.fillText(pct+'% das atividades já foram entregues pela turma',pad,200);
+  g.fillStyle='#fff';g.font=F(700,26);g.fillText(tipo==='todos'?pct+'% das atividades já foram entregues pela turma':TIPO_IMG[tipo].sub(alunos.length),pad,200);
   g.fillStyle='#262a3a';g.beginPath();g.roundRect(pad,218,W-pad*2,22,11);g.fill();
   g.fillStyle=grad;g.beginPath();g.roundRect(pad,218,Math.max(22,(W-pad*2)*pct/100),22,11);g.fill();
   g.fillStyle='#cfd3e6';g.font=F(500,20);
-  g.fillText(feitas+' entregas feitas'+(completos.length?' · '+completos.length+' aluno(s) com tudo em dia':'')+' · cada entrega conta!',pad,274);
+  g.fillText(tipo==='todos'?feitas+' entregas feitas'+(completos.length?' · '+completos.length+' aluno(s) com tudo em dia':'')+' · cada entrega conta!':'Turma: '+pct+'% das atividades entregues · '+feitas+' entregas feitas',pad,274);
   // cabeçalho das colunas
   const x0=pad+250;let y=topo-24;
   g.fillStyle='#8a90a8';g.font=F(700,15);g.textAlign='center';
@@ -533,6 +540,7 @@ function desenhaQuadro(D,op){
   g.textAlign='left';g.fillText('ALUNO',pad,y);g.textAlign='right';g.fillText('ENTREGAS',W-pad,y);g.textAlign='left';
   g.strokeStyle='#ffffff22';g.beginPath();g.moveTo(pad,y+10);g.lineTo(W-pad,y+10);g.stroke();
   const COR={verde:'#2ecc71',amar:'#f7b93e',azul:'#4aa3ff',verm:'#ff5d5d',cinza:'#6b7285'};
+  if(!alunos.length){g.fillStyle='#cfd3e6';g.font=F(700,26);g.fillText(TIPO_IMG[tipo].vazio,pad,topo+14)}
   alunos.forEach((k,r)=>{
     const yy=topo+r*linha;if(r%2===0){g.fillStyle='#ffffff08';g.fillRect(pad-12,yy-12,W-pad*2+24,linha)}
     g.fillStyle='#fff';g.font=F(600,22);g.fillText(nomeCurto(k,op.completo),pad,yy+14);
@@ -545,14 +553,29 @@ function desenhaQuadro(D,op){
     const I=info[k];g.textAlign='right';g.fillStyle=I.ent===I.tot&&I.tot?'#2ecc71':'#fff';g.font=F(700,22);g.fillText(I.ent+'/'+I.tot,W-pad,yy+14);
     if(!motiv&&I.verm){g.fillStyle='#ff8a8a';g.font=F(500,14);g.fillText(I.verm+' vencida(s)',W-pad,yy+32)}g.textAlign='left'});
   // destaques e rodapé
-  let yb=topo+alunos.length*linha+30;
+  let yb=topo+Math.max(1,alunos.length)*linha+30;
   if(destaques.length){g.fillStyle='#f5b83d';g.font=F(800,24);g.fillText('⭐ Destaques: '+destaques.map(k=>nomeCurto(k,false)).join(' · '),pad,yb);yb+=48}
   g.fillStyle='#cfd3e6';g.font=F(500,20);
-  g.fillText(motiv?'Quem ainda não entregou: dá tempo! É só comentar na Issue da atividade no seu repositório.':'Entregue comentando na Issue da atividade, no seu repositório aluno-<usuário>.',pad,yb);
+  g.fillText(tipo!=='todos'?TIPO_IMG[tipo].rodape:motiv?'Quem ainda não entregou: dá tempo! É só comentar na Issue da atividade no seu repositório.':'Entregue comentando na Issue da atividade, no seu repositório aluno-<usuário>.',pad,yb);
   g.fillStyle='#8a90a8';g.font=F(500,16);g.fillText('✓ entregue e corrigido   … entregue, aguardando correção   ! entregue com atraso   ○ ainda a entregar',pad,yb+34);
   return cv}
 
+function textoTipo(D,op,v){
+  const tipo=op.tipo,{lista,info,ativs}=D;const flt=D.filtros[tipo][1];const nm=k=>nomeCurto(k,op.completo);
+  const al=lista.filter(k=>info[k]&&flt(info[k]));if(!al.length)return TIPO_IMG[tipo].vazio+'\n\n(Nenhum aluno neste grupo agora. Não precisa mandar mensagem.)';
+  const dm=d=>new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const venc=ativs.filter(a=>!a.opcional&&a.prazo&&new Date(a.prazo).getTime()<=Date.now());
+  const nomes=al.map(nm).join(', ');const pick=a=>a[v%a.length];
+  const hr=new Date().getHours(),sd=hr<12?'Bom dia':hr<18?'Boa tarde':'Boa noite';
+  const como='Como entregar: comente na Issue da atividade, no seu repositório aluno-<seu usuário>. Travou? Escreva lá mesmo que eu ajudo.';
+  const lv=venc.length?'\n\n'+venc.map(a=>'• '+(a.codigo?a.codigo+' · ':'')+a.titulo+' (prazo '+dm(a.prazo)+')').join('\n'):'';
+  if(tipo==='ok')return pick([sd+', Liga! 🎮','Fala, pessoal! 🚀','Olha isso, Liga! 🏆'])+'\n\n⭐ Quem está em dia: '+nomes+'.\n\nConstância é o que faz a diferença. Parabéns pelo capricho! 👏\nQuem ainda não entrou na lista: dá tempo, bora! 😉';
+  if(tipo==='pend')return pick(['Oi, pessoal da Liga! 👋','Fala, Liga! 👋','Atenção, Liga de Games! 🎮'])+' Um lembrete rápido: ainda dá tempo de entregar.'+lv+'\n\nFaltam entregas de: '+nomes+'.\n'+como+' Bora! 🚀';
+  if(tipo==='atr')return pick(['Oi, Liga! 👋','Fala, pessoal! 🚀'])+' Quem entregou depois do prazo: '+nomes+'.\n\nTá valendo! Entrega atrasada vale 50% dos pontos, e é bem melhor do que ficar sem entregar. Na próxima, a gente chega no prazo. 💪';
+  if(tipo==='agu')return sd+', Liga! 🎮\n\n📥 Recebi as entregas de: '+nomes+'.\nAs notas saem assim que eu corrigir; quem entregou no prazo não é prejudicado se eu demorar. Obrigado pelo capricho! 🙏';
+  return pick(['Oi, Liga! 👋','Fala, pessoal! 👋'])+' Sentimos a falta de: '+nomes+'. 👀\n\nSem cobrança: a ideia é voltar ao ritmo. Escolham UMA atividade pequena e entreguem hoje.'+lv+'\n\n'+como+'\nSe algo travou (conta, Godot, tempo), me chamem no privado. A gente resolve junto. 🤝'}
 function textoIncentivo(D,op,v){
+  if(op.tipo&&op.tipo!=='todos'&&D.filtros&&D.filtros[op.tipo])return textoTipo(D,op,v).replace(/\.\.(?!\.)/g,'.');
   const {lista,info,ativs}=D;const al=lista.filter(k=>info[k]);const nm=k=>nomeCurto(k,op.completo);
   const comEnt=al.filter(k=>info[k].ent>0).sort((a,b)=>info[b].ent-info[a].ent);
   const topo=comEnt.length?info[comEnt[0]].ent:0;const dest=comEnt.filter(k=>info[k].ent===topo).slice(0,5);
@@ -573,7 +596,7 @@ function textoIncentivo(D,op,v){
     if(vencidas.length)L.push('⏳ As atividades que já passaram do prazo ainda podem ser entregues, com atraso (vale 50%). Melhor entregar atrasado do que não entregar!')}
   else L.push('','Turma inteira em dia. Que orgulho! 🎉');
   L.push('','Como entregar: comente na Issue da atividade, no seu repositório aluno-<seu usuário>. Travou? Escreva lá mesmo que eu ajudo. Bora subir no quadro! 🚀');
-  return L.join('\n')}
+  return L.join('\n').replace(/\.\.(?!\.)/g,'.')}
 
 function imagemCopa(c,nome,turma){
   const nev=!!(c.evento&&/nevoeiro/i.test(c.evento.nome||''));
@@ -629,7 +652,8 @@ function imagemCopa(c,nome,turma){
   cx.append(h('b',{},'Placar da Copa'),prev,h('div',{class:'barra livre'},copiar,baixa,h('button',{class:'btn sec',type:'button',onclick:()=>bg.remove()},'Fechar')));bg.append(cx);bg.onclick=e=>{if(e.target===bg)bg.remove()};document.body.append(bg)}
 function janelaImagem(D){
   document.querySelectorAll('.pop,.imgjan').forEach(x=>x.remove());
-  const op={modo:ls.get('liga_img_modo','motiv'),completo:ls.get('liga_img_nome','')==='1'};
+  const op={modo:ls.get('liga_img_modo','motiv'),completo:ls.get('liga_img_nome','')==='1',tipo:(D.filtros&&D.filtros[D.tipo])?D.tipo:'todos'};
+  const grupo=h('select',{title:'Escolha de quem é a imagem e o texto'},...Object.entries(D.filtros||{todos:['Todos os alunos']}).map(([v,[t]])=>h('option',{value:v},t)));grupo.value=op.tipo;
   const bg=h('div',{class:'imgjan',style:'position:fixed;inset:0;background:#000c;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px'});
   const cx=h('div',{style:'background:#171a26;border:1px solid var(--ouro);border-radius:16px;max-width:760px;width:100%;max-height:94vh;overflow:auto;padding:16px'});
   const prev=h('img',{style:'width:100%;border-radius:10px;border:1px solid #fff2'});
@@ -637,15 +661,15 @@ function janelaImagem(D){
   const nome=h('input',{type:'checkbox'});nome.checked=op.completo;
   let blob=null,vt=0;
   const txt=h('textarea',{rows:'11',style:'width:100%;background:#12141c;color:#fff;border:1px solid #fff2;border-radius:10px;padding:10px;font:inherit;resize:vertical'});
-  const gera=()=>{op.modo=modo.value;op.completo=nome.checked;ls.set('liga_img_modo',op.modo);ls.set('liga_img_nome',op.completo?'1':'0');txt.value=textoIncentivo(D,op,vt);const cv=desenhaQuadro(D,op);prev.src=cv.toDataURL('image/png');cv.toBlob(b=>{blob=b},'image/png')};
-  modo.addEventListener('change',gera);nome.addEventListener('change',gera);
+  const gera=()=>{op.tipo=grupo.value;op.modo=modo.value;op.completo=nome.checked;ls.set('liga_img_modo',op.modo);ls.set('liga_img_nome',op.completo?'1':'0');txt.value=textoIncentivo(D,op,vt);const cv=desenhaQuadro(D,op);prev.src=cv.toDataURL('image/png');cv.toBlob(b=>{blob=b},'image/png')};
+  grupo.addEventListener('change',()=>{vt=0;gera()});modo.addEventListener('change',gera);nome.addEventListener('change',gera);
   const copiar=h('button',{class:'btn',type:'button',onclick:async()=>{try{if(!blob)throw 0;await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);aviso('Imagem copiada. Agora é só colar (Ctrl+V) no WhatsApp.')}catch{aviso('Seu navegador não deixou copiar. Use o botão Baixar PNG e envie o arquivo.',1)}}},'📋 Copiar imagem');
   const baixa=h('a',{class:'btn sec',href:'#',onclick:ev=>{if(!blob){ev.preventDefault();return}baixa.href=URL.createObjectURL(blob);baixa.download='quadro-de-entregas-'+new Date().toISOString().slice(0,10)+'.png'}},'⬇ Baixar PNG');
   const outra=h('button',{class:'btn sec',type:'button',title:'Gera o texto de novo com outras palavras',onclick:()=>{vt++;txt.value=textoIncentivo(D,op,vt)}},'🔄 Outra versão');
   const copTxt=h('button',{class:'btn',type:'button',onclick:async()=>{const ok=await copiarTexto(txt.value);aviso(ok?'Texto copiado. Cole no WhatsApp junto com a imagem.':'Não consegui copiar.',!ok)}},'📋 Copiar texto');
   const fecha=h('button',{class:'btn sec',type:'button',onclick:()=>bg.remove()},'Fechar');
   cx.append(h('div',{class:'barra livre'},h('b',{},'Imagem do quadro de entregas'),h('span',{style:'flex:1'}),fecha),h('p',{class:'sub'},'A imagem usa os dados de agora. No modo Motivacional, quem ainda não entregou aparece com um círculo vazio, nunca em vermelho. Donos do portal e equipe não entram.'),
-    h('div',{class:'barra livre'},modo,h('label',{style:'display:flex;gap:6px;align-items:center'},nome,'Nome completo'),ajuda('acomp_imagem')),prev,h('div',{class:'barra livre'},copiar,baixa),h('b',{},'Texto de incentivo (pode editar antes de copiar)'),txt,h('div',{class:'barra livre'},copTxt,outra),h('p',{class:'sub'},'Como usar: 1) Copiar imagem e colar no WhatsApp. 2) Copiar texto e colar na legenda ou na mensagem. O texto elogia quem está na frente e avisa que ainda dá tempo, sem expor quem não entregou.'));
+    h('div',{class:'barra livre'},h('span',{class:'sub'},'Grupo:'),grupo,modo,h('label',{style:'display:flex;gap:6px;align-items:center'},nome,'Nome completo'),ajuda('acomp_imagem')),prev,h('div',{class:'barra livre'},copiar,baixa),h('b',{},'Texto de incentivo (pode editar antes de copiar)'),txt,h('div',{class:'barra livre'},copTxt,outra),h('p',{class:'sub'},'Como usar: 1) Copiar imagem e colar no WhatsApp. 2) Copiar texto e colar na legenda ou na mensagem. O texto elogia quem está na frente e avisa que ainda dá tempo, sem expor quem não entregou.'));
   bg.append(cx);bg.addEventListener('click',e=>{if(e.target===bg)bg.remove()});document.body.append(bg);gera()}
 function fichaAcomp(k,I,ativs,R,P,fechar){
   const box=h('div',{class:'fichabox'});
