@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
   try {
     const usuario = u.usuarioDaSessao(req);
     if (!usuario) return u.json(res, 401, { erro: 'Entre com o GitHub.' });
-    const { cfg } = await u.lerConfig();
+    const [{ cfg }, aulas] = await Promise.all([u.lerConfig(), u.listarAulas()]); // em paralelo: um GitHub de espera, não dois
     const geral = u.temPerm(cfg, usuario, 'presenca'); // tem alguma permissão de presença/atividades por cargo
     const ehOwner = u.papel(cfg, usuario) === 'owner', mon = cfg.monitores[usuario];
     const monTurma = (t) => !!mon && (!mon.turmas.length || mon.turmas.includes(t));
@@ -15,7 +15,6 @@ module.exports = async (req, res) => {
     const pode = (p, turma) => ehOwner || monTurma(turma) || cargoPara(p, turma); // monitor: tudo, nas turmas dele; cargo: só o que foi marcado e no alcance
     const podeQualquer = (ps, turma) => ps.some((p) => pode(p, turma));
     const PRS = u.GRUPOS.presenca;
-    const aulas = await u.listarAulas();
     const titulos = Object.fromEntries(aulas.map((a) => [a.chave, a.titulo]));
     const podeChamar = (chave) => { if (ehOwner || (mon && mon.aulas.includes(chave))) return true; if (!cargoPara('pr_chamada')) return false; const e = u.escopoDe(cfg, usuario, 'pr_chamada'); return e === null || e.niveis.has(String(chave).split('/')[0]); };
     const minhas = aulas.filter((a) => podeChamar(a.chave));
