@@ -144,7 +144,7 @@ module.exports = async (req, res) => {
     if (!ehOwner && !mon && !geral) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (String(b.acao || '').startsWith('ativ_')) {
       if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
-      const NEC = { ativ_salvar: ['at_criar'], ativ_liberar: ['at_liberar'], ativ_recolher: ['at_liberar'], ativ_deslocar: ['at_prazos'], ativ_nota: ['at_corrigir'], ativ_notas_lote: ['at_corrigir'], ativ_conferir: ['at_corrigir'], ativ_entregas: ['at_corrigir'], ativ_avisar: ['at_avisar'], ativ_avisar_lote: ['at_avisar'], ativ_remover: ['at_remover'], ativ_painel: ['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'] };
+      const NEC = { ativ_salvar: ['at_criar'], ativ_liberar: ['at_liberar'], ativ_recolher: ['at_liberar'], ativ_atualizar: ['at_liberar'], ativ_deslocar: ['at_prazos'], ativ_nota: ['at_corrigir'], ativ_notas_lote: ['at_corrigir'], ativ_conferir: ['at_corrigir'], ativ_entregas: ['at_corrigir'], ativ_avisar: ['at_avisar'], ativ_avisar_lote: ['at_avisar'], ativ_remover: ['at_remover'], ativ_painel: ['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'] };
       if (!podeQualquer(NEC[b.acao] || ['at_criar'], b.turma)) return u.json(res, 403, { erro: 'Seu cargo não inclui esta ação nas atividades desta turma. Peça a um owner.' });
       const r = await A.tratar(b, { usuario, alunosDe }); return u.json(res, r.status, r.corpo);
     }
