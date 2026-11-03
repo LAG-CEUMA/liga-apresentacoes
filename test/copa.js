@@ -41,6 +41,14 @@ assert(C.usar(E2, 'bia', 'e1', null, rank, INI, AG).ok); assert(E2.escudos.bia);
 assert.equal(E2.escudos.bia, 0.5); // dado 8 = escudo normal: reduz 50%
 r = C.usar(E2, 'caio', 'k2', 'bia', rank, INI, AG); assert(r.ok && !r.bloqueado, JSON.stringify(r)); assert(!E2.escudos.bia); // gasta o escudo, mas NÃO bloqueia 100%
 assert.equal(C.placar(E2, rank, AG).find((x) => x.usuario === 'bia').copa, 68); // banana -4 reduzida pela metade = -2
+// o dado do atacante ajusta a redução: crítico passa mais (-25 pontos percentuais), fraco é reduzido mais (+25)
+{ const mk2 = () => C.normalizar({ escudos: { bia: 0.5 }, inventario: { caio: [{ id: 'k9', tipo: 'banana', semana: 3 }] } });
+  C.setDado(() => 10); let a = mk2(); C.usar(a, 'caio', 'k9', 'bia', rank, INI, AG); assert.equal(a.log[a.log.length - 1].red, 0.25);
+  C.setDado(() => 5); a = mk2(); C.usar(a, 'caio', 'k9', 'bia', rank, INI, AG); assert.equal(a.log[a.log.length - 1].red, 0.75);
+  C.setDado(() => 8); a = mk2(); C.usar(a, 'caio', 'k9', 'bia', rank, INI, AG); assert.equal(a.log[a.log.length - 1].red, 0.5); }
+// narrador: golpe reduzido pelo escudo tem frase própria, com a porcentagem e o dano que sobrou
+{ const n1 = C.normalizar({ escudos: { bia: 0.5 }, inventario: { caio: [{ id: 'k8', tipo: 'banana', semana: 3 }] } }); C.setDado(() => 8); C.usar(n1, 'caio', 'k8', 'bia', rank, INI, AG);
+  const tx = C.narracao(n1, AG, (k) => k, 3); assert(/50%/.test(tx) && /escudo/i.test(tx), tx); }
 // a força do escudo vem do dado: 5 = fraco (25%), 10 = crítico (75%)
 { const mkE = () => C.normalizar({ inventario: { bia: [{ id: 'e1', tipo: 'escudo', semana: 3 }] } });
   C.setDado(() => 5); let f = mkE(); C.usar(f, 'bia', 'e1', null, rank, INI, AG); assert.equal(f.escudos.bia, 0.25);
