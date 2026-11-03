@@ -139,3 +139,5 @@ input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;bo
 .res-mais{display:block;margin-top:6px;opacity:.7}
 .res-num{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 14px}
 .res-n{font:inherit;color:inherit;text-align:left;cursor:pointer;border:1px solid #fff2;border-radius:14px;background:#ffffff08;padding:12px 14px;display:flex;flex-direction:column;gap:2px}.res-n:hover{background:#ffffff12}.res-n b{font-size:26px;font-family:'Space Grotesk',sans-serif}.res-n small{opacity:.75}
+
+.btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed;filter:grayscale(.4)}

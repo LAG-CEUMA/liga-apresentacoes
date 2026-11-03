@@ -89,7 +89,7 @@ module.exports = async (req, res) => {
       }
       if (q.acao === 'atividades') {
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !podeQualquer(['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'], q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
-        return u.json(res, 200, { turma: q.turma, roster: alunosDe(q.turma), atividades: await A.listar(q.turma) });
+        return u.json(res, 200, { turma: q.turma, roster: alunosDe(q.turma), atividades: A.comSelo(await A.listar(q.turma)) });
       }
       if (q.acao === 'ranking') {
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !pode('pr_ranking', q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
