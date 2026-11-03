@@ -38,8 +38,21 @@ r = C.usar(E, 'caio', 'k1', 'bia', rank, INI, AG); assert(r.ok, JSON.stringify(r
 // escudo bloqueia
 const E2 = C.normalizar({ inventario: { bia: [{ id: 'e1', tipo: 'escudo', semana: 3 }], caio: [{ id: 'k2', tipo: 'banana', semana: 3 }] } });
 assert(C.usar(E2, 'bia', 'e1', null, rank, INI, AG).ok); assert(E2.escudos.bia);
-r = C.usar(E2, 'caio', 'k2', 'bia', rank, INI, AG); assert(r.ok && r.bloqueado); assert(!E2.escudos.bia);
-assert.equal(C.placar(E2, rank, AG).find((x) => x.usuario === 'bia').copa, 70); // nada descontado
+assert.equal(E2.escudos.bia, 0.5); // dado 8 = escudo normal: reduz 50%
+r = C.usar(E2, 'caio', 'k2', 'bia', rank, INI, AG); assert(r.ok && !r.bloqueado, JSON.stringify(r)); assert(!E2.escudos.bia); // gasta o escudo, mas NÃO bloqueia 100%
+assert.equal(C.placar(E2, rank, AG).find((x) => x.usuario === 'bia').copa, 68); // banana -4 reduzida pela metade = -2
+// a força do escudo vem do dado: 5 = fraco (25%), 10 = crítico (75%)
+{ const mkE = () => C.normalizar({ inventario: { bia: [{ id: 'e1', tipo: 'escudo', semana: 3 }] } });
+  C.setDado(() => 5); let f = mkE(); C.usar(f, 'bia', 'e1', null, rank, INI, AG); assert.equal(f.escudos.bia, 0.25);
+  C.setDado(() => 10); f = mkE(); C.usar(f, 'bia', 'e1', null, rank, INI, AG); assert.equal(f.escudos.bia, 0.75);
+  C.setDado(() => 8);
+  // só 1 escudo por vez: com um ativo, usar outro dá erro e NÃO gasta o item
+  const g = C.normalizar({ escudos: { bia: 0.5 }, inventario: { bia: [{ id: 'e2', tipo: 'escudo', semana: 3 }] } });
+  const rr = C.usar(g, 'bia', 'e2', null, rank, INI, AG); assert(rr.erro && g.inventario.bia.length === 1);
+  // quem já tem escudo (ativo ou guardado) recebe outro item no lugar
+  const h1 = C.normalizar({ escudos: { bia: 0.5 } }), h2 = C.normalizar({ inventario: { bia: [{ id: 'z', tipo: 'escudo', semana: 3 }] } }), h3 = C.normalizar({});
+  for (let n = 0; n < 40; n++) { assert.notEqual(C.trocaEscudo(h1, 'bia', 'escudo', n), 'escudo'); assert.notEqual(C.trocaEscudo(h2, 'bia', 'escudo', n), 'escudo'); }
+  assert.equal(C.trocaEscudo(h3, 'bia', 'escudo', 1), 'escudo'); assert.equal(C.trocaEscudo(h1, 'bia', 'banana', 1), 'banana'); }
 // visibilidade inválida volta para oculta
 assert.equal(C.normalizar({ visibilidade: 'x' }).visibilidade, 'oculta');
 // trégua final: nos últimos 2 dias nada vale
@@ -49,7 +62,7 @@ const E4 = C.normalizar({ efeitos: [{ id: 'z', tipo: 'banana', de: 'bia', para: 
 assert.equal(C.placar(E4, rank, AG, '2026-12-31').find((x) => x.usuario === 'ana').copa, 77); assert.equal(C.placar(E4, rank, AG, FIM).find((x) => x.usuario === 'ana').copa, 80); // na trégua vale o oficial
 // roleta maluca cai sozinha; escudo bloqueia; não dá para usar
 const E5 = C.normalizar({}); C.roletar(E5, 'caio', 'r1', '2026-10-28T10:00:00Z', AG); assert.equal(C.placar(E5, rank, AG).find((x) => x.usuario === 'caio').copa, 58);
-const E6 = C.normalizar({ escudos: { caio: true } }); C.roletar(E6, 'caio', 'r2', '2026-10-28T10:00:00Z', AG); assert(!E6.escudos.caio && E6.efeitos.length === 0);
+const E6 = C.normalizar({ escudos: { caio: 0.5 } }); C.roletar(E6, 'caio', 'r2', '2026-10-28T10:00:00Z', AG); assert(!E6.escudos.caio && E6.efeitos.length === 1 && E6.efeitos[0].delta === -1); // roleta -2 reduzida a -1
 assert(C.usar(C.normalizar({ inventario: { bia: [{ id: 'r', tipo: 'roleta', semana: 3 }] } }), 'bia', 'r', null, rank, INI, AG).erro);
 // chuva de itens: 2 acima e 2 abaixo ganham item extra (bônus), que não conta no uso semanal
 const E7 = C.normalizar({ inventario: { caio: [{ id: 'ch', tipo: 'chuva', semana: 3 }] } }); r = C.usar(E7, 'caio', 'ch', null, rank, INI, AG); assert(r.ok, JSON.stringify(r));
@@ -156,6 +169,9 @@ assert(C.chuvaProfessor(E8, rank, INI, AG).erro); assert(C.chuvaProfessor(C.norm
   assert(/TRAIÇÃO/.test(C.narracao(e3, AG, (k) => k, 3)) && !/bia.*traiu|traiu.*bia/i.test(C.narracao(e3, AG, (k) => k, 3)));
   // falha crítica: item volta em outro colega e quem tirou 1 também perde 2 pontos
   C.setDado(() => 1); const e4 = mk(); r = C.usar(e4, 'bia', 'b1', 'ana', rk4, INI, AG, '2999-01-01'); assert.equal(r.faixa, 'falha_critica'); assert(e4.efeitos.some((x) => x.para === 'bia' && x.delta < 0)); C.setDado(() => 8);
-  const e5 = mk(); e5.escudos.ana = true; C.setDado(() => 10); r = C.usar(e5, 'bia', 'b1', 'ana', rk4, INI, AG, '2999-01-01'); assert(r.bloqueado); C.setDado(() => 8);
+  const e5 = mk(); e5.escudos.ana = true; C.setDado(() => 10); r = C.usar(e5, 'bia', 'b1', 'ana', rk4, INI, AG, '2999-01-01'); assert(r.ok && !r.bloqueado && !e5.escudos.ana && e5.efeitos.some((x) => x.para === 'ana' && x.delta < 0 && x.delta > -8)); C.setDado(() => 8); // escudo legado (true) vale 50%
 }
+// escudos repetidos guardados viram outro item na sincronização
+{ const q = C.normalizar({ inventario: { bia: [{ id: 'a1', tipo: 'escudo', semana: 3 }, { id: 'a2', tipo: 'escudo', semana: 3 }] } }); C.sincronizar(q, 'T', INI, AG, ['bia'], [], [], () => ({}));
+  assert.equal(q.inventario.bia.filter((x) => x.tipo === 'escudo').length, 1); }
 console.log('Copa: todos os testes passaram.');
