@@ -7,10 +7,18 @@ function aviso(t,erro){const m=$('msg');m.textContent=t;m.className='msg'+(erro?
 async function enviar(corpo){const r=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d}
 function lerAbertos(){try{const v=localStorage.getItem('liga_niveis_abertos');return v?JSON.parse(v):null}catch{return null}}
 function salvarAbertos(ds){try{localStorage.setItem('liga_niveis_abertos',JSON.stringify(ds.filter(x=>x.open).map(x=>x.dataset.nv)))}catch{}}
-const PERM_INFO={site:['Personalizar o site','cores, logo, fundos, avisos, agenda e redes'],aulas:['Mudar o nível das aulas','define quem vê cada aula (só owners ou membros da turma)'],pessoas:['Cadastrar pessoas','cadastrar alunos e monitores (não mexe em owners)'],tarefas:['Ver tarefas de casa (antigo)','sem função hoje: as atividades ficam em Presença'],presenca:['Fazer chamada e presença','chamada, participações e histórico'],slides:['Editar slides','usar o editor (/editor) nos níveis a que a pessoa está vinculada']};
-const PODE={site:'personalizar o site e publicar avisos, agenda e redes',aulas:'mudar o nível de cada aula',pessoas:'cadastrar alunos e monitores',tarefas:'ver as tarefas de casa',presenca:'fazer a chamada de todas as aulas e ver o histórico',slides:'editar os slides dos níveis a que está vinculada pela turma'};
-const NAO={site:'personalizar o site',aulas:'mudar o nível das aulas',pessoas:'cadastrar pessoas',tarefas:'ver as tarefas de casa',presenca:'fazer chamada (fora das aulas de monitor)',slides:'editar slides'};
-let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='',AGRUPAR=(()=>{try{return !!localStorage.getItem('liga_pessoas_agrupar')}catch{return false}})();
+// Permissões detalhadas: cada linha é uma caixa de marcar. [chave, nome, o que libera]
+const PERM_GRUPOS=[
+ ['Site',[['site_visual','Mudar a aparência','cores, logo, fundos e ordem das seções da tela inicial'],['site_boasvindas','Texto de boas-vindas','título e texto da tela inicial'],['site_avisos','Avisos','criar, editar e apagar avisos'],['site_agenda','Agenda','eventos e datas'],['site_redes','Redes sociais','links das redes da liga'],['site_destaques','Vitrine e destaques','vitrine e ranking publicado no site'],['site_imagens','Enviar imagens','banco de imagens do site']]],
+ ['Aulas e slides',[['aulas','Mudar quem vê cada aula','nível de acesso de cada aula (só owners ou membros da turma)'],['slides_editar','Editar aulas','abrir e salvar aulas que já existem no Editor'],['slides_criar','Criar aulas novas','botão "+ Nova aula" do Editor'],['slides_plano','Ficha de planejamento do nível','objetivo, materiais e aulas previstas']]],
+ ['Pessoas',[['p_ver','Ver pessoas','ver a lista e as fichas, sem poder alterar'],['p_alunos_cadastrar','Cadastrar alunos','cadastrar e corrigir dados do aluno, trocar usuário do GitHub'],['p_alunos_turma','Colocar aluno em turma','atribuir, promover e mover alunos entre turmas'],['p_alunos_remover','Remover pessoas','tirar alguém do cadastro'],['p_monitores','Gerir monitores','criar e remover monitores, escolher turmas e aulas deles']]],
+ ['Turmas e trilhas',[['t_criar','Criar turmas','nova turma (assunto, nível e datas)'],['t_editar','Editar turmas','nome, datas, nível, situação, arquivar e mudar o código'],['t_excluir','Excluir turmas','só turma vazia e sem chamadas'],['tr_gerir','Trilhas (dia e horário)','criar e editar trilhas, dias da semana e semanas sem aula'],['n_gerir','Assuntos e níveis','criar assuntos e níveis, ligar níveis a assuntos']]],
+ ['Chamada e presença',[['pr_chamada','Fazer chamada','chamadas e sessões de recuperação'],['pr_participacoes','Participações','pontos de participação e penalidades'],['pr_historico','Histórico e acompanhamento','ver chamadas já feitas e como cada aluno está'],['pr_ranking','Ranking','ver o ranking e a Copa da turma']]],
+ ['Atividades',[['at_criar','Criar atividades','escrever e editar atividades'],['at_liberar','Liberar atividades','liberar ou recolher para os alunos (cria as Issues)'],['at_prazos','Mudar prazos','adiar ou antecipar prazos da turma'],['at_corrigir','Corrigir','dar nota e estado às entregas e ver respostas (a correção com o Claude é só de owners)'],['at_avisar','Avisar alunos','comentar na Issue do aluno'],['at_remover','Apagar atividades','só as que ainda não foram liberadas']]]];
+const PERM_INFO=Object.fromEntries([...PERM_GRUPOS.flatMap(g=>g[1].map(x=>[x[0],[x[1],x[2]]])),['tarefas',['Ver tarefas de casa (antigo)','sem função hoje']]]);
+const LEG={site:PERM_GRUPOS[0][1].map(x=>x[0]),slides:['slides_editar','slides_criar','slides_plano'],pessoas:[...PERM_GRUPOS[2][1],...PERM_GRUPOS[3][1]].map(x=>x[0]),presenca:[...PERM_GRUPOS[4][1],...PERM_GRUPOS[5][1]].map(x=>x[0])};
+const expandePerm=l=>{const o=new Set();for(const p of l||[]){if(LEG[p])LEG[p].forEach(x=>o.add(x));else o.add(p)}return [...o]};
+let D=null,ABA='',FILTRO='todos',TURMA_F='',BUSCA='',AGRUPAR=(()=>{try{return !!localStorage.getItem('liga_pessoas_agrupar2')}catch{return false}})();
 
 // ---------- cálculo por pessoa ----------
 function todasPessoas(){const s=new Set([...(D.owners||[]),...(D.fixos||[]),...(D.alunos||[]),...Object.keys(D.monitores||{}),...Object.keys(D.equipe||{}),...Object.keys(D.acessos||{}),...(D.contatos||[]).map(c=>c.usuario).filter(Boolean)]);return [...s].sort()}
@@ -22,20 +30,22 @@ function info(n){
   const turmas=Object.keys(D.turmas||{}).filter(t=>D.turmas[t].alunos.includes(n));const extras=((D.acessos||{})[n]||[]);
   const cargos=(eq&&eq.cargos)||[];const origem={};
   let perms=new Set();
+  const soma=(p,src)=>{for(const q of expandePerm([p])){perms.add(q);(origem[q]=origem[q]||[]).push(src)}};
   if(owner)Object.keys(PERM_INFO).forEach(p=>perms.add(p));
-  else if(eq){(eq.permissoes||[]).forEach(p=>{perms.add(p);(origem[p]=origem[p]||[]).push('extra')});for(const c of cargos)for(const p of ((D.cargos||{})[c]||{}).permissoes||[]){perms.add(p);(origem[p]=origem[p]||[]).push(D.cargos[c].nome)}}
+  else if(eq){(eq.permissoes||[]).forEach(p=>soma(p,'extra'));for(const c of cargos)for(const p of ((D.cargos||{})[c]||{}).permissoes||[])soma(p,D.cargos[c].nome)}
   return {n,owner,fixo,aluno,mon,eq,turmas,cargos,extras,perms:[...perms],origem,editor:(D.editores||{})[n]||[]}
 }
 function emPalavras(i,aulasMap){
   const pode=[],nao=[];
   if(i.owner)return {pode:['tudo: abrir slides e roteiros, mudar níveis, cadastrar pessoas, personalizar o site, fazer chamada e criar cargos e turmas.'],nao:[]};
-  for(const p of Object.keys(PODE)){if(i.perms.includes(p))pode.push(PODE[p]);else if(!(p==='presenca'&&i.mon))nao.push(NAO[p])}
+  for(const [gt,itens] of PERM_GRUPOS){const on=itens.filter(x=>i.perms.includes(x[0]));if(on.length===itens.length)pode.push(gt.toLowerCase()+': tudo');else if(on.length)pode.push(gt.toLowerCase()+': '+on.map(x=>x[1].toLowerCase()).join(', '));else if(!(gt==='Chamada e presença'&&i.mon))nao.push(gt.toLowerCase())}
+  if(i.perms.includes('tarefas'))pode.push('ver as tarefas de casa (antigo)');
   if(i.mon){const a=i.mon.aulas.length,r=i.mon.roteiros.length;
     pode.push(a||r?`abrir slides de ${a} aula(s) e roteiro de ${r}; fazer a chamada dessas aulas${i.mon.turmas.length?' nas turmas '+i.mon.turmas.join(', '):' em todas as turmas'}`:'nada além do que um aluno vê (nenhuma aula liberada ainda)')}
   for(const v of i.editor||[])pode.push(`editar os slides de ${v.includes('/')?'a aula '+v:'todo o '+v} (editor)`);
   for(const x of (i.extras||[]).filter(x=>x.ate>=(D.hoje||'')))pode.push(`ver os slides de ${nomeNivel(x.nivel)} até ${x.ate.split('-').reverse().join('/')} (acesso extra)`);
   if(i.aluno||i.mon||i.eq)pode.push('ver as aulas de nível Membros'+(i.aluno?' e a própria presença':''));
-  if(!i.perms.includes('aulas')&&!i.perms.includes('pessoas'))nao.unshift('abrir o Painel');
+  if(!i.perms.includes('aulas')&&!LEG.pessoas.some(x=>i.perms.includes(x)))nao.unshift('abrir o Painel');
   return {pode,nao:[...new Set(nao)]}
 }
 function pillsPapel(i){const s=[];
@@ -87,7 +97,8 @@ function desenharPessoas(){
   lista.sort((a,b)=>nomeDe(a).localeCompare(nomeDe(b),'pt-BR',{sensitivity:'base'}));
   const emails=lista.map(l=>l.c&&l.c.email).filter(Boolean);
   const cp=h('button',{class:'btn sec',type:'button',onclick:async()=>{try{await navigator.clipboard.writeText(emails.join('; '));aviso(emails.length+' e-mail(s) copiado(s). Cole no campo Para/CCO.')}catch{aviso('Não consegui copiar.',1)}}},'Copiar e-mails ('+emails.length+')');
-  const agr=h('button',{type:'button',class:'chipx'+(AGRUPAR?' on':''),title:'Mostra as pessoas separadas por turma, em ordem alfabética dentro de cada uma',onclick:()=>{AGRUPAR=!AGRUPAR;try{localStorage.setItem('liga_pessoas_agrupar',AGRUPAR?'1':'')}catch{}desenharPessoas()}},'Agrupar por turma');
+  const modo=(txt,val,dica)=>h('button',{type:'button',class:'chipx'+(AGRUPAR===val?' on':''),style:'margin:0',title:dica,onclick:()=>{AGRUPAR=val;try{localStorage.setItem('liga_pessoas_agrupar2',val?'1':'')}catch{}desenharPessoas()}},txt);
+  const agr=h('span',{hidden:!!TURMA_F,style:'display:inline-flex;gap:4px;align-items:center'},h('span',{class:'sub',style:'font-size:12px'},'Ver:'),modo('Lista única',false,'Todas as pessoas numa lista só, em ordem alfabética (cada pessoa aparece uma vez)'),modo('Por turma',true,'Pessoas separadas por turma (quem está em várias turmas aparece em cada uma)'));
   barra.append(sel,agr,busca,h('span',{style:'flex:1'}),...(D.dono?[cp]:[]),h('button',{class:'btn',type:'button',onclick:()=>abrirGaveta('')},'+ Nova pessoa'));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo sobre uma pessoa fica aqui: dados (nome, e-mail, usuário), papéis, turma, cargos e permissões. Clique em Editar. Para cadastrar alguém novo, use + Nova pessoa.'),barra);
   const caixa=h('div',{class:'lista-cartao'});
@@ -98,7 +109,8 @@ function desenharPessoas(){
     const falta=[];if(!(c&&c.nome))falta.push('nome');if(!l.n)falta.push('usuário do GitHub');
     return h('div',{class:'pessoa'},h('div',{},h('b',{},titulo),h('div',{class:'sub',style:'font-size:12px'},sub)),h('div',{},h('div',{},...(i&&temPapel(i)?pillsPapel(i):[h('span',{class:'pill',style:'opacity:.7'},'Sem acesso')]),...(falta.length?[h('span',{class:'pill',style:'background:#5a4416'},'Falta: '+falta.join(', '))]:[])),h('div',{class:'pode'},i&&i.owner?'Pode tudo.':(w.pode[0]?'Pode '+w.pode[0].replace(/;.*$/,''):''))),
       h('button',{class:'btn sec',type:'button',onclick:()=>abrirGaveta(l.n,c)},'Editar'))};
-  if(!AGRUPAR)for(const l of lista)caixa.append(linha(l));
+  if(TURMA_F)caixa.prepend(h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:4px 2px 10px'},h('b',{},'Só quem é da turma: '+((D.turmas[TURMA_F]||{}).nome||TURMA_F)+' · '+lista.length),h('button',{class:'btn sec',type:'button',style:'padding:6px 12px;font-size:13px',onclick:()=>{TURMA_F='';desenharPessoas()}},'Ver todas as turmas')));
+  if(!AGRUPAR||TURMA_F||BUSCA)for(const l of lista)caixa.append(linha(l));
   else{const gr={};for(const l of lista){const ts=(l.i&&l.i.turmas.length)?l.i.turmas:[''];for(const tt of ts)(gr[tt]=gr[tt]||[]).push(l)}
     const ordem=Object.keys(gr).sort((a,b)=>(a===''?1:0)-(b===''?1:0)||(((D.turmas[b]||{}).status==='andamento')-((D.turmas[a]||{}).status==='andamento'))||a.localeCompare(b));
     for(const tt of ordem){const det=h('details',{class:'grp-turma',style:'margin:8px 0'},h('summary',{style:'cursor:pointer;font-weight:700;padding:8px 4px'},(tt?(D.turmas[tt]||{}).nome||tt:'Sem turma')+' · '+gr[tt].length));for(const l of gr[tt])det.append(linha(l));caixa.append(det)}}
@@ -106,6 +118,7 @@ function desenharPessoas(){
 }
 
 function abrirGaveta(nome,contato){
+  const SO_ALUNOS=!D.dono&&D.papel==='monitor'; // monitor só atribui alunos
   const i0=nome?info(nome):null;const dono=D.dono;contato=contato||(nome?contatoDe(nome):null);
   const DADOS={curso:(contato&&contato.curso)||'',nome:(contato&&contato.nome)||'',email:(contato&&contato.email)||'',anterior:contato?(contato.email||('@'+contato.usuario)):''};
   const E={usuario:nome,owner:i0?i0.owner:false,aluno:i0?i0.aluno:true,turmas:new Set(i0?i0.turmas:[Object.keys(D.turmas).find(t=>D.turmas[t].status==='andamento')||Object.keys(D.turmas)[0]]),
@@ -115,7 +128,7 @@ function abrirGaveta(nome,contato){
   const {fechar,box}=camada([],'gaveta');
   const rascunhoInfo=()=>info2(E);
   function info2(e){const eq=e.equipe?{permissoes:[...e.extras],cargos:[...e.cargos]}:null;const x={n:e.usuario,owner:e.owner,fixo:i0&&i0.fixo,aluno:e.aluno,extras:e.acessos,mon:e.monitor?{aulas:[...e.aulas],roteiros:[...e.roteiros],turmas:[...e.mturmas]}:null,eq,turmas:[...e.turmas],cargos:eq?eq.cargos:[],perms:[],origem:{},editor:[...e.editor]};
-    if(e.owner)Object.keys(PERM_INFO).forEach(p=>x.perms.push(p));else if(eq){const s=new Set(eq.permissoes);eq.permissoes.forEach(p=>(x.origem[p]=x.origem[p]||[]).push('extra'));for(const c of eq.cargos)for(const p of (D.cargos[c]||{}).permissoes||[]){s.add(p);(x.origem[p]=x.origem[p]||[]).push(D.cargos[c].nome)}x.perms=[...s]}return x}
+    if(e.owner)Object.keys(PERM_INFO).forEach(p=>x.perms.push(p));else if(eq){const st=new Set();const soma=(p,src)=>{for(const q of expandePerm([p])){st.add(q);(x.origem[q]=x.origem[q]||[]).push(src)}};eq.permissoes.forEach(p=>soma(p,'extra'));for(const c of eq.cargos)for(const p of (D.cargos[c]||{}).permissoes||[])soma(p,D.cargos[c].nome);x.perms=[...st]}return x}
   const chip=(txt,on,fn,cls)=>h('button',{type:'button',class:'chipx '+(cls||'')+(on?' on':''),onclick:fn},txt);
   const ck=(txt,on,fn,dis,extra)=>h('label',{class:'ck',style:'display:inline-flex;margin-right:16px'},h('input',{type:'checkbox',checked:on,disabled:!!dis,onchange:e=>fn(e.target.checked)}),txt,extra||'');
   function desenhar(){
@@ -128,7 +141,7 @@ function abrirGaveta(nome,contato){
       box.append(h('div',{class:'sec'},h('h3',{},'Dados da pessoa',ajuda('pes_dados')),
         cx('Nome completo *',inp(DADOS.nome,'Ex.: Davi Novato Silva',v=>{DADOS.nome=v})),
         cx('E-mail institucional (opcional)',inp(DADOS.email,dono?'a000000@ceuma.com.br':(contato?'(já cadastrado; só owners veem)':'a000000@ceuma.com.br'),v=>{DADOS.email=v}),'Só contato (convocações). Não dá acesso. Só owners enxergam os e-mails já salvos.'),
-        cx('Curso (opcional)',inp(DADOS.curso,'Ex.: Ciência da Computação',v=>{DADOS.curso=v})),
+        cx('Curso ou profissão (opcional)',inp(DADOS.curso,'Ex.: Ciência da Computação · Engenheiro de Computação',v=>{DADOS.curso=v})),
         cx('Usuário do GitHub *',inp(E.usuario,'Ex.: davi-novato (sem @)',v=>{E.usuario=v.trim().replace(/^@/,'').toLowerCase()},!!nome),nome?(i0&&(i0.owner||i0.eq)?'Já cadastrado; owners e equipe não podem ter o usuário trocado por aqui.':'Cadastrado. Se foi informado errado, use o botão abaixo para corrigir.'):'É por ele que a pessoa entra na plataforma (o nome que aparece no perfil do GitHub).')))}
     if(nome&&!(i0&&(i0.owner||i0.eq)))box.lastChild.append(h('button',{class:'btn sec',type:'button',style:'margin-top:8px',onclick:async()=>{
       const ni=h('input',{type:'text',placeholder:'novo-usuario (sem @)',style:'width:100%;margin-top:8px'});
@@ -139,31 +152,41 @@ function abrirGaveta(nome,contato){
     // papéis
     box.append(h('div',{class:'sec'},h('h3',{},'Papel na Liga',ajuda('pes_papel')),h('div',{class:'sub'},'Marque o que a pessoa é. Aluno: assiste às aulas e faz atividades. Monitor: ministra aulas. Equipe: ajuda a gerir a Liga (pelo cargo). Owner: administra tudo. ',h('b',{},'Nenhum marcado = cadastro inativo (sem acesso à plataforma).'),),
       ck('Owner',E.owner,v=>{E.owner=v;desenhar()},!dono||(i0&&i0.fixo)||(i0&&nome===D.usuario),dono?'':' (só owners definem)'),
-      ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()}),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()}),
+      ck('Aluno',E.aluno,v=>{E.aluno=v;desenhar()},SO_ALUNOS&&!!i0&&(i0.owner||i0.mon||i0.eq)),ck('Monitor (ministra aulas)',E.monitor,v=>{E.monitor=v;desenhar()},SO_ALUNOS,SO_ALUNOS?' (só owners definem)':''),
       dono?ck('Equipe (cargos)',E.equipe,v=>{E.equipe=v;desenhar()}):''));
-    if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma',ajuda('pes_turma')),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...tot.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
+    if(E.aluno)box.append(h('div',{class:'sec'},h('h3',{},'Perfil de aluno: turma',ajuda('pes_turma')),h('div',{class:'sub'},'A turma define o nível e se a pessoa é aluno atual ou ex-aluno (turma arquivada, com prazo de acesso). Pode marcar mais de uma; vale a soma.'),...turmasPorTrilha(tot).flatMap(g=>[h('div',{class:'sub',style:'margin:10px 0 4px;font-weight:700'},g.titulo),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...g.ids.map(t=>chip(D.turmas[t].nome+(D.turmas[t].status==='arquivada'?' (arquivada)':''),E.turmas.has(t),()=>{E.turmas.has(t)?E.turmas.delete(t):E.turmas.add(t);desenhar()})))]),Object.keys(D.turmas).length?'':h('p',{class:'sub'},'Crie uma turma na aba Turmas.')));
     if(E.monitor){
-      const bl=h('div',{class:'sec'},h('h3',{},'Aulas que o monitor ministra',ajuda('pes_monitor')),h('div',{class:'sub'},'Turmas em que ensina (nenhuma marcada = todas):'),...tot.map(t=>chip(D.turmas[t].nome,E.mturmas.has(t),()=>{E.mturmas.has(t)?E.mturmas.delete(t):E.mturmas.add(t);desenhar()})));
-      const grupos={};for(const a of D.aulas||[])(grupos[a.nivel]=grupos[a.nivel]||[]).push(a);
-      bl.append(h('div',{class:'aulaln sub',style:'border:0'},h('span',{},'Aula'),h('span',{},'Slides'),h('span',{},'Roteiro')));
-      Object.keys(grupos).sort().forEach(nv=>{const l=grupos[nv];const n=l.filter(a=>E.aulas.has(a.chave)||E.roteiros.has(a.chave)).length;
-        const det=h('details',{class:'nivel pequeno'},h('summary',{},h('span',{class:'nvt'},nv),h('span',{class:'nvc'},n?`${n} marcada(s)`:'nada marcado')));det.open=n>0;
+      const bl=h('div',{class:'sec'},h('h3',{},'Monitor: o que ele ministra',ajuda('pes_monitor')),
+        h('div',{style:'font-weight:700;margin:8px 0 2px'},'1. Em quais turmas ele ministra?'),
+        h('div',{class:'sub'},E.mturmas.size?E.mturmas.size+' turma(s) marcada(s).':'Nenhuma marcada: vale para TODAS as turmas.'),
+        ...turmasPorTrilha(tot).flatMap(g=>[h('div',{class:'sub',style:'margin:10px 0 4px;font-weight:700'},g.titulo),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...g.ids.map(t=>chip(D.turmas[t].nome,E.mturmas.has(t),()=>{E.mturmas.has(t)?E.mturmas.delete(t):E.mturmas.add(t);desenhar()})))]),
+        h('div',{style:'font-weight:700;margin:16px 0 2px'},'2. Quais aulas ele pode abrir?'));
+      const alvoT=[...E.mturmas],dirsRel=new Set(alvoT.map(t=>(D.turmas[t]||{}).nivel).filter(Boolean));
+      for(const c of [...E.aulas,...E.roteiros]){const a=(D.aulas||[]).find(x=>x.chave===c);if(a)dirsRel.add(a.dir)}
+      if(!dirsRel.size)bl.append(h('p',{class:'sub'},'Marque acima as turmas dele: aparecem aqui só as aulas dos níveis dessas turmas.'));
+      else bl.append(h('div',{class:'sub'},'Só aparecem os níveis das turmas marcadas. Slides = projetar para a turma; Roteiro = guia do apresentador (nunca aparece para alunos).'));
+      const grupos={};for(const a of D.aulas||[])if(dirsRel.has(a.dir))(grupos[a.dir]=grupos[a.dir]||[]).push(a);
+      if(dirsRel.size)bl.append(h('div',{class:'aulaln sub',style:'border:0'},h('span',{},'Aula'),h('span',{},'Slides'),h('span',{},'Roteiro')));
+      Object.keys(grupos).sort().forEach(dr=>{const l=grupos[dr];const n=l.filter(a=>E.aulas.has(a.chave)||E.roteiros.has(a.chave)).length;
+        const det=h('details',{class:'nivel pequeno'},h('summary',{},h('span',{class:'nvt'},rotuloNivel(dr)),h('span',{class:'nvc'},n?`${n} de ${l.length} marcada(s)`:'nada marcado')));det.open=false;
         det.append(h('div',{class:'massa'},h('button',{type:'button',class:'chipx',onclick:()=>{l.forEach(a=>{E.aulas.add(a.chave);if(a.tem_roteiro)E.roteiros.add(a.chave)});desenhar()}},'Marcar o nível todo'),h('button',{type:'button',class:'chipx',onclick:()=>{l.forEach(a=>{E.aulas.delete(a.chave);E.roteiros.delete(a.chave)});desenhar()}},'Limpar')));
-        for(const a of l)det.append(h('div',{class:'aulaln'},h('span',{},a.titulo),h('input',{type:'checkbox',checked:E.aulas.has(a.chave),'aria-label':'Slides de '+a.titulo,onchange:e=>{e.target.checked?E.aulas.add(a.chave):E.aulas.delete(a.chave);det.querySelector('.nvc')}}),a.tem_roteiro?h('input',{type:'checkbox',checked:E.roteiros.has(a.chave),'aria-label':'Roteiro de '+a.titulo,onchange:e=>{e.target.checked?E.roteiros.add(a.chave):E.roteiros.delete(a.chave)}}):h('span',{class:'sub'},'–')));
+        for(const a of l)det.append(h('div',{class:'aulaln'},h('span',{},a.titulo),h('input',{type:'checkbox',checked:E.aulas.has(a.chave),'aria-label':'Slides de '+a.titulo,onchange:e=>{e.target.checked?E.aulas.add(a.chave):E.aulas.delete(a.chave)}}),a.tem_roteiro?h('input',{type:'checkbox',checked:E.roteiros.has(a.chave),'aria-label':'Roteiro de '+a.titulo,onchange:e=>{e.target.checked?E.roteiros.add(a.chave):E.roteiros.delete(a.chave)}}):h('span',{class:'sub'},'–')));
         bl.append(det)});
       box.append(bl)}
     if(E.equipe&&dono){
       const cs=Object.keys(D.cargos);
-      const bl=h('div',{class:'sec'},h('h3',{},'Perfis de permissão (pode ter vários; vale a soma: prevalece o que dá mais acesso)',ajuda('pes_perfis')),...cs.map(c=>chip(D.cargos[c].nome,E.cargos.has(c),()=>{E.cargos.has(c)?E.cargos.delete(c):E.cargos.add(c);desenhar()},'cargo')),
-        cs.length?'':h('p',{class:'sub'},'Ainda não há perfis. Crie na aba Perfis.'),h('div',{class:'sub'},'Precisa de uma permissão a mais? Crie um perfil na aba Perfis com ela e marque aqui. Não há permissão avulsa por pessoa.'));
+      const bl=h('div',{class:'sec'},h('h3',{},'Cargos (pode ter vários; vale a soma: prevalece o que dá mais acesso)',ajuda('pes_perfis')),...cs.map(c=>chip(D.cargos[c].nome,E.cargos.has(c),()=>{E.cargos.has(c)?E.cargos.delete(c):E.cargos.add(c);desenhar()},'cargo')),
+        cs.length?'':h('p',{class:'sub'},'Ainda não há cargos. Crie na aba Cargos e funções.'),h('div',{class:'sub'},'Precisa de uma permissão a mais? Crie um cargo na aba Cargos e funções com ela e marque aqui. Não há permissão avulsa por pessoa.'));
       const x=rascunhoInfo();
-      for(const p of Object.keys(PERM_INFO)){const on=x.perms.includes(p);bl.append(h('div',{class:'permlinha'},h('span',{class:on?'on':'off'},on?'✓':'–'),h('span',{class:on?'':'off'},h('b',{},PERM_INFO[p][0]),' · '+PERM_INFO[p][1]),h('span',{class:'src'},on&&x.origem[p]?'por '+x.origem[p].join(', '):'')))}
-      if(E.extras.size)bl.append(h('div',{style:'background:#3a2a10;border:1px solid #b66d00;border-radius:10px;padding:10px 14px;margin-top:10px'},h('b',{},'Permissões individuais antigas: '+[...E.extras].map(p=>PERM_INFO[p][0]).join(', ')),h('div',{class:'sub'},'Não são mais usadas. Crie um perfil na aba Perfis com essas permissões, marque-o acima e remova as individuais.'),h('button',{class:'chipx',type:'button',style:'margin-top:6px',onclick:()=>{E.extras.clear();desenhar()}},'Remover permissões individuais')));
+      for(const [gt,itens] of PERM_GRUPOS){const on=itens.filter(q=>x.perms.includes(q[0]));const src=[...new Set(on.flatMap(q=>x.origem[q[0]]||[]))];bl.append(h('div',{class:'permlinha'},h('span',{class:on.length?'on':'off'},on.length?'✓':'–'),h('span',{class:on.length?'':'off'},h('b',{},gt),on.length?' · '+(on.length===itens.length?'tudo':on.map(q=>q[1]).join(', ')):''),h('span',{class:'src'},src.length?'por '+src.join(', '):'')))}
+      if(E.extras.size)bl.append(h('div',{style:'background:#3a2a10;border:1px solid #b66d00;border-radius:10px;padding:10px 14px;margin-top:10px'},h('b',{},'Permissões individuais antigas: '+[...E.extras].map(p=>(PERM_INFO[p]||[p])[0]).join(', ')),h('div',{class:'sub'},'Não são mais usadas. Crie um cargo na aba Cargos e funções com essas permissões, marque-o acima e remova as individuais.'),h('button',{class:'chipx',type:'button',style:'margin-top:6px',onclick:()=>{E.extras.clear();desenhar()}},'Remover permissões individuais')));
       box.append(bl)}
-    if(dono&&(E.monitor||E.equipe)&&!E.owner){const bl=h('div',{class:'sec'},h('h3',{},'Permissão para editar slides (opcional)',ajuda('pes_editor')),h('div',{class:'sub'},'Só para monitor ou equipe que vão criar/editar aulas no editor. Escolha o nível (ou uma aula) e clique em Liberar. Aluno comum não precisa disso.'));
-      const rot=(v)=>{const [d,i]=v.split('/');const a=(D.aulas||[]).find(x=>x.dir===d&&(!i||x.id===i));const n=((D.aulas||[]).find(x=>x.dir===d)||{}).nivel||d;return i?`${n} · ${a?a.titulo:i}`:`${n} (todas as aulas)`};
+    if(dono&&(E.monitor||E.equipe)&&!E.owner){const bl=h('details',{class:'sec'},h('summary',{style:'cursor:pointer;font-weight:700'},'Permissão para editar slides (opcional)',ajuda('pes_editor')),h('div',{class:'sub'},'Só para quem vai criar/editar aulas no editor. Escolha o nível (ou uma aula) e clique em Liberar.'));bl.open=E.editor.size>0;
+      const rot=(v)=>{const [d,i]=v.split('/');const a=(D.aulas||[]).find(x=>x.dir===d&&(!i||x.id===i));const n=rotuloNivel(d);return i?`${n} · ${a?a.titulo:i}`:`${n} (todas as aulas)`};
       [...E.editor].forEach(v=>bl.append(h('div',{class:'permlinha'},h('span',{class:'on'},'✓'),h('span',{},rot(v)),h('button',{class:'chipx',type:'button',onclick:()=>{E.editor.delete(v);desenhar()}},'Remover'))));
-      const ops=[];for(const [d,n] of niveisLista()){ops.push([d,n+' (todas as aulas)']);for(const a of (D.aulas||[]).filter(x=>x.dir===d))ops.push([d+'/'+a.id,n+' · '+a.titulo])}
+      const dirsMon=new Set([...E.mturmas].map(t=>(D.turmas[t]||{}).nivel).filter(Boolean));
+      bl.append(...(E.monitor&&!dirsMon.size?[h('p',{class:'sub'},'Marque acima as turmas do monitor: só os níveis delas podem ser liberados para edição.')]:[]));
+      const ops=[];for(const [d] of niveisLista().filter(([d])=>E.monitor?dirsMon.has(d):!/^nivel-(90|99)/.test(d))){const n=rotuloNivel(d);ops.push([d,n+' (todas as aulas)']);for(const a of (D.aulas||[]).filter(x=>x.dir===d))ops.push([d+'/'+a.id,n+' · '+a.titulo])}
       const sl=h('select',{},...ops.filter(o=>!E.editor.has(o[0])).map(o=>h('option',{value:o[0]},o[1])));
       bl.append(sl.options.length?h('div',{style:'display:flex;gap:6px;margin-top:8px;align-items:center'},(sl.style.cssText='flex:1;min-width:0',sl),h('button',{class:'chipx',type:'button',style:'flex:none;white-space:nowrap',onclick:()=>{E.editor.add(sl.value);desenhar()}},'Liberar edição')):h('p',{class:'sub'},'Nada mais a liberar.'));box.append(bl)}
     if(E.acessos.length){const bl=h('details',{class:'nivel pequeno',style:'margin-top:12px'},h('summary',{},h('span',{class:'nvt'},'Acessos individuais antigos (use turma de ex-aluno no lugar)'),h('span',{class:'nvc'},E.acessos.length?E.acessos.length+' liberado(s)':'nenhum')));bl.open=E.acessos.length>0;bl.append(h('div',{class:'sub'},'Este formato antigo não é mais criado. Para ex-aluno, coloque a pessoa em uma turma arquivada do nível (aba Turmas), com prazo de acesso. Remova estes itens depois.'));
@@ -200,27 +223,55 @@ async function verComo(i){
 // ---------- aba Cargos ----------
 function desenharCargos(){
   const p=$('p-cargos');p.textContent='';
-  p.append(h('p',{class:'sub',style:'max-width:760px'},'Um perfil (cargo) é um conjunto de permissões: você cria uma vez e depois só marca quem o recebe, na ficha da pessoa. Não existe permissão avulsa. Uma pessoa pode ter vários perfis; vale a soma e prevalece o que dá mais acesso. Só owners criam perfis.'));
-  const g=h('div',{class:'grade'});
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Um cargo é um conjunto de permissões que você marca uma a uma, e pode valer para tudo ou só para certos assuntos e turmas. Dê o cargo a quem precisar aqui mesmo (campo "Dar cargo") ou na ficha da pessoa. Uma pessoa pode ter vários cargos; vale a soma. Só owners criam cargos.'));
+  const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px;align-items:start'});
   for(const id of Object.keys(D.cargos)){const c=D.cargos[id];const ocup=Object.keys(D.equipe||{}).filter(n=>(D.equipe[n].cargos||[]).includes(id));
     const nome=h('input',{type:'text',value:c.nome,maxLength:40,style:'width:100%;font-weight:700'}),desc=h('input',{type:'text',value:c.descricao||'',maxLength:100,placeholder:'descrição curta',style:'width:100%;margin:6px 0'});
-    const cx=Object.keys(PERM_INFO).map(k=>h('label',{class:'ck'},h('input',{type:'checkbox',checked:c.permissoes.includes(k),'data-k':k}),h('b',{},PERM_INFO[k][0]),h('span',{class:'sub'},PERM_INFO[k][1])));
-    g.append(h('div',{class:'cartao2'},nome,desc,...cx,h('div',{class:'sub',style:'margin-top:10px'},`Quem ocupa (${ocup.length})`),h('div',{},...ocup.map(n=>h('span',{class:'pill e'},'@'+n))),
-      h('div',{style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'cargo',id,nome:nome.value,descricao:desc.value,permissoes:cx.map(l=>l.querySelector('input')).filter(x=>x.checked).map(x=>x.dataset.k)});aviso('Cargo salvo');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'),
+    const marcadas=new Set(expandePerm(c.permissoes));const caixas={};
+    const grupos=PERM_GRUPOS.map(([gt,itens])=>{const cont=h('span',{class:'nvc'});
+      const lista=itens.map(([k,t,d])=>{const inp=h('input',{type:'checkbox',checked:marcadas.has(k),onchange:()=>cont.atualiza()});caixas[k]=inp;return h('label',{class:'ck',style:'align-items:flex-start'},inp,h('span',{},h('b',{},t),h('span',{class:'sub',style:'display:block;font-size:12.5px'},d)))});
+      cont.atualiza=()=>{const n=itens.filter(x=>caixas[x[0]].checked).length;cont.textContent=n?n+' de '+itens.length:'nenhuma'};cont.atualiza();
+      return h('details',{class:'nivel pequeno'},h('summary',{},h('span',{class:'nvt'},gt),cont),
+        h('div',{class:'massa'},h('button',{type:'button',class:'chipx',onclick:()=>{itens.forEach(x=>caixas[x[0]].checked=true);cont.atualiza()}},'Marcar todas'),h('button',{type:'button',class:'chipx',onclick:()=>{itens.forEach(x=>caixas[x[0]].checked=false);cont.atualiza()}},'Limpar')),...lista)});
+    const al=c.alcance||{assuntos:[],turmas:[]},limitado=(al.assuntos||[]).length||(al.turmas||[]).length;
+    const modo=h('select',{style:'width:100%;margin-top:6px'},h('option',{value:'tudo'},'Vale para tudo (todos os assuntos e turmas)'),h('option',{value:'parte'},'Só para estes assuntos e turmas…'));modo.value=limitado?'parte':'tudo';
+    const asC={},tuC={};
+    const caixaAl=h('div',{style:'margin-top:8px'},h('div',{class:'sub'},'Assuntos (valem para todas as turmas deles):'),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...Object.keys(D.assuntos||{}).map(k=>{const i=h('input',{type:'checkbox',checked:(al.assuntos||[]).includes(k)});asC[k]=i;return h('label',{class:'ck'},i,D.assuntos[k].nome)}),Object.keys(D.assuntos||{}).length?'':h('span',{class:'sub'},'Nenhum assunto cadastrado.')),
+      h('div',{class:'sub',style:'margin-top:8px'},'Turmas avulsas:'),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap'},...Object.keys(D.turmas||{}).filter(k=>D.turmas[k].status!=='arquivada').map(k=>{const i=h('input',{type:'checkbox',checked:(al.turmas||[]).includes(k)});tuC[k]=i;return h('label',{class:'ck'},i,D.turmas[k].nome)})));
+    caixaAl.hidden=modo.value==='tudo';modo.addEventListener('change',()=>{caixaAl.hidden=modo.value==='tudo'});
+    const alcanceBox=h('div',{style:'margin:10px 0;padding:10px;border:1px solid #fff2;border-radius:10px'},h('b',{},'Alcance do cargo'),h('div',{class:'sub'},'Com alcance limitado, a pessoa só vê e mexe nas turmas, alunos e níveis desses assuntos; o Painel dela mostra só isso.'),modo,caixaAl);
+    g.append(h('div',{class:'cartao2'},nome,desc,...grupos,alcanceBox,h('div',{class:'sub',style:'margin-top:10px'},`Quem ocupa (${ocup.length})`),h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;margin:4px 0'},...ocup.map(n=>h('span',{class:'pill e'},'@'+n+' ',h('button',{type:'button',title:'Tirar este cargo de @'+n,style:'background:none;border:0;color:inherit;cursor:pointer;font-size:15px',onclick:async()=>{if(!confirm('Tirar o cargo "'+c.nome+'" de @'+n+'?'))return;try{await enviar({acao:'cargo_atribuir',id,usuario:n,dar:false});aviso('Cargo removido');await carregar()}catch(e){aviso(e.message,1)}}},'×'))),ocup.length?'':h('span',{class:'sub'},'Ninguém ainda.')),
+      (()=>{const nomeDe={};for(const x of D.contatos||[])if(x.usuario&&x.nome)nomeDe[x.usuario]=x.nome;
+        const us=[...new Set([...Object.keys(nomeDe),...(D.alunos||[]),...Object.keys(D.monitores||{}),...Object.keys(D.equipe||{})].filter(Boolean))].filter(n=>!ocup.includes(n));
+        const op=us.map(n=>({n,v:(nomeDe[n]?nomeDe[n]+' · ':'')+'@'+n})).sort((a,b)=>a.v.localeCompare(b.v,'pt-BR',{sensitivity:'base'}));
+        const dl='dl-'+id,inp=h('input',{type:'text',placeholder:'Procurar pessoa por nome ou usuário…',list:dl,style:'flex:1;min-width:150px'});
+        const achar=()=>{const t=inp.value.trim().toLowerCase().replace(/^@/,'');if(!t)return null;const ex=op.find(o=>o.v.toLowerCase()===inp.value.trim().toLowerCase())||op.find(o=>o.n===t);if(ex)return ex.n;const c=op.filter(o=>o.v.toLowerCase().includes(t));return c.length===1?c[0].n:(c.length?'?':null)};
+        return h('div',{style:'display:flex;gap:6px;align-items:center;margin-top:6px'},inp,h('datalist',{id:dl},...op.map(o=>h('option',{value:o.v}))),h('button',{class:'btn sec',type:'button',onclick:async()=>{const n=achar();if(n==='?'){aviso('Mais de uma pessoa combina. Escolha uma da lista.',1);return}if(!n){aviso('Não achei essa pessoa. Digite parte do nome e escolha na lista.',1);return}try{await enviar({acao:'cargo_atribuir',id,usuario:n,dar:true});aviso('Cargo dado a @'+n);await carregar()}catch(e){aviso(e.message,1)}}},'Dar cargo'))})(),
+
+      h('div',{style:'display:flex;gap:8px;margin-top:10px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'cargo',id,nome:nome.value,descricao:desc.value,permissoes:Object.keys(caixas).filter(k=>caixas[k].checked),alcance:modo.value==='tudo'?{assuntos:[],turmas:[]}:{assuntos:Object.keys(asC).filter(k=>asC[k].checked),turmas:Object.keys(tuC).filter(k=>tuC[k].checked)}});aviso('Cargo salvo');await carregar()}catch(e){aviso(e.message,1)}}},'Salvar'),
         h('button',{class:'btn sec',type:'button',onclick:async()=>{const ocup=Object.entries(D.equipe||{}).filter(([k,v])=>(v.cargos||[]).includes(id)).map(([k])=>'@'+k);if(!await confirmar({titulo:'Apagar o cargo "'+c.nome+'"?',corpo:[h('p',{class:'sub'},ocup.length?'Estas pessoas perdem as permissões deste cargo: '+ocup.join(', ')+'.':'Ninguém ocupa este cargo agora.'),h('p',{class:'sub'},'Nada é alterado no GitHub.')],digitar:c.nome,botao:'Apagar cargo'}))return;try{await enviar({acao:'remover_cargo',id});aviso('Cargo apagado');await carregar()}catch(e){aviso(e.message,1)}}},'Apagar'))))}
   g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:async()=>{const n=prompt('Nome do novo cargo (ex.: Secretaria, Vice-presidência):');if(!n)return;try{await enviar({acao:'cargo',nome:n,permissoes:[]});aviso('Cargo criado: marque as permissões e salve');await carregar()}catch(e){aviso(e.message,1)}}},'+ Novo cargo'),h('div',{class:'sub'},'Ex.: Vice-presidência, Eventos, Monitoria geral')));
-  p.append(g);
-  const det=h('div',{class:'cartao2'},h('h3',{},'O que cada permissão libera',ajuda('cargos_info')),...Object.keys(PERM_INFO).map(k=>h('div',{style:'margin:6px 0;font-size:14px'},h('b',{},PERM_INFO[k][0]+': '),PERM_INFO[k][1]+'.')),h('div',{class:'sub'},'Owners sempre têm tudo.'));
-  p.append(det)}
+  p.append(g)}
 
 // ---------- aba Turmas ----------
-function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;return Object.entries(m).sort((x,y)=>x[0].localeCompare(y[0]))}
-const nomeNivel=d=>d?((niveisLista().find(x=>x[0]===d)||[])[1]||d):'Todos os níveis';
+function niveisLista(){const m={};for(const a of D.aulas||[])m[a.dir]=a.nivel;for(const as of Object.values(D.assuntos||{}))for(const d of as.niveis||[])if(!m[d])m[d]='Nível '+Number(d.slice(6,8));return Object.entries(m).sort((x,y)=>x[0].localeCompare(y[0]))}
+const assuntoDoNivel=d=>Object.keys(D.assuntos||{}).find(k=>(D.assuntos[k].niveis||[]).includes(d))||'';
+const nomeNv=d=>(niveisLista().find(x=>x[0]===d)||[,d])[1];
+const rotuloNivel=d=>{const k=assuntoDoNivel(d);return k?D.assuntos[k].nome+' · '+nomeNv(d):nomeNv(d)};
+const nomeNivel=d=>d?rotuloNivel(d):'Todos os níveis';
+const niveisDoAssunto=k=>(k&&D.assuntos[k]?D.assuntos[k].niveis||[]:[]).map(d=>[d,nomeNv(d)]);
 const ESTADO_REPO={ficticio:['Aluno de teste (fictício): não usa GitHub','ok'],ok:['Pronto','ok'],'criado-com-acesso':['Criado, com acesso','ok'],convidado:['Convite enviado','m'],'criado-e-convidado':['Criado e convite enviado','m'],'convite-pendente':['Convite enviado, aguardando o aluno aceitar','m'],'sem-convite':['Repositório existe, falta convidar','t'],'sem-repo':['Repositório ainda não existe','t'],erro:['Erro','t']};
 async function reposDaTurma(id,nome){
   const corpo=h('div',{},h('p',{class:'sub'},'Verificando…'));const {fechar}=camada([h('h2',{style:'margin:0 0 8px'},'Repositórios dos alunos · '+nome,ajuda('repos')),h('p',{class:'sub'},'Cada aluno precisa de um repositório privado aluno-<usuario> (criado do modelo aluno-modelo) e de um convite aceito. Aqui você confere e resolve de uma vez.'),corpo,h('div',{style:'display:flex;justify-content:flex-end;margin-top:12px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Fechar'))],'modal');
   const mostrarR=(R,criou)=>{corpo.textContent='';const falta=R.some(x=>['sem-repo','sem-convite'].includes(x.estado));
     corpo.append(h('div',{style:'max-height:46vh;overflow:auto'},...R.map(x=>h('div',{class:'linha',style:'display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid #fff2'},h('b',{},'@'+x.usuario),h('span',{class:'pill '+(ESTADO_REPO[x.estado]||['','t'])[1]},(ESTADO_REPO[x.estado]||[x.estado])[0]+(x.msg?': '+x.msg:''))))));
+    const naoProntos=R.filter(x=>!['ok','criado-com-acesso','ficticio'].includes(x.estado));
+    if(naoProntos.length){const GR=[['convite-pendente','convidado','criado-e-convidado'],'⏳ *Convite do GitHub ainda não aceito* (aceite para poder entregar as atividades):'],GF=[['sem-repo','sem-convite','erro'],'🛠️ *Repositório ainda em preparação* (aguardem, o professor está liberando):'];
+      const L=['📌 *Liga de Games · '+nome+': repositórios dos alunos*','',`Faltam ${naoProntos.length} de ${R.length} alunos com tudo pronto.`];
+      for(const [est,tit] of [GR,GF]){const q=naoProntos.filter(x=>est.includes(x.estado));if(q.length){L.push('',tit,...q.map(x=>'• @'+x.usuario))}}
+      L.push('','✅ *Como aceitar o convite:* abra o e-mail do GitHub (ou https://github.com/notifications) e clique em *Accept invitation*. Se preferir, acesse direto: https://github.com/LAG-CEUMA/aluno-SEU-USUARIO/invitations (troque SEU-USUARIO pelo seu usuário do GitHub).','Qualquer dúvida, chama aqui! 🚀');
+      const ta=h('textarea',{rows:'10',readonly:true,style:'width:100%;margin-top:6px'});ta.value=L.join('\n');
+      corpo.append(h('details',{style:'margin-top:12px',open:true},h('summary',{style:'cursor:pointer;font-weight:700'},'📣 Texto para lembrar no WhatsApp ('+naoProntos.length+' pendente'+(naoProntos.length>1?'s':'')+')'),ta,h('div',{style:'margin-top:6px'},h('button',{class:'btn',type:'button',onclick:async()=>{try{await navigator.clipboard.writeText(ta.value);aviso('Texto copiado. É só colar no grupo.')}catch{ta.select();aviso('Selecione e copie o texto.',1)}}},'Copiar texto'))))}
     if(falta)corpo.append(h('button',{class:'btn',type:'button',style:'margin-top:12px',onclick:async()=>{if(!await confirmar({titulo:'Criar os repositórios que faltam?',corpo:[h('p',{class:'sub'},'Cria os repositórios privados a partir do modelo e envia o convite do GitHub a cada aluno. Nada é apagado.')],botao:'Criar e convidar'}))return;corpo.textContent='Trabalhando…';try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:true})).resultados,true)}catch(e){corpo.textContent=e.message}}},'Criar o que falta e convidar'));
     else if(R.every(x=>['ok','criado-com-acesso','ficticio'].includes(x.estado)))corpo.append(h('p',{class:'sub',style:'margin-top:10px'},'Tudo certo: todos os alunos têm repositório e acesso.'))};
   try{mostrarR((await enviar({acao:'repos_alunos',turma:id,criar:false})).resultados)}catch(e){corpo.textContent=e.message}}
@@ -248,59 +299,122 @@ function materiaisDaTurma(id){
     corpo.append(h('div',{style:'border-top:1px solid #fff2;padding:10px 0'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('b',{},a.titulo),h('span',{class:'pill m'},'Quem vê: '+ac)),h('div',{class:'sub',style:'font-size:12px'},a.chave),
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},lk('Slides (projetar)',a.url,'btn'),a.roteiro?lk('Roteiro (não projetar)',a.roteiro):'',D.editor?lk('Editar slides','/editor'):'',bt('Chamada desta aula',ir('/presenca#chamada',id,a.chave)),bt('Atividades',ir('/presenca#ativ',id,a.chave)),(D.permissoes||[]).includes('aulas')||D.dono?bt('Quem vê',()=>{FECHA();mostrar('aulas')}):'')))}
   FECHA=camada([h('h2',{style:'margin:0 0 8px'},'Aulas e materiais · '+t.nome),corpo],'gaveta').fechar}
+function abrirPresenca(id,aba){return()=>{try{localStorage.setItem('liga_turma',id)}catch{}window.open('/presenca#'+aba,'liga-presenca')}}
 function desenharTurmas(){
   const p=$('p-turmas');p.textContent='';
   if(D.dono)p.append(h('div',{style:'margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:auditoriaRepos},'Auditar repositórios e contas (GitHub)'),h('span',{class:'sub',style:'margin-left:8px'},'acha repositórios órfãos, contas que trocaram de nome e acessos estranhos')));
   p.append(h('p',{class:'sub',style:'max-width:760px'},'Uma turma é um grupo de alunos que percorre os níveis junto. A chamada, a presença e os certificados sempre pertencem a uma turma. O conteúdo das aulas é o mesmo para todas.'));
-  const g=h('div',{class:'grade'});const ROT={andamento:'Em andamento',planejada:'Planejada',arquivada:'Arquivada'};
+  const g=h('div',{class:'grade'});const CARDS={};const ROT={andamento:'Em andamento',planejada:'Planejada',arquivada:'Arquivada'};
   for(const id of Object.keys(D.turmas)){const t=D.turmas[id];const mons=Object.keys(D.monitores).filter(n=>D.monitores[n].turmas.includes(id)).length;
     const trocar=async(status)=>{try{await enviar({acao:'turma',id,nome:t.nome,status});aviso('Turma atualizada');await carregar()}catch(e){aviso(e.message,1)}};
-    g.append(h('div',{class:'cartao2'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h3',{},t.nome),h('span',{class:'st '+t.status},ROT[t.status])),
+    CARDS[id]=(h('div',{class:'cartao2'},h('div',{style:'display:flex;justify-content:space-between;align-items:center'},h('h3',{},t.nome),h('span',{class:'st '+t.status},ROT[t.status])),
       h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
-      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais'),h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
+      (D.permissoes.includes('presenca')||D.dono||D.papel==='monitor')?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'},
+        h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'chamada')},'Chamada'),h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'corr')},'Atividades e correção'),h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'rank')},'Ranking'),h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')):h('div',{style:'margin-bottom:8px'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
         t.status==='arquivada'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('andamento')},'Reabrir'):'',
-        t.alunos.length?h('button',{class:'btn',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
+        t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalPromover(id)},'Promover alunos…'):'',t.alunos.length?h('button',{class:'btn sec',type:'button',onclick:()=>modalMover(id)},'Mover…'):'',
         h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma(id)},'Editar'),ajuda('turma_botoes'))))}
-  g.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalTurma('')},'+ Nova turma'),h('div',{class:'sub'},'Dê um código curto (ex.: 2027.2). Alunos novos entram na turma em andamento ou na que você escolher.')));
-  const pg=h('div',{class:'grade'});const dd=v=>v?v.split('-').reverse().join('/'):'sem data';
+  const dd=v=>v?v.split('-').reverse().join('/'):'sem data';
+  const grade='display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px';
+  const emTrilha=new Set();
+  // Trilha > turmas: cada trilha é um bloco que reúne as turmas (níveis) dela
   for(const id of Object.keys(D.planos)){const pl=D.planos[id];
-    pg.append(h('div',{class:'cartao2'},h('h3',{},pl.nome),h('div',{class:'sub'},`${pl.trilha} · ${dd(pl.inicio)} a ${dd(pl.fim)}`+(pl.premiacao?' · premiação '+dd(pl.premiacao):'')),
-      h('div',{style:'margin:6px 0'},...(pl.turmas.length?pl.turmas.map(t=>h('span',{class:'pill m'},(D.turmas[t]||{}).nome||t)):[h('span',{class:'sub'},'nenhuma turma ainda')])),
-      h('button',{class:'btn sec',type:'button',onclick:()=>modalPlano(id)},'Editar plano')))}
-  pg.append(h('div',{class:'cartao2 tracejado'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Novo plano'),h('div',{class:'sub'},'Plano = calendário (ex.: 2026.2 a 2027.1) com as turmas/níveis dele. O ranking do plano soma os pontos das turmas, e a Copa passa a valer para o plano inteiro.')));
-  p.append(h('h2',{style:'margin:22px 0 6px'},'Planos (calendários)',ajuda('plano')),h('p',{class:'sub',style:'max-width:760px'},'Cada trilha tem o seu plano. A Arena Global (comparar trilhas) já está pronta, mas fica desligada até existirem trilhas paralelas (previsto para 2027.2).'),pg);
-  p.append(g,h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
+    const ts=(pl.turmas||[]).filter(t=>CARDS[t]);ts.forEach(t=>emTrilha.add(t));
+    const quando=[pl.diaSemana!==undefined&&pl.diaSemana!==''?DIAS[pl.diaSemana]+'s':'',pl.horario||''].filter(Boolean).join(' · ');
+    const det=h('details',{class:'nivel',open:true},h('summary',{},h('span',{class:'nvt'},pl.trilha||pl.nome),h('span',{class:'nvc'},[quando,dd(pl.inicio)+' a '+dd(pl.fim),ts.length+' turma(s)'].filter(Boolean).join(' · ')),ajuda('plano')),
+      h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px'},h('button',{class:'btn sec',type:'button',onclick:()=>modalPlano(id)},'Editar trilha'),h('span',{class:'sub'},pl.nome+(pl.premiacao?' · premiação '+dd(pl.premiacao):'')+((pl.semanasSemAula||[]).length?' · sem aula: '+pl.semanasSemAula.map(x=>dd(x).slice(0,5)).join(', '):''))));
+    const gr=h('div',{style:grade});for(const t of ts)gr.append(CARDS[t]);if(!ts.length)gr.append(h('p',{class:'sub'},'Nenhuma turma nesta trilha ainda. Clique em Editar trilha e use "Criar turma deste nível".'));
+    det.append(gr);p.append(det)}
+  const soltas=Object.keys(D.turmas).filter(t=>!emTrilha.has(t));
+  if(soltas.length){const det=h('details',{class:'nivel',open:true},h('summary',{},h('span',{class:'nvt'},'Turmas sem trilha'),h('span',{class:'nvc'},soltas.length+' turma(s)')));const gr=h('div',{style:grade});for(const t of soltas)gr.append(CARDS[t]);det.append(gr);p.append(det)}
+  p.append(h('div',{style:'display:flex;gap:10px;flex-wrap:wrap;margin:16px 0'},h('button',{class:'btn',type:'button',onclick:()=>modalPlano('')},'+ Nova trilha'),h('button',{class:'btn sec',type:'button',onclick:()=>modalTurma('')},'+ Nova turma avulsa'),h('button',{class:'btn sec',type:'button',onclick:()=>modalAssuntos()},'Assuntos e níveis'),h('span',{class:'sub'},'Trilha = dia da semana, horário e calendário. Turma = assunto + nível, dentro de uma trilha.')));
+  p.append(h('div',{class:'dica'},h('b',{},'Turma encerrada? '),'Use Arquivar: ela some das listas do dia a dia, mas a presença e os certificados continuam guardados.'))}
+function turmasPorTrilha(ids){ // agrupa ids de turma pela trilha (plano) a que pertencem
+  const out=[],usado=new Set();
+  for(const k of Object.keys(D.planos||{})){const pl=D.planos[k],ts=(pl.turmas||[]).filter(t=>ids.includes(t));if(ts.length){out.push({titulo:(pl.trilha||pl.nome)+(pl.diaSemana!==undefined&&pl.diaSemana!==''?' · '+DIAS[pl.diaSemana]:''),ids:ts});ts.forEach(t=>usado.add(t))}}
+  const sobra=ids.filter(t=>!usado.has(t));if(sobra.length)out.push({titulo:'Sem trilha',ids:sobra});return out}
+const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const dmy=v=>v?v.split('-').reverse().join('/'):'';
+const lerDatas=t=>String(t||'').split(/[\s,;]+/).map(x=>{const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):''}).filter(Boolean);
 function modalPlano(id){
-  const pl=id?D.planos[id]:{nome:'',trilha:'Trilha 1',inicio:'',fim:'',turmas:[],premiacao:''};
-  const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-2027.1',style:'text-transform:uppercase',disabled:!!id,oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:pl.nome,maxLength:40,placeholder:'ex.: Plano 2026.2 a 2027.1'}),tr=h('input',{type:'text',value:pl.trilha,maxLength:30}),ini=h('input',{type:'date',value:pl.inicio}),fim=h('input',{type:'date',value:pl.fim}),pre=h('input',{type:'date',value:pl.premiacao||''});
+  const pl=id?D.planos[id]:{nome:'',trilha:'Trilha',inicio:'',fim:'',turmas:[],premiacao:'',diaSemana:'',horario:'',semanasSemAula:[]};
+  const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-2027.1-QUI',style:'text-transform:uppercase',disabled:!!id,oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),
+    tr=h('input',{type:'text',value:pl.trilha,maxLength:30,placeholder:'ex.: Trilha Quinta'}),
+    nome=h('input',{type:'text',value:pl.nome,maxLength:40,placeholder:'ex.: Calendário 2026.2/2027.1 · Quinta'}),
+    dia=h('select',{},h('option',{value:''},'Escolha…'),...DIAS.map((x,i)=>h('option',{value:String(i)},x))),
+    hor=h('input',{type:'text',value:pl.horario||'',maxLength:30,placeholder:'ex.: 19:00 às 20:00'}),
+    ini=h('input',{type:'date',value:pl.inicio}),fim=h('input',{type:'date',value:pl.fim}),pre=h('input',{type:'date',value:pl.premiacao||''}),
+    sem=h('input',{type:'text',value:(pl.semanasSemAula||[]).map(dmy).join(', '),placeholder:'ex.: 23/03/2027, 29/06/2027'});
+  dia.value=pl.diaSemana===undefined||pl.diaSemana===''?'':String(pl.diaSemana);
   const sel=new Set(pl.turmas);const usadas={};for(const [k,o] of Object.entries(D.planos))if(k!==id)for(const t of o.turmas)usadas[t]=o.nome;
   const lista=h('div',{style:'max-height:30vh;overflow:auto;border:1px solid #fff2;border-radius:10px;padding:6px 12px'});
-  for(const t of Object.keys(D.turmas))lista.append(h('label',{class:'ck'},h('input',{type:'checkbox',checked:sel.has(t),disabled:!!usadas[t],onchange:e=>{e.target.checked?sel.add(t):sel.delete(t)}}),D.turmas[t].nome+(usadas[t]?' (já está em '+usadas[t]+')':'')));
-  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir o plano "${pl.nome}"? As turmas continuam; a Copa volta a ser por turma.`))return;try{await enviar({acao:'excluir_plano',id});aviso('Plano excluído');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir plano'):'';
-  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar plano':'Novo plano'),h('div',{class:'form'},h('label',{},'Código',cod),h('label',{},'Nome',nome),h('label',{},'Trilha',tr),h('label',{},'Início',ini),h('label',{},'Fim',fim),h('label',{},'Premiação (opcional)',pre)),
-    h('p',{class:'sub'},'Turmas deste plano (cada turma fica em um plano só):'),lista,
-    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,turmas:[...sel]});aviso('Plano salvo');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
+  const itemTurma=(t,nm)=>h('label',{class:'ck'},h('input',{type:'checkbox',checked:sel.has(t),disabled:!!usadas[t],onchange:e=>{e.target.checked?sel.add(t):sel.delete(t)}}),nm+(usadas[t]?' (já está em '+usadas[t]+')':''));
+  for(const t of Object.keys(D.turmas))lista.append(itemTurma(t,D.turmas[t].nome));
+  const nvSel=h('select',{},h('option',{value:''},'Escolha o assunto e nível…'),...niveisLista().filter(([d])=>!/^nivel-(90|99)/.test(d)).map(([k,x])=>h('option',{value:k},rotuloNivel(k))));
+  const criarNivel=h('button',{class:'btn sec',type:'button',onclick:async()=>{
+    const nv=nvSel.value;if(!nv){aviso('Escolha o nível.',1);return}
+    const base=(id||cod.value||'').toUpperCase();if(!base){aviso('Preencha o código da trilha antes.',1);return}
+    const partes=base.split('-'),prefixo=partes[0],suf=partes.length>2?'-'+partes[partes.length-1]:'';const n=(/nivel-(\d+)/.exec(nv)||[])[1];
+    let codT=(prefixo+'-N'+(n!==undefined?parseInt(n,10):'X')+suf).slice(0,20),i=2;while(D.turmas[codT]){codT=(prefixo+'-N'+(n!==undefined?parseInt(n,10):'X')+suf).slice(0,17)+'-'+i++}
+    const nomeT=rotuloNivel(nv).slice(0,40);
+    try{await enviar({acao:'turma',id:codT,nome:nomeT,status:'planejada',inicio:ini.value,fim:'',nivel:nv});D.turmas[codT]={nome:nomeT,status:'planejada',inicio:ini.value,fim:'',nivel:nv,alunos:[]};sel.add(codT);lista.append(itemTurma(codT,nomeT));aviso('Turma criada nesta trilha: '+nomeT+'. Clique em Salvar para concluir.')}catch(e){aviso(e.message,1)}}},'Criar turma deste nível');
+  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir a trilha "${pl.nome}"? As turmas continuam; a Copa volta a ser por turma.`))return;try{await enviar({acao:'excluir_plano',id});aviso('Trilha excluída');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir trilha'):'';
+  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar trilha':'Nova trilha'),
+    h('div',{class:'form'},h('label',{},'Nome da trilha',tr),h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome do calendário',nome),h('label',{},'Dia da semana',dia),h('label',{},'Horário',hor),h('label',{},'Início',ini),h('label',{},'Fim (pode ser provisório)',fim),h('label',{},'Premiação (opcional)',pre),h('label',{},'Semanas sem aula (datas dd/mm/aaaa, separadas por vírgula)',sem)),
+    h('p',{class:'sub',style:'margin-top:14px'},h('b',{},'Turmas desta trilha'),' (cada turma fica em uma trilha só):'),lista,
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center'},nvSel,criarNivel),
+    h('p',{class:'sub',style:'margin:6px 0 0;max-width:720px'},'Cria uma turma nova (assunto + nível) e já a coloca nesta trilha (dia da semana).'),
+    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{await enviar({acao:'plano',id:id||cod.value,nome:nome.value,trilha:tr.value,inicio:ini.value,fim:fim.value,premiacao:pre.value,diaSemana:dia.value,horario:hor.value,semanasSemAula:lerDatas(sem.value),turmas:[...sel]});aviso('Trilha salva');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Salvar')))],'modal');}
+function modalAssuntos(){
+  const corpo=h('div',{});const {fechar}=camada([h('h2',{style:'margin:0 0 4px'},'Assuntos e níveis'),h('p',{class:'sub',style:'margin:0 0 12px;max-width:640px'},'Um assunto (Artes, Música…) tem os seus próprios níveis e conteúdo, que não se misturam com os de outro assunto. Cada assunto pode ter quantos níveis precisar.'),corpo,h('div',{style:'display:flex;justify-content:flex-end;margin-top:12px'},h('button',{class:'btn sec',type:'button',onclick:async()=>{fechar();await carregar()}},'Fechar'))],'modal');
+  const desenha=()=>{corpo.textContent='';
+    for(const k of Object.keys(D.assuntos||{})){const as=D.assuntos[k];
+      const nN=h('input',{type:'number',min:0,max:99,placeholder:'Nº',style:'width:70px'}),nNome=h('input',{type:'text',placeholder:'Nome do nível (ex.: Pensar como designer)',style:'width:250px'});
+      const pills=h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;margin:6px 0'},...(as.niveis||[]).map(d=>h('span',{class:'pill m'},nomeNv(d)+' · '+d.slice(9).replace(/-/g,' '))));if(!(as.niveis||[]).length)pills.append(h('span',{class:'sub'},'Nenhum nível ainda.'));
+      const criar=h('button',{class:'btn sec',type:'button',onclick:async()=>{try{const r=await enviar({acao:'novo_nivel',assunto:k,numero:nN.value,nome:nNome.value});as.niveis=[...(as.niveis||[]),r.dir].sort();aviso('Nível criado. Monte as aulas dele no Editor.');desenha()}catch(e){aviso(e.message,1)}}},'+ Criar nível');
+      const livres=niveisLista().filter(([d])=>!assuntoDoNivel(d)&&!/^nivel-(90|99)/.test(d));
+      const adSel=h('select',{},h('option',{value:''},'Nível existente sem assunto…'),...livres.map(([d,x])=>h('option',{value:d},x+' · '+d.slice(9).replace(/-/g,' '))));
+      const ad=h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!adSel.value)return;try{await enviar({acao:'adotar_nivel',assunto:k,dir:adSel.value});as.niveis=[...(as.niveis||[]),adSel.value].sort();desenha()}catch(e){aviso(e.message,1)}}},'Ligar a este assunto');
+      const ren=h('button',{class:'btn sec',type:'button',onclick:async()=>{const n=prompt('Novo nome do assunto:',as.nome);if(!n)return;try{await enviar({acao:'assunto',id:k,nome:n});as.nome=n.trim();desenha()}catch(e){aviso(e.message,1)}}},'Renomear');
+      const del=h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm('Excluir o assunto "'+as.nome+'"? Os níveis e aulas continuam guardados, só ficam sem assunto.'))return;try{await enviar({acao:'excluir_assunto',id:k});delete D.assuntos[k];desenha()}catch(e){aviso(e.message,1)}}},'Excluir');
+      corpo.append(h('div',{class:'cartao2',style:'margin-bottom:12px'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center'},h('b',{style:'font-size:17px'},as.nome),h('div',{style:'display:flex;gap:6px'},ren,del)),pills,h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},nN,nNome,criar),livres.length?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px'},adSel,ad):''))}
+    const nn=h('input',{type:'text',placeholder:'Novo assunto (ex.: Artes, Música)',maxLength:30,style:'width:260px'});
+    corpo.append(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},nn,h('button',{class:'btn',type:'button',onclick:async()=>{if(!nn.value.trim())return;try{const r=await enviar({acao:'assunto',nome:nn.value});D.assuntos=D.assuntos||{};D.assuntos[r.id]={nome:nn.value.trim(),niveis:[]};desenha()}catch(e){aviso(e.message,1)}}},'+ Novo assunto')))};
+  desenha()}
 function modalTurma(id){
   const t=id?D.turmas[id]:{nome:'',status:'planejada',inicio:'',fim:'',nivel:'',acessoApos:true,acessoAte:''};
   const cod=h('input',{type:'text',value:id,maxLength:20,placeholder:'ex.: 2026.2-N0',style:'text-transform:uppercase',oninput:e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g,'-')}}),nome=h('input',{type:'text',value:t.nome,maxLength:40,placeholder:'ex.: Nível 0 · 2026.2'}),ini=h('input',{type:'date',value:t.inicio}),fim=h('input',{type:'date',value:t.fim||''}),
     st=h('select',{},...[['planejada','Planejada'],['andamento','Em andamento'],['arquivada','Arquivada']].map(([k,x])=>h('option',{value:k},x))),
-    nv=h('select',{},h('option',{value:''},'Todos os níveis (sem restrição)'),...niveisLista().map(([k,x])=>h('option',{value:k},x))),
+    nv=h('select',{}),
     ap=h('input',{type:'checkbox',checked:t.acessoApos!==false}),ate=h('input',{type:'date',value:t.acessoAte||''});
-  st.value=t.status;nv.value=t.nivel||'';
+  st.value=t.status;
   const mostraAte=()=>{ateL.hidden=st.value!=='arquivada'};st.addEventListener('change',mostraAte);
   const ateL=h('label',{},'Acesso ao material vai até ',ate);
-  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir a turma "${t.nome}"? Só é possível se ela estiver vazia e sem chamadas.`))return;try{await enviar({acao:'excluir_turma',id});aviso('Turma excluída');fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir turma'):'';
-  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome',nome),h('label',{},'Nível da turma',nv),h('label',{},'Situação',st),h('label',{},'Início',ini),h('label',{},'Fim previsto',fim)),
+  const excluir=id?h('button',{class:'btn sec',type:'button',onclick:async()=>{if(!confirm(`Excluir a turma "${t.nome}"? Só é possível se ela estiver vazia e sem chamadas.`))return;try{await enviar({acao:'excluir_turma',id});aviso('Turma excluída');fechar();await carregar()}catch(e){aviso(e.message,1);if(D.dono&&/chamadas salvas|ainda tem alunos/.test(e.message))aviso('Quer apagar mesmo assim? Use o botão "Excluir à força".',1)}}},'Excluir turma'):'';
+  const forcar=(id&&D.dono)?h('button',{class:'btn sec',type:'button',title:'Só owners. Apaga chamadas, atividades e Copa da turma, tira a turma e (se você pedir) apaga os repositórios dos alunos que só estavam nela. Mostra antes o que será apagado.',onclick:async()=>{try{const sim=await enviar({acao:'excluir_turma_forcado',id,simular:true});const rs=sim.repos.length?'\n\nRepositórios dos alunos (só dessa turma):\n'+sim.repos.map(x=>'• '+x).join('\n'):'';if(!confirm(`EXCLUIR À FORÇA a turma ${sim.turma} (${sim.nome})?\n\nSerão apagados: ${sim.chamadas} arquivo(s) de chamadas, ${sim.atividades} de atividades e a Copa. ${sim.alunos} aluno(s) saem da turma.${rs}${sim.aviso?'\n\n'+sim.aviso:''}\n\nNão dá para desfazer.`))return;let apagarRepos=false;if(sim.repos.length)apagarRepos=confirm(`Apagar TAMBÉM os ${sim.repos.length} repositório(s) do GitHub listados?\n\nOK = apagar os repositórios\nCancelar = manter os repositórios`);const cf=prompt(`Para confirmar, digite o código da turma: ${sim.turma}`);if(cf===null)return;const r=await enviar({acao:'excluir_turma_forcado',id,confirma:cf,apagarRepos});let m=`Turma excluída. ${r.apagados} arquivo(s) de dados apagados.`;if(r.falhas.length)m+=` ${r.falhas.length} não puderam ser apagados.`;if(r.reposOk.length)m+=` ${r.reposOk.length} repositório(s) apagados.`;aviso(m);if(r.reposManual.length){alert('O GitHub não deixou apagar estes repositórios (o token do portal não tem permissão de apagar). Abra cada link, role até "Danger Zone" e apague:\n\n'+r.reposManual.map(x=>x.url).join('\n'))}fechar();await carregar()}catch(e){aviso(e.message,1)}}},'Excluir à força'):'';
+  const planoAtual=Object.keys(D.planos||{}).find(k=>(D.planos[k].turmas||[]).includes(id))||'';
+  const trSel=h('select',{},h('option',{value:''},'Sem trilha'),...Object.keys(D.planos||{}).map(k=>h('option',{value:k},(D.planos[k].trilha||D.planos[k].nome)+(D.planos[k].diaSemana!==undefined&&D.planos[k].diaSemana!==''?' · '+DIAS[D.planos[k].diaSemana]:''))));trSel.value=planoAtual;
+  const asSel=h('select',{});const novoAs=h('button',{class:'btn sec',type:'button',style:'padding:6px 12px;font-size:13px;margin-top:6px',onclick:()=>modalAssuntos()},'Gerenciar assuntos e níveis');
+  const preencheAs=()=>{asSel.textContent='';asSel.append(h('option',{value:''},'Escolha o assunto…'),...Object.keys(D.assuntos||{}).map(k=>h('option',{value:k},D.assuntos[k].nome)))};
+  const preencheNv=()=>{const ls=niveisDoAssunto(asSel.value);const cur=t.nivel||'';nv.textContent='';nv.append(h('option',{value:''},asSel.value?(ls.length?'Escolha o nível…':'Este assunto ainda não tem níveis (use Gerenciar assuntos e níveis)'):'Escolha o assunto primeiro'),...ls.map(([k,x])=>h('option',{value:k},x)));nv.value=ls.some(x=>x[0]===cur)?cur:''};
+  preencheAs();asSel.value=assuntoDoNivel(t.nivel||'');preencheNv();asSel.addEventListener('change',preencheNv);
+  const novaTr=h('button',{class:'btn sec',type:'button',style:'padding:6px 12px;font-size:13px;margin-top:6px',onclick:()=>modalPlano('')},'+ Criar nova trilha');
+  const {fechar}=camada([h('h2',{style:'margin:0 0 12px'},id?'Editar turma':'Nova turma'),h('div',{class:'form'},h('label',{},'Código (sempre em maiúsculas)',cod),h('label',{},'Nome',nome),h('label',{},'Assunto',asSel,novoAs),h('label',{},'Nível (dentro do assunto)',nv),h('label',{},'Trilha (dia da semana)',trSel,novaTr),h('label',{},'Situação',st),h('label',{},'Início',ini),h('label',{},'Fim previsto',fim)),
     id?h('p',{class:'sub'},'Código, nome, nível e datas podem ser corrigidos depois. O código só muda enquanto a turma não tem chamadas salvas.'):'',
     h('label',{class:'ck'},ap,'Mantém acesso ao material (slides) por 1 ano depois de arquivada'),ateL,
     h('p',{class:'sub'},'Os alunos da turma só veem as aulas do nível dela (e que estejam como Membros). Roteiros nunca aparecem para alunos. Passado o prazo, o acesso ao material dessa turma se encerra; para estender, edite a data acima.'),
-    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},excluir||h('span'),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{
+    h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},excluir||h('span'),forcar||h('span')),h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:async()=>{try{
       let alvo=cod.value.trim().toUpperCase();if(id&&alvo&&alvo!==id){await enviar({acao:'renomear_turma',de:id,para:alvo})}if(!id||!alvo)alvo=alvo||id;
-      await enviar({acao:'turma',id:alvo,nome:nome.value,inicio:ini.value,fim:fim.value,nivel:nv.value,status:st.value,acessoApos:ap.checked,acessoAte:st.value==='arquivada'?ate.value:''});aviso('Turma salva');fechar();await carregar()}catch(e){aviso(e.message,1);if(id)await carregar()}}},'Salvar')))],'modal');mostraAte();}
+      await enviar({acao:'turma',id:alvo,nome:nome.value,inicio:ini.value,fim:fim.value,nivel:nv.value,status:st.value,acessoApos:ap.checked,acessoAte:st.value==='arquivada'?ate.value:''});
+      if(trSel.value!==planoAtual){ // muda a turma de trilha (cada turma fica em uma trilha só)
+        if(planoAtual&&D.planos[planoAtual])await enviar({acao:'plano',id:planoAtual,turmas:(D.planos[planoAtual].turmas||[]).filter(x=>x!==id&&x!==alvo)});
+        if(trSel.value&&D.planos[trSel.value])await enviar({acao:'plano',id:trSel.value,turmas:[...new Set([...(D.planos[trSel.value].turmas||[]),alvo])]})}
+      aviso('Turma salva');fechar();await carregar()}catch(e){aviso(e.message,1);if(id)await carregar()}}},'Salvar')))],'modal');mostraAte();}
 function modalPromover(de){
   const outras=Object.keys(D.turmas).filter(t=>t!==de&&D.turmas[t].status!=='arquivada');
   if(!outras.length){aviso('Crie a turma de destino primeiro (+ Nova turma).',1);return}
@@ -454,7 +568,68 @@ function desenharWiki(){
 
 // ---------- contatos da equipe sem usuário do GitHub (só owners) ----------
 // ---------- abas ----------
-function abasDisponiveis(){const a=[];if(!D.dono&&!D.permissoes.includes('pessoas')&&!D.permissoes.includes('aulas'))a.push(['ferramentas','Ferramentas']);if(D.permissoes.includes('pessoas'))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Perfis']);if(D.permissoes.includes('pessoas'))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+const temAlgum=(...ks)=>ks.some(k=>(D.permissoes||[]).includes(k));
+const VER_PESSOAS=['p_ver','p_alunos_cadastrar','p_alunos_turma','p_alunos_remover','p_monitores'],VER_TURMAS=['t_criar','t_editar','t_excluir','tr_gerir','n_gerir','p_alunos_turma'];
+function abasDisponiveis(){const a=[['inicio','Início']];if(temAlgum(...VER_PESSOAS))a.push(['pessoas','Pessoas']);if(D.dono)a.push(['cargos','Cargos e funções']);if(temAlgum(...VER_TURMAS))a.push(['turmas','Turmas']);if(D.dono)a.push(['pontos','Pontuação']);if(D.dono)a.push(['reservadas','Páginas reservadas']);if(D.dono)a.push(['imagens','Banco de imagens']);if(D.dono)a.push(['wiki','Guias e dúvidas']);if(D.permissoes.includes('aulas'))a.push(['aulas','Níveis das aulas']);a.push(['guia','Guia']);return a}
+function desenharInicio(){
+  const p=$('p-inicio');p.textContent='';const pm=D.permissoes||[];const dono=!!D.dono;
+  const tem=x=>dono||pm.includes(x);
+  const T=Object.values(D.turmas||{}),and=T.filter(t=>t.status==='andamento'),alAnd=and.reduce((n,t)=>n+(t.alunos||[]).length,0);
+  const ST={
+    turmas:[[and.length,'em andamento'],[alAnd,'alunos nelas'],[Object.keys(D.planos||{}).length,'trilha(s)']],
+    pessoas:[[(D.alunos||[]).length,'alunos'],[Object.keys(D.monitores||{}).length,'monitores'],[Object.keys(D.equipe||{}).length,'equipe']],
+    cargos:[[Object.keys(D.cargos||{}).length,'perfis']],
+    aulas:[[(D.aulas||[]).length,'aulas']],
+    chamada:and.length?[[and.length===1?and[0].nome:and.length+' turmas','em andamento']]:[],
+    corr:[['…','a corrigir']]
+  };
+  const G=[
+    ['Turmas (dia a dia)',[
+      [temAlgum(...VER_TURMAS),'#turmas','Trilhas e turmas','Criar trilhas (dia, horário, níveis), turmas, alunos, repositórios, promover e arquivar.','turmas'],
+    ]],
+    ['Conteúdo',[
+      [!!D.editor,'/editor','Editor de slides','Criar e editar as aulas, roteiros e atividades.'],
+      [pm.includes('aulas'),'#aulas','Níveis das aulas','Quem enxerga cada aula (só owners, membros ou público).','aulas'],
+      [dono,'#imagens','Banco de imagens','Imagens usadas nos slides e no site.'],
+      [dono||['owner','monitor','equipe'].includes(D.papel),dono?'#wiki':'/wiki','Guias e dúvidas','Tutoriais e respostas para a equipe.'],
+    ]],
+    ['Site',[
+      [tem('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques da tela inicial.'],
+      [dono,'#pontos','Pontuação','Pesos de presença, participação e exercícios no ranking.'],
+      [dono,'#reservadas','Páginas reservadas','Endereços protegidos e redirecionamentos.'],
+    ]],
+    ['Acesso',[
+      [temAlgum(...VER_PESSOAS),'#pessoas','Pessoas','Cadastrar e ordenar alunos, monitores e equipe.','pessoas'],
+      [dono,'#cargos','Cargos e funções','Criar cargos, definir o que cada um pode fazer e dar a pessoas.','cargos'],
+    ]],
+    ['Ajuda',[
+      [true,'#guia','Guia do Painel','Como usar cada área, em linguagem simples. Serve também para novos owners.'],
+    ]],
+  ];
+  p.append(h('p',{class:'sub',style:'max-width:760px'},'Tudo o que você pode fazer, agrupado por tarefa. Cada ação existe em um lugar só.'));
+  const nav=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px;position:sticky;top:0;z-index:5;padding:8px 0;background:var(--bg)'});const chips={};
+  p.append(nav);
+  const podePres=tem('presenca')||D.papel==='monitor';
+  const idsAnd=podePres?Object.keys(D.turmas||{}).filter(k=>D.turmas[k].status==='andamento'):[];
+  for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);const extra=nome==='Turmas (dia a dia)'?idsAnd.length:0;if(!L.length&&!extra)continue;
+    const idG='grp-'+nome.replace(/\s+/g,'-');
+    const ch=h('button',{type:'button',class:'btn sec',style:'padding:6px 14px;font-size:14px',onclick:()=>document.getElementById(idG).scrollIntoView({behavior:'smooth',block:'start'})},nome+' ('+(L.length+extra)+')');chips[idG]=ch;nav.append(ch);
+    p.append(h('h3',{id:idG,style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;scroll-margin-top:60px'},nome));
+    const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
+    if(extra)for(const id of idsAnd){const t=D.turmas[id];const bt=(txt,fn,extraEl)=>h('button',{class:'btn',type:'button',style:'padding:8px 14px;font-size:14px',onclick:fn},txt,extraEl||'');
+      g.append(h('div',{class:'cartao2',style:'grid-column:1/-1'},
+        h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap'},h('h3',{style:'margin:0'},t.nome),h('span',{class:'sub'},(t.alunos||[]).length+' alunos · '+(t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'em andamento'))),
+        h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'},
+          bt('Chamada',abrirPresenca(id,'chamada')),
+          bt('Atividades e correção',abrirPresenca(id,'corr'),h('span',{class:'bdg',id:'corr-'+id,style:'margin-left:8px;background:#ff5d5d;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px',hidden:!((window.CORR_POR||{})[id])},String((window.CORR_POR||{})[id]||''))),
+          bt('Ranking',abrirPresenca(id,'rank')),
+          ...(D.aulas?[bt('Aulas e materiais',()=>materiaisDaTurma(id))]:[]))))}
+    for(const [,alvo,t,d,id,sk] of L){const sts=(ST[sk||id]||[]);const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),sts.length?h('div',{class:'kv',style:'margin-top:10px'},...sts.map(([n,l],i)=>h('div',{},h('div',{class:'num',...((sk||id)==='corr'?{id:'stat-corr'}:{}),style:typeof n==='string'&&n.length>6?'font-size:18px':''},String(n)),h('div',{class:'sub'},l)))):'',h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
+      if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
+      if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}
+      g.append(a)}
+    p.append(g)}
+  if('IntersectionObserver' in window){const marca=id=>{for(const k in chips){chips[k].className='btn '+(k===id?'':'sec')}};const first=Object.keys(chips)[0];if(first)marca(first);const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting)marca(e.target.id)},{rootMargin:'-10% 0px -75% 0px'});for(const k in chips)io.observe(document.getElementById(k))}}
 function desenharFerramentas(){
   const p=$('p-ferramentas');p.textContent='';const pm=D.permissoes||[];
   const L=[[pm.includes('site'),'/personalizar','Personalizar site','Cores, logo, avisos, agenda, vitrine e destaques de ranking da tela inicial.'],
@@ -467,22 +642,29 @@ function desenharFerramentas(){
   if(!L.length)p.append(h('p',{class:'sub'},'Nenhuma ferramenta liberada ainda.'));p.append(g)}
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
-  $('abas').textContent='';for(const [id,t] of disp)$('abas').append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
-  $('abas').append(ajuda('adm_'+k));
-  for(const [id] of [['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
-  if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+  // Menu enxuto: o Início é o centro; dentro de uma área só aparecem "← Início" e as áreas irmãs do mesmo grupo.
+  const GRUPO={turmas:'Turmas (dia a dia)',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
+  const A=$('abas');A.textContent='';
+  if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',onclick:()=>mostrar('inicio')},'← Início'));
+    const gr=GRUPO[k],irm=disp.filter(x=>GRUPO[x[0]]===gr);
+    if(gr)A.append(h('span',{class:'sub',style:'align-self:center;margin:0 4px 0 8px;text-transform:uppercase;letter-spacing:.06em;font-size:12px'},gr));
+    if(irm.length>1)for(const [id,t] of irm)A.append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
+    else A.append(h('button',{type:'button',class:'on'},(disp.find(x=>x[0]===k)||[,k])[1]))}
+  A.append(ajuda('adm_'+k));
+  for(const [id] of [['inicio'],['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
+  if(k==='inicio')desenharInicio();else if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
   D=await r.json();D.turmas=D.turmas||{};D.planos=D.planos||{};D.cargos=D.cargos||{};D.equipe=D.equipe||(D.dono?{}:undefined);
   const pm=D.permissoes||[],ver=(id,ok)=>{const e=$(id);if(e)e.hidden=!ok};
   const soFerr=!D.dono&&!pm.includes('pessoas')&&!pm.includes('aulas');ver('f-site',!soFerr&&(D.dono||pm.includes('site')));ver('f-pres',!soFerr&&(D.dono||pm.includes('presenca')||D.papel==='monitor'));ver('f-ed',!soFerr&&!!D.editor);ver('f-wiki',!soFerr&&!D.dono&&['owner','monitor','equipe'].includes(D.papel));
-  mostrar(ABA||location.hash.slice(1)||(()=>{try{return localStorage.getItem('liga_admin_aba')}catch{return ''}})()||'pessoas')}
+  mostrar(ABA||location.hash.slice(1)||'inicio')}
 // aviso: respostas dos alunos no GitHub esperando correção (só para quem usa a Presença)
 async function avisoCorrecao(){
   if(typeof D==='undefined'||!D||!(D.dono||(D.permissoes||[]).includes('presenca')||D.papel==='monitor'))return;
-  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);if(n<=0)return;
+  try{const r=await fetch('/api/presenca?acao=correcao_resumo');if(!r.ok)return;const c=await r.json();let V={};try{V=JSON.parse(localStorage.getItem('liga_corr_visto')||'{}')}catch{}const nv=x=>(x.duv||[]).filter(d=>!V[d.usuario+'#'+d.numero+'@'+d.atualizado]).length;c.turmas=c.turmas.map(x=>({...x,duvidas:nv(x)}));const n=c.turmas.reduce((m,x)=>m+x.acorrigir+x.novas+x.revisadas+x.duvidas,0);const sc=$('stat-corr');if(sc)sc.textContent=String(n);window.CORR_N=n;window.CORR_POR={};for(const x of c.turmas){const q=x.acorrigir+x.novas+x.revisadas;window.CORR_POR[x.turma]=q;const bx=$('corr-'+x.turma);if(bx){bx.hidden=!q;bx.textContent=String(q)}}if(n<=0)return;
     const t=c.turmas.filter(x=>x.acorrigir+x.novas+x.revisadas+x.duvidas>0).map(x=>x.nome+': '+[x.acorrigir+x.novas?(x.acorrigir+x.novas)+' a corrigir':'',x.revisadas?x.revisadas+' fechada(s) no GitHub sem nota':'',x.duvidas?x.duvidas+' dúvida(s)':''].filter(Boolean).join(', ')).join(' · ');
     const b=h('a',{href:'/presenca#corr',target:'liga-presenca',id:'aviso-corr',style:'display:block;text-decoration:none;color:inherit;background:#f5b83d22;border:1px solid var(--ouro);border-left:6px solid var(--ouro);border-radius:12px;padding:12px 16px;margin:12px 0'},h('b',{},'Alunos responderam no GitHub: '+n+' item(ns) esperando você'),h('div',{class:'sub'},t+'. Abrir a Correção →'));
-    $('abas').before(b);const f=$('f-pres');if(f&&!f.hidden)f.textContent='Presença e atividades ('+n+')'}catch{}}
+    window.CORR_N=n;const bd=$('badge-corr');if(bd){bd.hidden=false;bd.textContent=n+' a ver'}$('abas').before(b)}catch{}}
 carregar().then(()=>{if(D&&D.dono&&window.ligaCota){const a=document.querySelector('.topo .acoes');if(a){const sp=document.createElement('span');a.prepend(sp);ligaCota(sp)}}return avisoCorrecao()});

@@ -85,7 +85,7 @@ global.fetch = async (url, op = {}) => {
   return resp(404, {});
 };
 const u = require('../lib/util');
-const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado', 'wiki'];
+const ROTAS = ['login', 'callback', 'logout', 'site', 'tema', 'imagem', 'certificado', 'reservado', 'wiki', 'foto'];
 const h = (n) => require((ROTAS.includes(n) ? '../lib/rotas/' : '../api/') + n);
 function chamar(fn, { query = {}, user = null, method = 'GET', body, headers = {} } = {}) {
   const req = { query, method, body, headers: { host: 'site.test', ...headers } };
@@ -299,7 +299,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   // tesouraria: só título, vê como membro
   assert.equal((await chamar(h('admin'), { user: 'tes' })).status, 403); assert.equal((await ver('tes', 'aula-02')).status, 200); assert.equal((await ver('tes', 'aula-03')).status, 403);
   r = JSON.parse((await chamar(h('aulas'), { user: 'tes' })).body); assert.equal(r.papel, 'equipe'); assert.equal(r.titulo, 'Tesouraria'); assert.deepEqual(r.permissoes, []);
-  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 6);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'dono' })).body); assert.equal(r.permissoes.length, 36);
   assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' }, {}, 'sec')).status, 403);
   assert.equal((await post({ acao: 'remover_equipe', usuario: 'mkt' })).status, 200); assert.equal((await chamar(h('personalizar'), { user: 'mkt' })).status, 403);
   // ---------- presença: chamada em até 3 momentos, participações e histórico ----------
@@ -395,10 +395,10 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'pessoa', usuario: 'outro-aluno', nome: 'Outro', email: 'ni-teste@ceuma.com.br', aluno: true }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'pessoa', usuario: 'marina', equipe: true, cargos: ['marketing-e-artes', 'tesouraria', 'nao-existe'] })).status, 200);
   assert.deepEqual(cfg.equipe.marina.cargos, ['marketing-e-artes', 'tesouraria']);
-  r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site']); assert.equal(r.titulo, 'Marketing e artes, Tesouraria');
+  r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert(r.permissoes.includes('site') && r.permissoes.includes('site_avisos') && !r.permissoes.includes('tarefas')); assert.equal(r.titulo, 'Marketing e artes, Tesouraria');
   assert.equal((await chamar(h('personalizar'), { user: 'marina' })).status, 200);
   assert.equal((await post({ acao: 'cargo', id: 'marketing-e-artes', nome: 'Marketing e artes', permissoes: ['site', 'tarefas'] })).status, 200); // muda o cargo, muda a pessoa
-  r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert.deepEqual(r.permissoes, ['site', 'tarefas']);
+  r = JSON.parse((await chamar(h('aulas'), { user: 'marina' })).body); assert(r.permissoes.includes('site') && r.permissoes.includes('tarefas'));
   assert.equal((await post({ acao: 'turma', id: '2027.1', nome: 'Turma 2027.1', status: 'planejada', inicio: '2027-03-01' }, {}, 'sec')).status, 200);
   assert.equal((await post({ acao: 'turma', id: '../x' }, {}, 'sec')).status, 400);
   assert.equal((await post({ acao: 'adicionar', papel: 'aluno', turma: '2027.1', usuarios: ['davi-novato', '@Luiza-Dev', 'https://github.com/pedro-h', 'joao silva', 'ana_clara'], pessoas: [] }, {}, 'sec')).status, 200);
@@ -448,6 +448,14 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
   assert.equal((await post({ acao: 'renomear_turma', de: '2026', para: 'OUTRA' }, {}, 'sec')).status, 400); // tem chamadas salvas
   assert.equal((await post({ acao: 'excluir_turma', id: '2026' }, {}, 'sec')).status, 400); // tem alunos
   assert.equal((await post({ acao: 'excluir_turma', id: '2026.2-N0' }, {}, 'sec')).status, 200); assert(!cfg.turmas['2026.2-N0']);
+  { assert.equal((await post({ acao: 'turma', id: 'FORCA-X', nome: 'Forca', inicio: '2026-11-01', fim: '2026-12-01' }, {}, 'sec')).status, 200);
+    assert.equal((await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', simular: true }, {}, 'sec')).status, 403); // não-owner
+    const sim = await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', simular: true }); assert.equal(sim.status, 200); assert(JSON.parse(sim.body).simulacao && cfg.turmas['FORCA-X']); // só simula
+    assert.equal((await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', confirma: 'errado' })).status, 400);
+    const ex = await post({ acao: 'excluir_turma_forcado', id: 'FORCA-X', confirma: 'forca-x' }); assert.equal(ex.status, 200); assert(!cfg.turmas['FORCA-X']); }
+  { const f1 = await pres({ acao: 'minhafoto', imagem: 'data:image/jpeg;base64,AAAA' }); assert.equal(f1.status, 400); // não é JPEG
+    const f2 = await pres({ acao: 'minhafoto', imagem: 'data:image/png;base64,iVBORw0KGgo=' }); assert.equal(f2.status, 400);
+    const f3 = await chamar(h('foto'), { query: { u: 'dono' } }); assert.equal(f3.status, 302); assert(String(f3.h.Location).includes('github.com/dono.png')); } // sem foto enviada: avatar do GitHub
   assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'arquivada' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, u.maisUmAno()); // arquivar = 1 ano
   assert.equal((await post({ acao: 'turma', id: '2026.2-N1', status: 'andamento' }, {}, 'sec')).status, 200); assert.equal(cfg.turmas['2026.2-N1'].acessoAte, '');
   {

@@ -14,8 +14,32 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem){const d=el('details','nivel');const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 const fmt=p=>p?new Date(p).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
 let U=null,AULAS=null,ATIV=null,PONT=null,PRES=null,PERF=null,REPO=null,ABA='aulas';
+const pendentes=()=>((ATIV&&ATIV.atividades)||[]).filter(x=>(!x.estado||x.estado==='nao')&&!x.respondida&&!x.opcional);
 const j=u=>fetch(u,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
 
+function tabResumo(C){
+  const L=(ATIV&&ATIV.atividades)||[];
+  const pend=pendentes().sort((a,b)=>(a.prazo?new Date(a.prazo).getTime():9e15)-(b.prazo?new Date(b.prazo).getTime():9e15));
+  const esp=L.filter(x=>x.aguardando||(x.respondida&&typeof x.nota!=='number')).length;
+  const feitas=L.filter(x=>typeof x.nota==='number').length;
+  const opc=L.filter(x=>x.opcional&&(!x.estado||x.estado==='nao')&&!x.respondida).length;
+  const t=PONT&&PONT.turmas&&(PONT.turmas.find(x=>x.status==='andamento')||PONT.turmas[0]);
+  const ola=el('div','res-ola');ola.append(el('b','','Olá, @'+U+'!'),el('small','',t?t.nome:''));C.append(ola);
+  // 1. o que fazer agora
+  const g=el('div','res-card '+(pend.length?'res-fazer':'res-ok'));
+  if(pend.length){g.append(el('h3','','Para fazer agora'));
+    for(const x of pend.slice(0,3)){const venc=x.prazo&&new Date(x.prazo).getTime()<Date.now();const r=el('div','res-lin');const a=el('a','',(x.codigo?x.codigo+' · ':'')+x.titulo);a.href=x.issue||'#atividades';if(x.issue){a.target='_blank';a.rel='noopener'}r.append(a,el('small',venc?'res-venc':'',x.prazo?(venc?'prazo vencido em ':'até ')+fmt(x.prazo):'sem prazo'));g.append(r)}
+    if(pend.length>3)g.append(el('small','res-mais','e mais '+(pend.length-3)+' em Atividades'));
+  }else{g.append(el('h3','','✔ Tudo em dia'));g.append(el('p','sub',L.length?'Você não tem nenhuma atividade obrigatória pendente.'+(opc?' Há '+opc+' desafio'+(opc>1?'s':'')+' opcional'+(opc>1?'is':'')+' para pontos extras.':''):'Quando o professor liberar atividades, elas aparecem aqui.'))}
+  C.append(g);
+  // 2. números
+  const n=el('div','res-num');
+  const caixa=(v,r,aba)=>{const b=el('button','res-n');b.type='button';b.append(el('b','',String(v)),el('small','',r));b.onclick=()=>{ABA=aba;try{history.replaceState(null,'','#'+aba)}catch{}desenhar()};return b};
+  n.append(caixa(pend.length,'a fazer','atividades'),caixa(esp,'aguardando correção','atividades'),caixa(feitas,'corrigidas','atividades'));
+  if(t)n.append(caixa(t.total>0?t.posicao+'º':'—',t.total>0?'de '+t.de+' · '+t.total+' pts':'ranking','ranking'));
+  C.append(n);
+  C.append(el('p','sub','Aulas e slides estão em "Aulas". Sua presença e seus pontos estão em "Meu progresso".'));
+}
 function tabAulas(C){
   const d=AULAS;
   if(!d.aulas.length)C.append(el('p','sub',U?'Nenhuma aula liberada para você ainda.':'Nenhuma aula pública no momento.'));
@@ -30,12 +54,28 @@ function tabAulas(C){
 function tabAtiv(C){
   const L=(ATIV&&ATIV.atividades)||[];
   if(!L.length){const v=secao('Atividades','nenhuma liberada ainda');v.append(el('p','sub','Quando o professor liberar uma atividade (exercício ou tarefa), ela aparece aqui com prazo, peso e o link para responder no GitHub.'));C.append(v);v.open=true;return}
-  const pend=L.filter(x=>!x.estado||x.estado==='nao'),feitas=L.filter(x=>x.estado&&x.estado!=='nao');
-  const item=x=>{const i=el('div','item');i.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo+(x.opcional?' (OPCIONAL, pontos extras)':'')),el('br'),
-    el('small','',`${x.prazo?'prazo '+fmt(x.prazo)+' · ':''}${x.opcional?'opcional':'peso '+x.peso} · ${x.aguardando?'Entregue · aguardando correção do professor':(ES[x.estado]||ES.nao)}${x.nota!==null&&x.nota!==undefined?' · nota '+x.nota:''}`));
-    if(x.issue){const w=el('div','');w.style.cssText='margin-top:10px';const a=el('a','btn','Abrir no GitHub e responder');a.href=x.issue;a.target='_blank';a.rel='noopener';w.append(a,el('small','',' Se aparecer "404", aceite o convite do seu repositório em github.com/LAG-CEUMA ou avise o monitor.'));i.append(w)}else if(!x.estado||x.estado==='nao'){i.append(el('br'),el('small','','O link do GitHub aparece aqui assim que a atividade for enviada ao seu repositório.'))}return i};
+  const pend=L.filter(x=>(!x.estado||x.estado==='nao')&&!x.respondida),feitas=L.filter(x=>(x.estado&&x.estado!=='nao')||x.respondida);
+  const agora=Date.now();
+  const item=x=>{
+    const ok=typeof x.nota==='number',resp=x.aguardando||x.respondida||(x.estado&&x.estado!=='nao'&&x.estado!=='dispensado'),disp=x.estado==='dispensado';
+    const atrasoEnt=x.estado==='atraso'||(x.respondida&&x.respondidaAtraso);
+    let cls,rot,sub;
+    if(disp){cls='cz';rot='Dispensado';sub=''}
+    else if(ok){cls='ok';rot='✔ Corrigida · nota '+x.nota;sub=atrasoEnt?'entregue com atraso':'entregue no prazo'}
+    else if(resp){cls='esp';rot='⏳ Aguardando correção';sub=(x.respondidaEm?'respondida em '+fmt(x.respondidaEm)+' · ':'')+(atrasoEnt?'com atraso':'no prazo')}
+    else if(x.prazo&&new Date(x.prazo).getTime()<agora){cls='atr';rot='Pendente · prazo vencido';sub='ainda dá para entregar'}
+    else{cls='pen';rot='Pendente';sub=x.prazo?'até '+fmt(x.prazo):''}
+    const i=el('div','atv '+cls);
+    const top=el('div','atv-top');const tt=el('div','atv-tt');
+    tt.append(el('b','',(x.codigo?x.codigo+' · ':'')+x.titulo),el('small','',[x.prazo&&(ok||resp)?'prazo '+fmt(x.prazo):'',x.opcional?'opcional · pontos extras':'peso '+x.peso].filter(Boolean).join(' · ')));
+    const st=el('div','atv-st');st.append(el('span','atv-chip',rot));if(sub)st.append(el('small','',sub));
+    top.append(tt,st);i.append(top);
+    if(x.issue){const a=el('a',(ok||resp)?'atv-link':'btn atv-btn',(ok||resp)?'Ver minha resposta no GitHub':'Responder no GitHub');a.href=x.issue;a.target='_blank';a.rel='noopener';i.append(a)}
+    else if(!ok&&!resp&&!disp)i.append(el('small','atv-sub','O link do GitHub aparece aqui assim que a atividade for enviada ao seu repositório.'));
+    return i};
+  const dica=el('p','sub','Responda comentando na Issue da atividade, no GitHub. Se aparecer "404", aceite o convite do seu repositório em github.com/LAG-CEUMA ou avise o monitor.');dica.style.cssText='margin:0 0 12px;font-size:13px';if(pend.length)C.append(dica);
   const a=secao('Pendentes',pend.length+(pend.length===1?' atividade':' atividades'));for(const x of pend)a.append(item(x));if(!pend.length)a.append(el('p','sub','Tudo em dia. Nenhuma pendência.'));C.append(a);LigaNovo.aplicar(a,'ativ-pend',pend.map(x=>x.id),true);
-  const b=secao('Entregues',feitas.length+(feitas.length===1?' atividade':' atividades'));for(const x of feitas)b.append(item(x));if(!feitas.length)b.append(el('p','sub','Nada entregue ainda.'));C.append(b);LigaNovo.aplicar(b,'ativ-feitas',feitas.map(x=>x.id+x.estado),false);
+  const b=secao('Entregues',feitas.length+(feitas.length===1?' atividade':' atividades'));for(const x of feitas)b.append(item(x));if(!feitas.length)b.append(el('p','sub','Nada entregue ainda.'));C.append(b);LigaNovo.aplicar(b,'ativ-feitas',feitas.map(x=>x.id+x.estado+(x.respondida?'r':'')),false);
 }
 function tabProgresso(C){
   const m=PONT;
@@ -65,7 +105,28 @@ function tabPerfil(C){
   const s=el('div','item');s.style.cssText='max-width:560px;display:block';
   s.append(el('b','',P.nome),el('br'),el('small','','GitHub: @'+P.usuario+' · para corrigir nome ou usuário, fale com o professor'));
   const campo=(rot,id,valor,ph,tipo,dicaKey)=>{const l=el('label','');l.style.cssText='display:block;margin-top:14px;font-size:13px';l.append(rot);const i=el('input','');i.type=tipo||'text';i.value=valor||'';i.placeholder=ph;i.id=id;i.style.cssText='display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:10px;background:#12141c;color:inherit;border:1px solid #fff3;border-radius:8px;font:inherit';if(window.dica)window.dica(i,dicaKey);l.append(i);return l};
-  s.append(campo('E-mail institucional','pf_email',P.email,'a000000@ceuma.com.br','email','pf_email'),campo('E-mail pessoal','pf_pessoal',P.emailPessoal,'nome@gmail.com','email','pf_pessoal'),campo('CPF (obrigatório)','pf_cpf',fmtCpf(P.cpf),'000.000.000-00','text','pf_cpf'),campo('Curso','pf_curso',P.curso,'Ex.: Engenharia de Software','text','pf_curso'));
+  { const f=el('div','');f.style.cssText='margin-top:14px;padding:12px;border:1px solid #fff3;border-radius:10px';
+    const topo=el('div','');topo.style.cssText='display:flex;gap:12px;align-items:center;flex-wrap:wrap';const prev=el('div','');prev.style.cssText='width:64px;height:64px;border-radius:50%;overflow:hidden;flex:none';
+    const atual=()=>{prev.textContent='';const a=Corrida.avatar(P.usuario);a.style.cssText='width:64px;height:64px;border-radius:50%;object-fit:cover';prev.append(a)};
+    const msgF=el('small','');msgF.style.cssText='display:block;margin-top:8px;min-height:16px';
+    const arq=el('input','');arq.type='file';arq.accept='image/*';arq.style.display='none';
+    const env=el('button','btn sec','📷 Enviar foto');env.type='button';env.onclick=()=>arq.click();
+    const rem=el('button','btn sec','Remover foto enviada');rem.type='button';rem.style.display=P.fotoModo==='upload'?'':'none';
+    topo.append(prev,el('b','','Sua foto'),env,rem,arq);
+    const r1=el('label','');r1.style.cssText='display:block;margin-top:10px;font-size:13px';const i1=el('input','');i1.type='radio';i1.name='pf_foto';i1.value='github';r1.append(i1,' Usar a foto do meu GitHub (padrão)');
+    const r2=el('label','');r2.style.cssText='display:block;margin-top:6px;font-size:13px';const i2=el('input','');i2.type='radio';i2.name='pf_foto';i2.value='upload';r2.append(i2,' Usar a foto que enviei para a plataforma');
+    const r3=el('label','');r3.style.cssText='display:block;margin-top:10px;font-size:13px';const i3=el('input','');i3.type='checkbox';i3.checked=!!P.fotoPublica;r3.append(i3,' Mostrar minha foto enviada também nas páginas públicas (ex.: destaques da página inicial). Desmarcado, só quem está logado na Liga vê.');
+    const sync=()=>{i1.checked=P.fotoModo!=='upload';i2.checked=P.fotoModo==='upload';i2.disabled=P.fotoModo!=='upload'&&!P._enviou;r3.style.display=P.fotoModo==='upload'?'':'none';rem.style.display=P.fotoModo==='upload'?'':'none'};
+    const post=async(c)=>{const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Erro');return d};
+    const pref=async()=>{try{P.fotoModo=i2.checked?'upload':'github';P.fotoPublica=i3.checked;await post({acao:'minhafoto_pref',modo:P.fotoModo,publica:P.fotoPublica});msgF.textContent='Preferência salva.';sync();atual()}catch(e){msgF.textContent=e.message}};
+    i1.onchange=pref;i2.onchange=pref;i3.onchange=pref;
+    rem.onclick=async()=>{try{await post({acao:'minhafoto_remover'});P.fotoModo='github';P.fotoPublica=false;P._enviou=false;msgF.textContent='Foto removida: voltou a usar a do GitHub.';sync();atual()}catch(e){msgF.textContent=e.message}};
+    arq.onchange=()=>{const fl=arq.files&&arq.files[0];if(!fl)return;msgF.textContent='Preparando a foto…';const im=new Image();const u=URL.createObjectURL(fl);im.onerror=()=>{msgF.textContent='Não consegui abrir essa imagem.'};
+      im.onload=async()=>{try{const L=Math.min(im.width,im.height),sx=(im.width-L)/2,sy=(im.height-L)/2;const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,256,256);g.drawImage(im,sx,sy,L,L,0,0,256,256);URL.revokeObjectURL(u);let q=.85,d=cv.toDataURL('image/jpeg',q);while(d.length*.75>70*1024&&q>.4){q-=.1;d=cv.toDataURL('image/jpeg',q)}
+        await post({acao:'minhafoto',imagem:d,publica:i3.checked});P.fotoModo='upload';P._enviou=true;P.fotoPublica=i3.checked;msgF.textContent='Foto enviada e ativada.';sync();prev.textContent='';const a=el('img','');a.src=d;a.style.cssText='width:64px;height:64px;border-radius:50%;object-fit:cover';prev.append(a)}catch(e){msgF.textContent=e.message}};
+      im.src=u};
+    atual();sync();f.append(topo,r1,r2,r3,msgF,el('small','','A foto é reduzida no seu aparelho antes de enviar (fica bem leve). A do GitHub já é pública no próprio GitHub.'));s.append(f)}
+  s.append(campo('E-mail institucional','pf_email',P.email,'a000000@ceuma.com.br','email','pf_email'),campo('E-mail pessoal','pf_pessoal',P.emailPessoal,'nome@gmail.com','email','pf_pessoal'),campo('CPF (obrigatório)','pf_cpf',fmtCpf(P.cpf),'000.000.000-00','text','pf_cpf'),campo('Curso ou profissão','pf_curso',P.curso,'Ex.: Engenharia de Software · Engenheiro de Computação','text','pf_curso'));
   const msg=el('small','');msg.style.cssText='display:block;margin-top:10px;min-height:18px';
   const b=el('button','btn','Salvar meus dados');b.type='button';b.style.marginTop='14px';
   b.onclick=async()=>{b.disabled=true;msg.textContent='Salvando…';try{const r=await fetch('/api/presenca',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'meuperfil',email:document.getElementById('pf_email').value,emailPessoal:document.getElementById('pf_pessoal').value,cpf:document.getElementById('pf_cpf').value,curso:document.getElementById('pf_curso').value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.erro||'Não consegui salvar agora.');Object.assign(P,d);document.getElementById('pf_email').value=d.email;document.getElementById('pf_pessoal').value=d.emailPessoal;document.getElementById('pf_curso').value=d.curso;document.getElementById('pf_cpf').value=fmtCpf(d.cpf);msg.textContent='Dados salvos. Obrigado!'}catch(e){msg.textContent=e.message}b.disabled=false};
@@ -121,10 +182,39 @@ async function jogar(b,chamar,tab,ic){
   const [r]=await Promise.all([chamar(),new Promise(z=>setTimeout(z,modo==='dado'?900:0))]);if(giro)clearInterval(giro);
   if(!r.ok){alert(r.erro||'Não deu certo.');b.textContent=rotuloJogo();b.disabled=false;return null}
   if(modo==='roleta'&&r.dado)await girarRoleta(r.dado,tab);await mostrarResultado(r,ic);return r}
+function guiaCopa(c){
+  const d=el('details','item');d.append(el('summary','','❓ Como funciona a Copa (regras e dúvidas)'));
+  const p=(t)=>d.append(el('p','sub',t)),t=(x)=>d.append(el('b','',x));
+  t('O que é');p('Um joguinho em cima do ranking. Ele mexe só nos pontos da COPA. Sua nota e o ranking oficial nunca mudam por causa dele.');
+  t('1. Como ganho itens');p('Presença na aula, participação e entregas no prazo rendem itens. Você guarda até 3 por vez. Quando a turma inteira entrega no prazo, todo mundo ganha 1 item extra (missão da turma).');
+  t('2. Como uso um item');p('Escolha o item, escolha o alvo (se precisar) e clique em Jogar: o dado (d10) decide o resultado. 1 é FALHA CRÍTICA e custa pontos a quem tirou (o item vira contra você ou cai em outro colega e você ainda perde 2 pontos), 2 a 3 é falha (nada acontece), números médios enfraquecem, 10 é CRÍTICO (efeito 50% maior). Cada aluno joga 1 item por semana e não ataca a mesma pessoa duas vezes seguidas.');
+  t('3. Os itens');
+  for(const [k,it] of Object.entries(c.itens||{}))p(`${it.ic} ${it.nome}: ${it.txt}`);
+  t('4. Aliança e traição 🤝💔');p('Convide um colega: se ele aceitar, vocês viram aliados por 7 dias. Aliados dividem ataques e falhas críticas (cada um perde metade), ganham 50% dos bônus um do outro (Turbo e roubo) e não se atacam. 1 aliança por vez e 1 nova por semana. Atacar o aliado é TRAIR: dano em dobro, dado mais arriscado, a aliança acaba e você fica 2 semanas sem poder aliar. A turma fica sabendo que houve uma traição.');t('5. Proteções (ninguém é massacrado)');p('🏴‍☠️ Roubo: quando seu ataque acerta, você ganha 25% do que o colega perdeu. Atacar compensa!');p('🛡️ O Escudo NÃO bloqueia tudo: ele reduz o próximo ataque que você receber. A força depende dos dados: o seu ao ativar (fraco 25%, normal 50%, crítico 75%) e o de quem atacou (golpe fraco é reduzido mais, golpe crítico passa mais). Depois some. Só dá para ter 1 escudo por vez, e quem já tem escudo recebe outro item no lugar. Quem está em último lugar fica protegido. Cada aluno recebe no máximo 2 ataques por dia. Ninguém vê quem lançou o item em você.');
+  t('6. Duração');p('Ataques e turbos duram 4 semanas, mas perdem força a cada semana (100%, 75%, 50%, 25%): uma pancada forte vai sendo recuperada aos poucos, então dá para virar o jogo! Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial.');
+  t('7. Eventos e Chefão');p('Toda semana pode ter um evento (nevoeiro, dado em dobro, semana da paz, chuva de itens). O professor joga como 👹 Chefão da Liga, inimigo de todos: 1 item por semana. Quando todos entregam no prazo, o Chefão cai e todo mundo ganha 1 item.');
+  t('Dúvidas comuns');
+  p('🐢 Posso jogar o Casco em quem está na minha frente? Sim, o Casco só acerta quem está à sua frente no ranking. Escolha a pessoa e jogue o dado.');
+  p('🎰 O que faz a Roleta maluca? Ela não fica guardada: cai sozinha em quem a sorteou, tira 2 pontos da Copa por 4 semanas (diminuindo a cada semana), e o escudo, se você tiver, reduz esse golpe (e gasta). É raríssima!');
+  return d}
+function cartaoAlianca(c,m){
+  const w=secao('🤝 Aliança',m.alianca?'aliado de '+m.alianca.nome:(m.castigo?'de castigo':'sem aliado'));w.open=!!(m.alianca||(m.convitesRecebidos||[]).length);
+  const dt=x=>new Date(x).toLocaleDateString('pt-BR');
+  const recarrega=async()=>{COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
+  const acao=async(corpo)=>{const r=await postCopa({...corpo,turma:c.turma});if(!r.ok){alert(r.erro||'Não deu certo.');return}if(r.resultado)alert(r.resultado);await recarrega()};
+  w.append(el('p','sub','Aliados dividem ataques e falhas críticas (cada um perde metade), ganham 50% dos bônus um do outro (Turbo e roubo) e não se atacam. Vale 7 dias. Só 1 aliança por vez e 1 nova por semana. Atacar o aliado é trair: dano em dobro, dado mais arriscado, a aliança acaba e você fica 2 semanas de castigo.'));
+  if(m.alianca){w.append(el('p','',`🤝 Você está aliado com ${m.alianca.nome} até ${dt(m.alianca.ate)}.`));return w}
+  if(m.castigo)w.append(el('p','',`💔 Você traiu um aliado: sem formar aliança até ${dt(m.castigo)}.`));
+  for(const cv of (m.convitesRecebidos||[])){const l=el('div','item');l.append(el('b','',`${cv.nome} quer ser seu aliado.`));const bx=el('div','');bx.style.cssText='margin-top:6px;display:flex;gap:8px';const a=el('button','btn','Aceitar');a.type='button';a.onclick=()=>acao({acao:'copa_aliar_resp',convite:cv.id,aceitar:true});const r=el('button','btn sec','Recusar');r.type='button';r.onclick=()=>acao({acao:'copa_aliar_resp',convite:cv.id,aceitar:false});bx.append(a,r);l.append(bx);w.append(l)}
+  for(const cv of (m.convitesEnviados||[]))w.append(el('p','sub',`⏳ Convite enviado para ${cv.nome}. Esperando resposta (vale 3 dias).`));
+  if(!m.castigo&&!c.tregua){const sel=el('select','');const o0=el('option','','Escolha um colega…');o0.value='';sel.append(o0);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}
+    const b=el('button','btn','🤝 Convidar para aliança');b.type='button';b.onclick=()=>{if(!sel.value){alert('Escolha um colega.');return}acao({acao:'copa_aliar',para:sel.value})};const l=el('div','');l.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px';l.append(sel,b);w.append(l)}
+  return w}
 function tabCopa(C){
   if(PREV&&!COPA)return previa(C,'copa');
   const c=COPA,m=c.meu;
-  if(!m){C.append(el('p','sub','🏁 A Copa da Liga é o jogo de itens por cima do ranking: você ganha itens por presença, participação e entregas no prazo, joga o dado e atrapalha ou ajuda colegas. Ela só muda pontos da Copa, nunca a sua nota nem o ranking oficial.'));C.append(el('p','',c.foraDoRanking?'Você ainda não está no ranking desta turma.':'🔒 A Copa ainda não foi aberta pela sua turma. Assim que o professor abrir, ela aparece aqui.'));return}const turma=PONT.turmas.find(x=>x.turma===c.turma)||{};const max=turma.pesos?(turma.pesos.presenca+turma.pesos.participacao+turma.pesos.exercicios):100;
+  if(!m){C.append(el('p','sub','🏁 A Copa da Liga é o jogo de itens por cima do ranking: você ganha itens por presença, participação e entregas no prazo, joga o dado e atrapalha ou ajuda colegas. Ela só muda pontos da Copa, nunca a sua nota nem o ranking oficial.'));C.append(guiaCopa(c));C.append(el('p','',c.foraDoRanking?'Você ainda não está no ranking desta turma.':'🔒 A Copa ainda não foi aberta pela sua turma. Assim que o professor abrir, ela aparece aqui.'));return}const turma=PONT.turmas.find(x=>x.turma===c.turma)||{};const max=turma.pesos?(turma.pesos.presenca+turma.pesos.participacao+turma.pesos.exercicios):100;
+  C.append(guiaCopa(c));
   C.append(el('p','sub','A Copa da Liga é a parte divertida: itens ganhos por presença, participação e entregas no prazo mexem só nos pontos da Copa. Seu ranking oficial e suas notas nunca mudam por causa dela.'));
   const nev=!!(c.evento&&c.evento.tipo==='nevoeiro');
   if(c.evento)C.append(el('p','',`${c.evento.ic} Evento da semana: ${c.evento.nome}. ${c.evento.txt}`));
@@ -141,8 +231,8 @@ function tabCopa(C){
   const card=el('div','item');card.append(el('b','',nev?`🌫️ Nevoeiro: sua posição está escondida · ${m.copa} pontos na Copa`:`Você está em ${m.posCopa}º de ${m.de} na Copa · ${m.copa} pontos`),el('br'),
     el('small','',`Ranking oficial: ${m.oficial} pontos${m.efeito?` · efeito de itens: ${m.efeito>0?'+':''}${m.efeito}`:''}${m.gapAcima?` · falta ${m.gapAcima} para o colega à sua frente`:''}${m.escudo?' · 🛡️ escudo ativo':''}`));
   if(!PREV)avisarRecebidos(m,c);
-  for(const r of m.recebidos){const bo=(c.itensChefao||{})[r.tipo];card.append(el('br'),el('small','',bo?`${bo.ic} O Chefão da Liga te pegou com ${bo.nome.toLowerCase()}: ${r.delta>0?'+':''}${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`:`${(c.itens[r.tipo]||{}).ic||''} Alguém te acertou com ${((c.itens[r.tipo]||{}).nome||r.tipo).toLowerCase()}: ${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`))}
-  C.append(card);
+  for(const r of m.recebidos){if(r.rateio){card.append(el('br'),el('small','',`🤝 Sua aliança dividiu ${r.delta<0?'a pancada':'o bônus'} com você: ${r.delta>0?'+':''}${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`));continue}const bo=(c.itensChefao||{})[r.tipo];card.append(el('br'),el('small','',bo?`${bo.ic} O Chefão da Liga te pegou com ${bo.nome.toLowerCase()}: ${r.delta>0?'+':''}${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`:`${(c.itens[r.tipo]||{}).ic||''} Alguém te acertou com ${((c.itens[r.tipo]||{}).nome||r.tipo).toLowerCase()}: ${r.delta} pontos na Copa até ${new Date(r.ate).toLocaleDateString('pt-BR')}.`))}
+  C.append(card);C.append(cartaoAlianca(c,m));
   // meus itens
   const inv=secao('Meus itens',m.inventario.length+' item(ns) · valem só até '+(ateData(c)||'o fim da semana'));inv.open=true;
   inv.append(el('p','sub','Item não passa de uma semana para a outra: use ou perca. Você pode usar 1 item por semana (os itens extras de uma chuva não contam). Quem está em último lugar fica protegido de ataques.'));
@@ -150,16 +240,16 @@ function tabCopa(C){
   for(const it of m.inventario){const def=c.itens[it.tipo]||{ic:'❔',nome:it.tipo,txt:'',alvo:'si'};const w=el('div','item');
     w.append(el('b','',`${def.ic} ${def.nome}${it.bonus?' (extra)':''}`),el('br'),el('small','',def.txt));const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
     const bloqueado=c.tregua||(m.jaUsouNaSemana&&!it.bonus);
-    let sel=null;if(def.alvo==='outro'){sel=el('select','');const o1=el('option','','🎲 Aleatório (pode cair em você)');o1.value='__sorteio';sel.append(o1);const o2=el('option','','🙃 Eu mesmo (arriscado)');o2.value='__eu';sel.append(o2);for(const a of m.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
+    let sel=null;if(def.alvo==='outro'){sel=el('select','');const o1=el('option','','🎲 Aleatório (pode cair em você)');o1.value='__sorteio';sel.append(o1);const o2=el('option','','🙃 Eu mesmo (arriscado)');o2.value='__eu';sel.append(o2);for(const a of m.alvos){const o=el('option','',a.aliado?'🤝 '+a.nome+' (aliado: atacar = trair)':a.nome);o.value=a.usuario;o.dataset.aliado=a.aliado?'1':'';sel.append(o)}}
     const b=el('button','btn',rotuloJogo());b.type='button';if(bloqueado){b.disabled=true;b.title=c.tregua?'Trégua final':'Você já usou um item nesta semana'}
-    b.onclick=async()=>{const r=await jogar(b,()=>postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:''}),(c.dado||{})[it.tipo],def.ic);if(!r)return;COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
+    b.onclick=async()=>{const trair=!!(sel&&sel.selectedOptions[0]&&sel.selectedOptions[0].dataset.aliado);if(trair&&!confirm('💔 Trair seu aliado?\n\nO dano vale o DOBRO, mas o dado fica mais arriscado, a aliança acaba e você fica 2 semanas sem poder formar outra. Todo mundo vai saber que houve uma traição.'))return;const r=await jogar(b,()=>postCopa({acao:'copa_usar',turma:c.turma,item:it.id,alvo:sel?sel.value:'',trair}),(c.dado||{})[it.tipo],def.ic);if(!r)return;COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(c.turma));desenhar()};
     if(sel)caixa.append(sel);caixa.append(b);if(bloqueado)caixa.append(el('small','',c.tregua?'Trégua final.':'Já usado esta semana.'));w.append(caixa);if(!bloqueado){const ex=explicaDado((c.dado||{})[it.tipo]);if(ex)w.append(ex)}inv.append(w)}
   C.append(inv);
   const reg=secao('Como funciona','regras rápidas');reg.append(el('p','sub','Ganha item na semana: presença na aula, participação e entrega no prazo (até 3 por semana). O tipo é sorteado.'));
   for(const [k,d] of Object.entries(c.itens))reg.append(el('p','',`${d.ic} ${d.nome}: ${d.txt}`));
-  reg.append(el('p','sub','🎲 Todo item é decidido no dado (d10): você aperta o botão e o resultado vem da sorte. Quanto mais forte o item, mais difícil acertar em cheio. 1 = falha crítica (pode virar contra você ou cair em outro colega) · falha = nada acontece · fraco = metade do efeito · normal = efeito inteiro · 10 = crítico (50% a mais). Três falhas críticas seguidas dão um Escudo de consolo.'));
+  reg.append(el('p','sub','🎲 Todo item é decidido no dado (d10): você aperta o botão e o resultado vem da sorte. Quanto mais forte o item, mais difícil acertar em cheio. 1 = falha crítica (o item vira contra você ou cai em outro colega, e você ainda perde pontos) · falha = nada acontece · fraco = metade do efeito · normal = efeito inteiro · 10 = crítico (50% a mais). Três falhas críticas seguidas dão um Escudo de consolo.'));
   if(c.dado){const tb=el('p','sub','');const nm=(k)=>((c.itens[k]||{}).ic||'')+' '+((c.itens[k]||{}).nome||k);tb.innerHTML='';for(const [k,t] of Object.entries(c.dado)){const f=(a,b)=>a>b?'—':(a===b?a:a+'–'+b);tb.append(document.createTextNode(`${nm(k)}: falha crítica ${f(1,t[0])} · falha ${f(t[0]+1,t[1])} · fraco ${f(t[1]+1,t[2])} · normal ${f(t[2]+1,t[3])} · crítico 10`),document.createElement('br'))}reg.append(tb)}
-  reg.append(el('p','sub',`Efeitos duram ${c.diasEfeito} dias. Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
+  reg.append(el('p','sub',`Efeitos duram 4 semanas, perdendo força a cada semana (100%, 75%, 50%, 25%). Nos últimos 2 dias da turma há trégua: nada vale e a Copa fica igual ao ranking oficial. Ninguém vê quem lançou um item em você.`));C.append(reg);
 }
 function vidaChefao(m){const w=el('div','');w.style.cssText='margin:8px 0';const v=Math.max(0,Math.min(100,m.vida));
   const barra=el('div','');barra.style.cssText='height:14px;border-radius:8px;background:#ffffff22;overflow:hidden;max-width:420px';const f=el('div','');f.style.cssText='height:100%;width:'+v+'%;background:linear-gradient(90deg,#e4572e,#f5b83d)';barra.append(f);
@@ -178,7 +268,7 @@ async function previa(C,qual){
     const ol=el('div','pont-top');for(const x of r.ranking.filter(x=>x.posicao>3)){const l=el('div','pont-lin');l.append(el('span','pont-pos',x.posicao+'º'),el('span','pont-nome',nome(x.usuario)),el('span','pont-pts',x.total+' pts'));ol.append(l)}corpo.append(ol);return}
   const c=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(PREVT));corpo.textContent='';
   if(!c||c.erro){corpo.append(el('p','sub','Não consegui carregar a Copa desta turma.'));return}
-  if(c.chefao&&c.chefao.def){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 1 ataque por dia, trégua).'));
+  if(c.chefao&&c.chefao.def){const ch=c.chefao,d=ch.def;const bx=el('div','item');bx.append(el('b','',`👹 Você é o Chefão da Liga, inimigo de todos · ${d.ic} ${d.nome}`),el('br'),el('small','',d.txt+' Vale 1 uso por semana e só mexe nos pontos da Copa. Itens e efeitos seguem as mesmas proteções dos alunos (escudo, último lugar protegido, 2 ataques por dia, trégua).'));
     const caixa=el('div','');caixa.style.cssText='margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
     let sel=null;if(d.alvo==='outro'&&!ch.aleatorio){sel=el('select','');const o1=el('option','','🎲 Aleatório');o1.value='__sorteio';sel.append(o1);for(const a of ch.alvos){const o=el('option','',a.nome);o.value=a.usuario;sel.append(o)}}
     const b=el('button','btn',rotuloJogo());b.type='button';if(ch.usado||ch.tregua){b.disabled=true}
@@ -206,15 +296,16 @@ function tabRanking(C){
   C.append(el('p','sub','Quer ver os detalhes da sua presença e participação? Abra "Meu progresso". Quer jogar com itens? Abra "🏁 Copa".'))}
 function desenhar(){
   const A=document.getElementById('abas');A.textContent='';const C=document.getElementById('corpo');C.textContent='';
-  const abas=[['aulas','Aulas',AULAS&&AULAS.aulas.length?'':'']];
+  const abas=[];
+  if(U)abas.push(['resumo','Resumo']);abas.push(['aulas','Aulas']);
   if(U){abas.push(['atividades','Atividades']);abas.push(['progresso','Meu progresso']);abas.push(['ranking','🏆 Ranking']);if(COPA||PREV)abas.push(['copa','🏁 Copa']);abas.push(['perfil','Meus dados'])}
-  if(!abas.some(a=>a[0]===ABA))ABA='aulas';
+  if(!abas.some(a=>a[0]===ABA))ABA=U?'resumo':'aulas';
   for(const [id,t] of abas){const b=el('button','btn'+(id===ABA?'':' sec'),t);b.type='button';b.onclick=()=>{ABA=id;try{history.replaceState(null,'','#'+id)}catch{}desenhar()};
-    if(id==='atividades'&&ATIV&&ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length){const n=el('span','novo',String(ATIV.atividades.filter(x=>!x.estado||x.estado==='nao').length));b.append(n)}
+    if(id==='atividades'&&ATIV&&pendentes().length){const n=el('span','novo',String(pendentes().length));b.append(n)}
     A.append(b)}
   A.append(ajuda('al_'+ABA));
   if(ABA!=='perfil')faixaRepo(C);
-  if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else if(ABA==='copa')tabCopa(C);else if(ABA==='ranking')tabRanking(C);else tabProgresso(C);
+  if(ABA==='resumo')tabResumo(C);else if(ABA==='aulas')tabAulas(C);else if(ABA==='atividades')tabAtiv(C);else if(ABA==='perfil')tabPerfil(C);else if(ABA==='copa')tabCopa(C);else if(ABA==='ranking')tabRanking(C);else tabProgresso(C);
   // marca como visto para a faixa "novo" do menu da Início
   try{localStorage.setItem('liga_nv_menu',LigaNovo.sig([(AULAS.aulas||[]).map(a=>a.chave),((ATIV&&ATIV.atividades)||[]).map(x=>x.id)]))}catch{}
 }
@@ -224,7 +315,7 @@ function desenhar(){
   if(U)[ATIV,PONT,PRES,PERF,REPO]=await Promise.all([j('/api/presenca?acao=minhasatividades'),j('/api/presenca?acao=minhapontuacao'),j('/api/presenca?acao=minha'),j('/api/presenca?acao=meuperfil'),j('/api/presenca?acao=meurepo')]);
   if(U&&PONT&&PONT.turmas){const t=PONT.turmas.find(x=>x.status==='andamento')||PONT.turmas[0];if(t){COPA=await j('/api/presenca?acao=copa&turma='+encodeURIComponent(t.turma));if(COPA&&COPA.erro)COPA=null}}
   if(U&&!(PONT&&PONT.turmas&&PONT.turmas.length)){const cx=await j('/api/presenca?acao=contexto');if(cx&&cx.turmas&&Object.keys(cx.turmas).length){PREV=cx;PREVT=Object.keys(cx.turmas).find(k=>cx.turmas[k].status==='andamento')||Object.keys(cx.turmas)[0]}}
-  const h=location.hash.slice(1);if(['aulas','atividades','progresso','ranking','perfil','copa'].includes(h))ABA=h;
+  const h=location.hash.slice(1);if(['resumo','aulas','atividades','progresso','ranking','perfil','copa'].includes(h))ABA=h;else if(U)ABA='resumo';
   desenhar();
 })();
 </script><script src="/como.js"></script>

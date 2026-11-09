@@ -60,6 +60,10 @@
       "destination": "/api/publico?rota=tema"
     },
     {
+      "source": "/api/foto",
+      "destination": "/api/publico?rota=foto"
+    },
+    {
       "source": "/api/imagem",
       "destination": "/api/publico?rota=imagem"
     },
