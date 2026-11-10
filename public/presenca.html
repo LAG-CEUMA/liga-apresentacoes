@@ -302,7 +302,8 @@ async function telaAtiv(alvo){ATV_ALVO=alvo;
   alvo.append(h('div',{class:'leg'},
     h('div',{class:'tg E',style:'border:1px solid #fff2'},h('span',{class:'letra'},'E'),h('span',{},h('b',{},'Exercício (Exercise)'),h('br'),h('span',{class:'expl'},'Feito em sala, durante a aula, com o instrutor.'))),
     h('div',{class:'tg T',style:'border:1px solid #fff2'},h('span',{class:'letra'},'T'),h('span',{},h('b',{},'Tarefa (Task)'),h('br'),h('span',{class:'expl'},'Dever de casa, depois da aula: T1, T2, T3… (a marcada como opcional dá pontos extras).'))),
-    h('div',{style:'border:1px solid #fff2'},h('span',{},h('b',{},'N0.1-2'),h('br'),h('span',{class:'expl'},'Nível 0, aula 1 de 2.')))));
+    (()=>{const m=(ATV.atividades.map(a=>/^N(\d+)\.(\d+)-(\d+)/.exec(String(a.codigo||''))).find(Boolean))||[,'1','1','2'];
+      return h('div',{style:'border:1px solid #fff2'},h('span',{},h('b',{},'Código da aula (ex.: N'+m[1]+'.'+m[2]+'-'+m[3]+')'),h('br'),h('span',{class:'expl'},'Nível '+m[1]+', aula '+m[2]+' de '+m[3]+'. O nome da aula vem antes de E ou T: N'+m[1]+'.'+m[2]+'-'+m[3]+'·E1 é o exercício 1 dessa aula.')))})()));
   alvo.append(h('div',{style:'margin:10px 0'},h('button',{class:'btn sec',type:'button',title:'Imprevisto, atraso ou antecipação: muda todos os prazos desta turma de uma vez',onclick:async()=>{
     const v=prompt('Quantos dias adiar todos os prazos desta turma?\nUse número positivo para ADIAR (ex.: 7) ou negativo para ANTECIPAR (ex.: -7).\nDica: use múltiplos de 7 para manter os dias da semana.');if(v===null)return;const n=Math.round(Number(v));
     if(!n)return aviso('Informe um número de dias (ex.: 7 ou -7).',1);if(!confirm((n>0?'Adiar ':'Antecipar ')+Math.abs(n)+' dia(s) os prazos de TODAS as atividades da turma '+TURMA+'? As datas escritas nas descrições também mudam.'))return;
