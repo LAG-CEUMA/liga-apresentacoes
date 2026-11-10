@@ -461,13 +461,18 @@ function desenharAulas(d){
   const box=$('aulas');box.textContent='';
   const INFO={owners:'Quem vê: só owners.',membros:'Quem vê: owners, monitores e alunos da lista (precisa entrar com o GitHub).',publico:'Quem vê: qualquer pessoa com o link, sem login.'};
   const NOMES={owners:'Só owners',membros:'Membros'};
+  // Níveis agrupados por trilha (dia da semana), para níveis de dias diferentes não se misturarem.
   const grupos={};for(const a of d.aulas)(grupos[a.nivel]=grupos[a.nivel]||[]).push(a);
-  const aberto=lerAbertos();const nomesNiveis=Object.keys(grupos).sort();
+  const trilhaDoNivel={};for(const a of d.aulas)trilhaDoNivel[a.nivel]={t:a.trilha||'',o:a.ordem_trilha===undefined?99:a.ordem_trilha};
+  const aberto=lerAbertos();const nomesNiveis=Object.keys(grupos).sort((x,y)=>(trilhaDoNivel[x].o-trilhaDoNivel[y].o)||x.localeCompare(y,'pt',{numeric:true}));
+  let trilhaAtual=null;
   const barra=el('div','linha');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px';
   const bx=el('button','btn sec','Expandir tudo'),br=el('button','btn sec','Recolher tudo');
-  barra.append(bx,br,el('small','',`${d.aulas.length} aulas em ${nomesNiveis.length} nível(is)`));box.append(barra);
+  barra.append(bx,br,el('small','',`${d.aulas.length} aulas em ${nomesNiveis.length} nível(is), agrupados por trilha`));box.append(barra);
   const todos=[];
   nomesNiveis.forEach((nv,i)=>{const lista=grupos[nv];
+    const tr=trilhaDoNivel[nv].t||'Sem trilha';
+    if(tr!==trilhaAtual){trilhaAtual=tr;const nn=nomesNiveis.filter(x=>(trilhaDoNivel[x].t||'Sem trilha')===tr);const ht=el('h3','trilha-titulo');ht.style.cssText='margin:22px 0 8px;font-size:15px;letter-spacing:2px;text-transform:uppercase;color:#f5b83d';ht.textContent=`${tr} · ${nn.length} nível(is)`;box.append(ht)}
     const det=el('details','nivel');det.dataset.nv=nv;det.open=aberto===null?i===0:aberto.includes(nv);todos.push(det);
     det.addEventListener('toggle',()=>salvarAbertos(todos));
     const sm=el('summary');const tt=el('span','nvt',nv);const cont=el('span','nvc');sm.append(tt,cont);

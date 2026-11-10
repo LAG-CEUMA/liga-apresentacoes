@@ -23,7 +23,12 @@ module.exports = async (req, res) => {
       const limA = perm.includes('aulas') && !dono ? escs(['aulas']) : null;
       let niveisOk = null; // aulas visíveis ao painel: só dos níveis do alcance, quando o cargo é limitado
       { const es = [...(limP || []), ...(limA || [])]; if (!dono && es.length && es.every((e) => e !== null)) niveisOk = uniao(es, 'niveis'); }
-      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.filter((a) => !niveisOk || niveisOk.has(a.dir)).map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
+      // Trilha (dia da semana) de cada nível, pelos calendários: o plano liga a turma, e a turma liga o nível. Níveis com o mesmo número (ex.: um de Godot e um de Artes) ganham o assunto no nome para não se misturarem.
+      const trilhaDe = {}, ordemTrilha = {}; for (const p of Object.values(cfg.planos || {})) for (const tid of p.turmas || []) { const d = cfg.turmas[tid] && cfg.turmas[tid].nivel; if (d && !trilhaDe[d]) { trilhaDe[d] = p.trilha; ordemTrilha[p.trilha] = ordemTrilha[p.trilha] === undefined ? (p.diaSemana === '' ? 9 : ((p.diaSemana + 6) % 7)) : ordemTrilha[p.trilha]; } }
+      const dirsPorNivel = {}; for (const a of aulas) (dirsPorNivel[a.nivel] = dirsPorNivel[a.nivel] || new Set()).add(a.dir);
+      const assuntoDe = (dir) => { const e = Object.values(cfg.assuntos || {}).find((x) => (x.niveis || []).includes(dir)); return e ? e.nome : ''; };
+      const rotuloNivel = (a) => (dirsPorNivel[a.nivel].size > 1 ? `${a.nivel} · ${assuntoDe(a.dir) || a.dir}` : a.nivel);
+      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.filter((a) => !niveisOk || niveisOk.has(a.dir)).map((a) => ({ dir: a.dir, chave: a.chave, nivel: rotuloNivel(a), trilha: trilhaDe[a.dir] || '', ordem_trilha: trilhaDe[a.dir] ? ordemTrilha[trilhaDe[a.dir]] : 99, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (!perm.includes('pessoas') && (papelU === 'monitor' || grupoPr.length)) { // monitor ou cargo de presença: só as turmas dele (atalhos de chamada, atividades e ranking)
         const m = cfg.monitores[usuario]; let ids = (m && m.turmas && m.turmas.length) ? m.turmas : (m ? Object.keys(cfg.turmas) : []);

@@ -27,7 +27,7 @@ window.AJUDA = Object.assign(window.AJUDA || {}, {
   pontos_pesos: { t: 'Pesos padrão', l: ['Quanto cada parte vale no ranking: presença, participação e atividades. Valem para as turmas que não tiverem pesos próprios.'] },
   pontos_part: { t: 'Valor de cada tipo de participação', l: ['Multiplicador dos pontos que a pessoa recebe em cada tipo de participação (ajuda, apresentação, penalidade…).'] },
   pontos_turma: { t: 'Pesos por turma e Top 5', l: ['Escolha uma turma para dar pesos só para ela e ver o Top 5 atual. Sem pesos próprios, ela usa os padrão.'] },
-  aulas_niveis: { t: 'Todas deste nível', l: ['Muda o acesso de todas as aulas deste nível de uma vez.', 'Só owners: só vocês veem. Membros: monitores, equipe e alunos das turmas ligadas ao nível.'] },
+  aulas_niveis: { t: 'Todas deste nível', l: ['Os níveis ficam agrupados por trilha (Terça, Quinta…), pelo calendário de cada turma; dois níveis com o mesmo número, de assuntos diferentes, aparecem com o assunto no nome. Um nível sem turma em calendário fica em "Sem trilha".', 'Muda o acesso de todas as aulas deste nível de uma vez.', 'Só owners: só vocês veem. Membros: monitores, equipe e alunos das turmas ligadas ao nível.'] },
 
   /* ---- Personalizar ---- */
   pers_1: { t: 'Identidade', l: ['Nome, subtítulo e logo do site. Aparecem no topo de todas as telas.'] },
