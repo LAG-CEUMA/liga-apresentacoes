@@ -664,7 +664,7 @@ function mostrar(k){
   const A=$('abas');A.textContent='';
   if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',onclick:()=>mostrar('inicio')},'← Início'));
     const gr=GRUPO[k],irm=disp.filter(x=>GRUPO[x[0]]===gr);
-    if(gr)A.append(h('span',{class:'sub',style:'align-self:center;margin:0 4px 0 8px;text-transform:uppercase;letter-spacing:.06em;font-size:12px'},gr));
+    if(gr&&irm.length>1)A.append(h('span',{class:'sub',style:'align-self:center;margin:0 4px 0 8px;text-transform:uppercase;letter-spacing:.06em;font-size:12px'},gr));
     if(irm.length>1)for(const [id,t] of irm)A.append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
     else A.append(h('button',{type:'button',class:'on'},(disp.find(x=>x[0]===k)||[,k])[1]))}
   A.append(ajuda('adm_'+k));
