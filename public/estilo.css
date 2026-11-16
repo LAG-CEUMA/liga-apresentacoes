@@ -166,3 +166,6 @@ input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;bo
 .menu-itens .btn.sec{background:transparent;border:0;box-shadow:none}
 .menu-itens .btn.sec:hover:not(:disabled){background:#fff2}
 .btn:disabled,.btn[disabled]{box-shadow:none}
+
+details.guia-ativ:not([open]){background:none;border:0;padding:0}
+details.guia-ativ[open]{border-left:4px solid var(--ouro)}

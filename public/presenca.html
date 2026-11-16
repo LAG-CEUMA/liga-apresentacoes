@@ -319,7 +319,7 @@ async function telaAtiv(alvo){ATV_ALVO=alvo;
   alvo.append(h('p',{class:'sub'},'Cada atividade é um exercício com peso, prazo e entrega próprios. Você decide quando liberar (para todos ou só alguns) e as respostas chegam separadas, cada uma na sua Issue.'));
   {const GK='liga_guia_ativ';let esc=false;try{esc=localStorage.getItem(GK)==='1'}catch{}
    const mod="## Objetivo\n(uma frase: o que o aluno vai fazer)\n\n## Passo a passo\n1. \n2. \n3. \n\n## Deu certo se\n\n\n## Se deu erro\n- \n\n## O que entregar\n\n\n## Como entregar\nComente **nesta Issue** (botão *Comment*). Uma atividade, uma resposta. Arraste o print para a caixa de comentário. Travou? Escreva a dúvida aqui mesmo.\n";
-   const g=h('details',{class:'box',style:'border-left:4px solid #f5b83d;margin:10px 0'},h('summary',{style:'cursor:pointer;font-weight:700'},'Como criar uma atividade (passo a passo)'),
+   const g=h('details',{class:'box guia-ativ',style:'margin:10px 0'},h('summary',{style:'cursor:pointer;font-weight:700'},'Como criar uma atividade (passo a passo)'),
     h('ol',{style:'line-height:1.6;margin:10px 0'},
      h('li',{},h('b',{},'Antes:'),' crie a aula no Editor de slides, para a atividade ficar ligada a ela.'),
      h('li',{},'Abra ',h('b',{},'+ Nova atividade'),' e preencha: código (ex.: A1.1·E1), título, peso, nota máxima e prazo.'),
