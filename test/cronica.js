@@ -73,3 +73,11 @@ console.log('Stands: todos os testes passaram.');
   assert(A.conferir('cavalo', Buffer.from('lixo')).includes('ler'));
   console.log('Arte conferir: ok');
 }
+
+// Laboratório: motor roda com estado próprio e só para owner
+{
+  const assert = require('assert'); const L = require('../lib/lab');
+  assert.strictEqual(L.ELENCO.length, 5); assert(L.ELENCO.every((x) => /^ficticio-/.test(x.id)));
+  assert.strictEqual(L.ELENCO.filter((x) => x.stand).length, 3);
+  console.log('Laboratório: ok');
+}

@@ -1,0 +1,116 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Laboratório de Duelos</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&family=Rye&display=swap"><link rel="stylesheet" href="/estilo.css"><link rel="stylesheet" href="/api/tema.css">
+<style>
+.lab-tit{font-family:'Rye','Space Grotesk',serif;letter-spacing:1px;font-size:clamp(26px,5vw,40px);margin:4px 0}
+.aviso-lab{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(90deg,#3a2a0e,#241a0a);border:1px solid #f5b83d66;border-radius:12px;padding:12px 16px;margin:0 0 18px;font-size:.95em}
+.palco{display:grid;grid-template-columns:1fr 64px 1fr;gap:10px;align-items:center;margin:8px 0 16px}
+.lutador{position:relative;transition:transform .45s cubic-bezier(.2,.9,.3,1.2),filter .3s;min-width:0}
+.lutador .nome{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px}
+.lutador .nome b{font-family:'Space Grotesk',sans-serif;font-size:1.05em}
+.sel{display:inline-block;background:#fff1;border:1px solid #fff2;border-radius:99px;padding:2px 10px;font-size:.8em;color:#e8e4d8}
+.lutador.vazio{opacity:.45}
+.lutador svg{display:block;width:100%;height:auto}
+.vs{font-family:'Rye',serif;font-size:28px;text-align:center;color:var(--ouro);text-shadow:0 2px 0 #000a}
+.investe-d{transform:translateX(18%) scale(1.06);z-index:3}.investe-e{transform:translateX(-18%) scale(1.06);z-index:3}
+.treme{animation:treme .5s linear}.recua{filter:brightness(1.4) saturate(1.3)}
+@keyframes treme{0%,100%{transform:translateX(0)}15%{transform:translateX(-10px) rotate(-1.2deg)}35%{transform:translateX(9px) rotate(1deg)}55%{transform:translateX(-6px)}75%{transform:translateX(4px)}}
+.grito{position:absolute;left:50%;top:22%;transform:translateX(-50%) rotate(-4deg) scale(.4);opacity:0;font-family:'Rye',serif;font-size:clamp(20px,4vw,34px);color:#fff;background:#c0392b;border:3px solid #2a1608;border-radius:8px 22px 8px 22px;padding:4px 14px;white-space:nowrap;pointer-events:none;z-index:5;box-shadow:0 4px 0 #2a1608}
+.grito.pop{animation:pop 1.4s ease-out forwards}
+@keyframes pop{0%{opacity:0;transform:translateX(-50%) rotate(-4deg) scale(.3)}18%{opacity:1;transform:translateX(-50%) rotate(-4deg) scale(1.15)}30%{transform:translateX(-50%) rotate(-4deg) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) rotate(-4deg) scale(1) translateY(-12px)}}
+.dano{position:absolute;right:12%;top:30%;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(28px,6vw,48px);color:#ff6b57;text-shadow:0 3px 0 #000,0 0 14px #ff6b5788;opacity:0;pointer-events:none;z-index:5}
+.dano.pop{animation:sobe 1.5s ease-out forwards}
+@keyframes sobe{0%{opacity:0;transform:translateY(10px) scale(.6)}20%{opacity:1;transform:translateY(-6px) scale(1.2)}100%{opacity:0;transform:translateY(-46px) scale(1)}}
+.anim-sobre{position:absolute;inset:0;display:none;z-index:4}.anim-sobre img{width:100%;height:100%;object-fit:contain}
+.resultado{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:var(--card);border:1px solid #fff2;border-radius:16px;padding:14px 18px;margin:10px 0;min-height:92px}
+.dado{width:74px;height:74px;border-radius:16px;display:flex;align-items:center;justify-content:center;font:700 34px 'Space Grotesk',sans-serif;color:#12141c;background:#8d8a82;box-shadow:inset 0 -5px 0 #0003}
+.dado.rolando{animation:gira .6s linear}@keyframes gira{to{transform:rotate(720deg)}}
+.f-falha_critica{background:#e5604f}.f-falha{background:#ee9b6a}.f-fraco{background:#e6d36a}.f-normal{background:#8fd694}.f-critico{background:#3ec9b0}
+.lab-passos{display:grid;gap:14px;background:var(--card);border:1px solid #fff2;border-radius:16px;padding:16px 18px;margin:10px 0}
+.lab-passos h3{margin:0 0 6px;font-size:.95em;letter-spacing:1px;color:var(--ouro);text-transform:uppercase}
+.fichas{display:flex;gap:8px;flex-wrap:wrap}
+.ficha{background:#ffffff10;border:2px solid #fff2;color:var(--txt);border-radius:12px;padding:8px 12px;cursor:pointer;font:inherit;text-align:left;line-height:1.25;min-width:0}
+.ficha small{display:block;color:var(--mut)}.ficha:hover:not(:disabled){border-color:var(--ouro)}.ficha[aria-pressed=true]{border-color:var(--ouro);background:#f5b83d24}
+.ficha:disabled{opacity:.4;cursor:not-allowed}
+.acao{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-duelo{font-size:1.15em;padding:14px 26px}
+.placar{display:grid;gap:6px}.lin{display:grid;grid-template-columns:28px 1fr auto auto;gap:10px;align-items:center;background:#ffffff0a;border-radius:10px;padding:8px 12px}
+.lin .pts{font:700 1.1em 'Space Grotesk',sans-serif}.neg{color:#ff8a7a}.pos{color:#7be0c8}
+.log{font-size:.9em;color:#cfcbc0;line-height:1.45}.log li{margin:6px 0}
+@media(max-width:720px){.palco{grid-template-columns:1fr}.vs{display:none}.investe-d,.investe-e{transform:scale(1.03)}}
+@media(prefers-reduced-motion:reduce){.lutador,.treme,.grito.pop,.dano.pop,.dado.rolando{animation:none!important;transition:none!important}}
+</style></head>
+<body data-pg="laboratorio"><main>
+<div class="topo"><div><p class="tag">LABORATÓRIO · SÓ OWNERS</p><h1 class="lab-tit">Laboratório de Duelos</h1></div><div class="acoes"><a class="btn sec" href="/">&larr; Início</a><span id="aj"></span></div></div>
+<div class="aviso-lab"><span style="font-size:1.4em">🧪</span><div><b>Liga de testes.</b> Cinco cavaleiros fictícios e três Stands. Nada daqui afeta alunos, turmas, Stands ou a Copa de verdade: o placar tem estado próprio. Aqui usamos o mesmo motor de regras do jogo para testar regras, textos e animações antes de ir para os alunos.</div></div>
+<div id="erro" class="aviso-lab" style="display:none;border-color:#e5604f"></div>
+<div id="conteudo" style="display:none">
+ <div class="palco" id="palco" aria-live="polite"></div>
+ <div class="resultado" id="res"><div class="dado" id="dado">?</div><div id="txt"><b>Monte um duelo</b><p style="margin:4px 0 0">Escolha quem age, o item e o alvo. Depois clique em Duelo.</p></div></div>
+ <div class="lab-passos">
+  <div><h3>1 · Quem age?</h3><div class="fichas" id="f-de"></div></div>
+  <div><h3>2 · Qual item?</h3><div class="fichas" id="f-item"></div></div>
+  <div id="p-alvo"><h3>3 · Em quem?</h3><div class="fichas" id="f-alvo"></div></div>
+  <div class="acao"><button class="btn btn-duelo" id="go" disabled>⚔️ Duelo!</button><span id="dica" class="sel"></span></div>
+ </div>
+ <details class="cartao" open><summary><b>🏆 Placar do laboratório</b></summary><div class="placar" id="placar" style="margin-top:10px"></div></details>
+ <details class="cartao"><summary><b>📜 Últimos lances</b></summary><ul class="log" id="log"></ul></details>
+ <details class="cartao"><summary><b>🧭 Rumo do produto (o que vamos evoluir)</b></summary>
+  <ol class="log"><li><b>Cena de combate de verdade:</b> hoje as animações são GIFs soltos. O alvo é um palco com camadas (fundo, chão, Stand, cavaleiro, efeitos), câmera e golpes sincronizados.</li><li><b>Feedback com peso:</b> tremor de tela, pausa de impacto, números de dano, sons e vibração no celular.</li><li><b>Quadros de golpe por Stand:</b> cada Stand com a sua assinatura (luz, fumaça, poeira), em vez de um efeito genérico.</li><li><b>Jogo no Godot:</b> o motor de regras já é independente de tela, então o mesmo duelo pode rodar na engine, com a arte dos alunos.</li><li><b>Modo espectador:</b> a turma assiste ao duelo ao vivo na aula.</li></ol></details>
+ <div class="acao" style="margin:14px 0"><button class="btn sec" id="zerar">↺ Zerar placar do laboratório</button></div>
+</div>
+</main>
+<script src="/arte-visual.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script>
+<script>
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+const $=id=>document.getElementById(id);
+let D=null,de='',alvo='',item='banana',ocupado=false;
+const NOMES_ITEM={banana:'🍌 Banana',casco:'🐢 Casco',turbo:'🍄 Turbo',escudo:'🛡️ Escudo'};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const reduz=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+async function api(corpo){const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const x=await r.json().catch(()=>({}));return{r,x}}
+function cav(id){return D.cavaleiros.find(c=>c.id===id)}
+function lutador(c,lado){const w=el('div','lutador'+(c?'':' vazio'));w.id='lut-'+lado;
+  if(!c){w.append(el('div','nome')).append(el('b','','Escolha acima'));return w}
+  const n=el('div','nome');n.append(el('b','',c.nome));n.append(el('span','sel',c.stand?`${c.stand.ic} ${c.stand.nome}`:'sem Stand'));if(c.escudo)n.append(el('span','sel','🛡️ escudo'));
+  const s=el('div','');s.innerHTML=Arte.cena(c.visual);w.append(n,s);
+  const so=el('div','anim-sobre');so.id='so-'+lado;w.append(so);w.append(el('div','grito'),el('div','dano'));return w}
+function palco(){const p=$('palco');p.textContent='';const a=cav(de),b=item==='banana'||item==='casco'?cav(alvo):a;
+  p.append(lutador(a,'e'),el('div','vs','VS'),lutador(item==='banana'||item==='casco'?b:null,'d'))}
+function ficha(rot,sub,on,fn,off){const b=el('button','ficha');b.type='button';b.setAttribute('aria-pressed',on?'true':'false');b.append(document.createTextNode(rot));if(sub)b.append(el('small','',sub));b.disabled=!!off;b.addEventListener('click',fn);return b}
+function atualizar(){
+  const f1=$('f-de');f1.textContent='';for(const c of D.cavaleiros)f1.append(ficha(c.nome,c.stand?c.stand.ic+' '+c.stand.nome:'sem Stand',c.id===de,()=>{de=c.id;if(alvo===de)alvo='';atualizar()}));
+  const f2=$('f-item');f2.textContent='';for(const k of Object.keys(D.itens))f2.append(ficha(NOMES_ITEM[k]||k,D.itens[k].alvo==='outro'?'ataque':'em você',k===item,()=>{item=k;atualizar()}));
+  const ataque=D.itens[item].alvo==='outro';$('p-alvo').style.display=ataque?'':'none';
+  const f3=$('f-alvo');f3.textContent='';for(const c of D.cavaleiros)f3.append(ficha(c.nome,c.stand?c.stand.ic+' '+c.stand.nome:'sem Stand',c.id===alvo,()=>{alvo=c.id;atualizar()},c.id===de));
+  const ok=!!de&&(!ataque||!!alvo)&&!ocupado;$('go').disabled=!ok;
+  $('dica').textContent=!de?'Escolha quem age':ataque&&!alvo?'Escolha o alvo':'Pronto para o duelo';
+  palco();
+  const pl=$('placar');pl.textContent='';[...D.cavaleiros].sort((x,y)=>y.pontos-x.pontos).forEach((c,i)=>{const l=el('div','lin');l.append(el('b','',String(i+1)+'º'));const n=el('div','');n.append(el('b','',c.nome));n.append(el('small','',c.stand?'  '+c.stand.ic+' '+c.stand.nome:'  sem Stand'));l.append(n);
+    const e=el('span',c.efeito<0?'neg':c.efeito>0?'pos':'',c.efeito?(c.efeito>0?'+':'')+c.efeito:'');l.append(e);l.append(el('span','pts',String(c.pontos)));pl.append(l)});
+  const lg=$('log');lg.textContent='';if(!D.log.length)lg.append(el('li','','Nenhum lance ainda.'));for(const x of D.log)lg.append(el('li','',x.txt))}
+function grito(){const g=D.gritos.ataque;return g[Math.floor(Math.random()*g.length)]}
+async function duelo(){
+  if(ocupado)return;ocupado=true;$('go').disabled=true;const ataque=D.itens[item].alvo==='outro';
+  const dd=$('dado');dd.className='dado';dd.textContent='…';if(!reduz){void dd.offsetWidth;dd.classList.add('rolando')}
+  const {r,x}=await api({acao:'lab_usar',de,alvo:ataque?alvo:'',item});
+  if(!r.ok){ocupado=false;dd.textContent='!';$('txt').innerHTML='';const b=el('b','',x.erro||'Não foi possível.');$('txt').append(b);atualizar();return}
+  const e=$('lut-e'),d=$('lut-d');
+  if(ataque&&e&&d&&!reduz){
+    const anim=x.visualDe&&x.visualDe.anim&&x.visualDe.anim.ataque;
+    if(anim){const so=$('so-e');so.innerHTML='';const im=el('img');im.src=anim;im.alt='';so.append(im);so.style.display='block'}
+    e.classList.add('investe-d');await sleep(380);
+    const gr=e.querySelector('.grito');gr.textContent=(x.golpe&&x.golpe.nome?x.golpe.nome+'! ':'')+grito().split('!')[0]+'!';gr.classList.add('pop');
+    d.classList.add('treme','recua');const dn=d.querySelector('.dano');const perdeu=/perde (\d+(?:[.,]\d+)?)/.exec(x.resultado||'');dn.textContent=x.faixa==='falha'||x.faixa==='falha_critica'?'ERROU':perdeu?'-'+perdeu[1]:'';dn.classList.add('pop');
+    await sleep(520);d.classList.remove('treme','recua');e.classList.remove('investe-d');await sleep(250);
+  }
+  dd.classList.remove('rolando');dd.classList.add('f-'+x.faixa);dd.textContent=x.dado;
+  const t=$('txt');t.textContent='';t.append(el('b','',(x.golpe?x.golpe.ic+' '+x.golpe.nome:NOMES_ITEM[item])));t.append(el('p','',x.resultado));
+  await carregar();ocupado=false;atualizar()}
+async function carregar(){const r=await fetch('/api/presenca?acao=lab');const x=await r.json().catch(()=>({}));
+  if(!r.ok){$('erro').style.display='flex';$('erro').textContent=x.erro||'Sem acesso. Entre com uma conta de owner.';$('conteudo').style.display='none';return false}
+  D=x;$('conteudo').style.display='';return true}
+(async()=>{if(window.ajuda)$('aj').append(ajuda('ix_lab'));if(!(await carregar()))return;de=D.cavaleiros[0].id;alvo=D.cavaleiros[2].id;atualizar();
+  $('go').addEventListener('click',duelo);
+  $('zerar').addEventListener('click',async()=>{if(!confirm('Zerar o placar e os lances do laboratório? (Só afeta a liga de testes.)'))return;await api({acao:'lab_zerar'});await carregar();$('dado').className='dado';$('dado').textContent='?';$('txt').innerHTML='<b>Placar zerado</b><p style="margin:4px 0 0">Monte um novo duelo.</p>';atualizar()})})();
+</script></body></html>
