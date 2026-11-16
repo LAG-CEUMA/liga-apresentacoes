@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
     const q = { ...(req.query || {}) }; if (q.turma) q.turma = String(q.turma).toUpperCase();
     const turmaMon = (turma) => ehOwner || monTurma(turma) || PRS.some((p) => cargoPara(p, turma));
     const alunosDe = (turma) => (cfg.turmas[turma] ? cfg.turmas[turma].alunos : cfg.alunos);
-    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos, inicio: t.inicio || '', fim: t.fim || '' }]));
+    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos, inicio: t.inicio || '', fim: t.fim || '', cronograma: require('../lib/cronograma').calcular(cfg, id, aulas) }]));
     const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
 
     if (req.method === 'GET') {

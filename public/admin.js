@@ -286,6 +286,31 @@ async function auditoriaRepos(){
       for(const x of L)det.append(h('div',{style:'padding:6px 0;border-top:1px solid #fff2'},h('b',{},(x.repo?x.repo:'@'+x.usuario)+(x.repo&&x.usuario&&k!=='orfaos'?' · @'+x.usuario:'')),h('div',{class:'sub',style:'font-size:12px'},x.motivo+(x.desde?' (desde '+x.desde.slice(0,10).split('-').reverse().join('/')+')':'')),h('a',{href:x.url,target:'_blank',rel:'noopener',class:'sub'},'Abrir no GitHub')));
       corpo.append(det)}
   }catch(e){corpo.textContent=e.message}}
+const DSEM=['dom','seg','ter','qua','qui','sex','sáb'];
+const fmtAula=v=>{if(!v)return 'sem data';const d=new Date(v+'T12:00:00Z');return DSEM[d.getUTCDay()]+', '+v.split('-').reverse().join('/')};
+const somaDias=(v,n)=>{const d=new Date(v+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+function modalDataAula(id,aula,lista,reabrir){
+  const t=D.turmas[id],cr=t.cronograma||{};const atual=(cr[aula.chave]||{}).data||'';
+  const seg=lista.slice(lista.findIndex(x=>x.chave===aula.chave)+1).filter(x=>(cr[x.chave]||{}).data);
+  const inp=h('input',{type:'date',value:atual});
+  const gravar=async(datas,msgOk)=>{try{await enviar({acao:'datas_aulas',id,datas});aviso(msgOk);fechar();await carregar();reabrir()}catch(e){aviso(e.message,1)}};
+  const area=h('div',{style:'margin-top:12px'});
+  const passo2=()=>{const novo=inp.value;if(!novo)return aviso('Escolha a data.',1);if(novo===atual)return fechar();
+    const delta=atual?Math.round((new Date(novo+'T12:00:00Z')-new Date(atual+'T12:00:00Z'))/864e5):0;
+    const choque=seg.filter(x=>cr[x.chave].data<=novo);
+    if(delta>0&&choque.length){
+      area.textContent='';
+      area.append(h('p',{},h('b',{},aula.titulo+' vai para '+fmtAula(novo)+'.'),' A próxima aula ('+seg[0].titulo+') está em '+fmtAula(cr[seg[0].chave].data)+(cr[seg[0].chave].data===novo?', o mesmo dia.':'.')),
+        h('p',{class:'sub'},'Quer empurrar as '+seg.length+' aula(s) seguinte(s) '+delta+' dia(s) para frente, mantendo o intervalo entre elas?'),
+        h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},
+          h('button',{class:'btn',type:'button',onclick:()=>{const d={[aula.chave]:novo};for(const x of seg)d[x.chave]=somaDias(cr[x.chave].data,delta);gravar(d,'Aula e '+seg.length+' seguinte(s) movidas em '+delta+' dia(s).')}},'Empurrar esta e as seguintes'),
+          h('button',{class:'btn sec',type:'button',onclick:()=>gravar({[aula.chave]:novo},'Data da aula alterada.')},'Mudar só esta aula')));
+    }else gravar({[aula.chave]:novo},'Data da aula alterada.')};
+  const {fechar}=camada([h('h2',{style:'margin:0 0 6px'},'Data da aula'),h('p',{class:'sub',style:'margin:0 0 10px'},aula.titulo+' · hoje está em '+fmtAula(atual)+(cr[aula.chave]&&cr[aula.chave].manual?' (data ajustada por você)':' (data prevista pelo calendário)')),
+    h('label',{},'Nova data ',inp),area,
+    h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:space-between'},
+      (cr[aula.chave]&&cr[aula.chave].manual)?h('button',{class:'btn sec',type:'button',title:'Volta a usar a data calculada pelo calendário da trilha',onclick:()=>gravar({[aula.chave]:''},'Voltou à data prevista.')},'Voltar à data prevista'):h('span'),
+      h('div',{style:'display:flex;gap:8px'},h('button',{class:'btn sec',type:'button',onclick:()=>fechar()},'Cancelar'),h('button',{class:'btn',type:'button',onclick:passo2},'Salvar')))],'modal')}
 function materiaisDaTurma(id){
   let FECHA=()=>{};
   const t=D.turmas[id];const aulas=(D.aulas||[]).filter(a=>!t.nivel||String(a.chave).startsWith(t.nivel+'/')).sort((a,b)=>a.chave.localeCompare(b.chave));
@@ -296,7 +321,7 @@ function materiaisDaTurma(id){
     h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px'},bt('Presença da turma',ir('/presenca#chamada')),bt('Atividades da turma',ir('/presenca#ativ')),bt('Ranking',ir('/presenca#rank')),bt('Histórico',ir('/presenca#hist')),D.dono?bt('Repositórios dos alunos',()=>{FECHA();reposDaTurma(id,t.nome)}):'',D.editor?lk('Editor de slides','/editor'):''));
   if(!aulas.length)corpo.append(h('p',{class:'sub'},'Esta turma ainda não tem aulas no nível dela.'));
   for(const a of aulas){const ac={owners:'só owners',membros:'membros',publico:'público'}[a.acesso]||a.acesso;
-    corpo.append(h('div',{style:'border-top:1px solid #fff2;padding:10px 0'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('b',{},a.titulo),h('span',{class:'pill m'},'Quem vê: '+ac)),h('div',{class:'sub',style:'font-size:12px'},a.chave),
+    corpo.append(h('div',{style:'border-top:1px solid #fff2;padding:10px 0'},h('div',{style:'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap'},h('b',{},a.titulo),h('span',{class:'pill m'},'Quem vê: '+ac)),h('div',{class:'sub',style:'font-size:12px'},a.chave),h('div',{style:'display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px'},h('b',{},'📅 '+fmtAula(((t.cronograma||{})[a.chave]||{}).data)),((t.cronograma||{})[a.chave]||{}).manual?h('span',{class:'pill t'},'ajustada'):'',bt('Mudar data',()=>modalDataAula(id,a,aulas,()=>{FECHA();materiaisDaTurma(id)}))),
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'},lk('Slides (projetar)',a.url,'btn'),a.roteiro?lk('Roteiro (não projetar)',a.roteiro):'',D.editor?lk('Editar slides','/editor'):'',bt('Chamada desta aula',ir('/presenca#chamada',id,a.chave)),bt('Atividades',ir('/presenca#ativ',id,a.chave)),(D.permissoes||[]).includes('aulas')||D.dono?bt('Quem vê',()=>{FECHA();mostrar('aulas')}):'')))}
   FECHA=camada([h('h2',{style:'margin:0 0 8px'},'Aulas e materiais · '+t.nome),corpo],'gaveta').fechar}
 function abrirPresenca(id,aba){return()=>{try{localStorage.setItem('liga_turma',id)}catch{}window.open('/presenca#'+aba,'liga-presenca')}}

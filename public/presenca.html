@@ -311,6 +311,10 @@ async function telaHoje(alvo){
     col('Antes','Preparar a aula',linha('Slides e roteiro',()=>{location.href='/'},'Abrir as aulas'),linha('Liberar atividades',ir('ativ'),'Criar as Issues dos alunos')),
     col('Durante','Em sala',linha('Fazer a chamada',ir('chamada')),linha('Registrar participações',ir('part'))),
     col('Depois','Fechar a aula',linha('Corrigir respostas',ir('corr')),linha('Ver quem está atrasado',ir('acomp')))))}
+function dataDaAula(cod){ // 'N1.1-2' = nível 1, aula 1: mostra a data da aula (do calendário da turma), se houver
+  const m=/^N\d+\.(\d+)/i.exec(cod||'');const t=(CTX&&CTX.turmas||{})[TURMA];if(!m||!t||!t.cronograma)return '';
+  const chaves=Object.keys(t.cronograma).sort();const c=chaves[Number(m[1])-1];const x=c&&t.cronograma[c];if(!x||!x.data)return '';
+  const d=new Date(x.data+'T12:00:00Z');return h('span',{class:'sub',style:'margin-left:12px;font-weight:400',title:'Data da aula'+(x.manual?' (ajustada)':' (prevista pelo calendário)')+'. Para mudar: Painel > Turmas > ⋯ > Aulas e materiais.'},'📅 '+['dom','seg','ter','qua','qui','sex','sáb'][d.getUTCDay()]+', '+x.data.split('-').reverse().join('/').slice(0,5))}
 async function telaAtiv(alvo){ATV_ALVO=alvo;
   alvo.textContent='';alvo.append(h('p',{},'Carregando…'));
   const r=await fetch('/api/presenca?acao=atividades&turma='+encodeURIComponent(TURMA));
@@ -346,7 +350,7 @@ async function telaAtiv(alvo){ATV_ALVO=alvo;
   const TIPOS={E:'E · Exercícios (Exercise): feitos em sala, durante a aula',T:'T · Tarefas (Task): dever de casa, feito depois da aula',O:'Outras atividades: '};
   const det=(chave,titulo,aberto,cls,extra)=>{const d=h('details',{class:cls||'ag'});const sm=h('summary',{});if(extra)sm.append(...extra);else sm.append(titulo);d.append(sm);d.open=aberto||ATV_OPEN.has(chave);d.addEventListener('toggle',()=>{d.open?ATV_OPEN.add(chave):ATV_OPEN.delete(chave)});return d};
   const destino=(a)=>{const m=/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(a.codigo||'');const aula=m?m[1].trim():'Sem aula',tp=m?m[2].toUpperCase():'O';
-    if(!grupos[aula]){const n=ATV.atividades.filter(x=>((/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(x.codigo||'')||[0,'Sem aula'])[1].trim())===aula).length;grupos[aula]={d:det('a:'+aula,'',false,'ag',[h('span',{},aula),h('span',{class:'cnt'},n+' atividades')]),t:{}};lista.append(grupos[aula].d)}
+    if(!grupos[aula]){const n=ATV.atividades.filter(x=>((/^(.*?)\s*[·.]\s*([ET])\d*$/i.exec(x.codigo||'')||[0,'Sem aula'])[1].trim())===aula).length;grupos[aula]={d:det('a:'+aula,'',false,'ag',[h('span',{},aula),dataDaAula(aula),h('span',{class:'cnt'},n+' atividades')]),t:{}};lista.append(grupos[aula].d)}
     const G=grupos[aula];if(!G.t[tp]){G.t[tp]=det('t:'+aula+tp,'',false,'tg '+tp,[h('span',{class:'letra'},tp==='O'?'·':tp),h('span',{},TIPOS[tp].split(':')[0].replace(/^[ET] · /,''),h('br'),h('span',{class:'expl'},TIPOS[tp].split(':')[1]||''))]);G.d.append(G.t[tp])}if(ATV_SEL===a.id){G.d.open=true;G.t[tp].open=true}return G.t[tp]};
   const LOTE=new Map();
   for(const a of ATV.atividades){

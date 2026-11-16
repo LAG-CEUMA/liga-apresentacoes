@@ -52,6 +52,7 @@ module.exports = async (req, res) => {
       if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.filter((x) => !permitidos || permitidos.has(x.usuario)).map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
+      if (v.turmas) { const CR = require('../lib/cronograma'); v.turmas = Object.fromEntries(Object.entries(v.turmas).map(([k, t]) => [k, { ...t, cronograma: CR.calcular(cfg, k, aulas) }])); }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
     }
@@ -358,10 +359,23 @@ module.exports = async (req, res) => {
       novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status, inicio, fim,
         nivel: b.nivel === undefined ? (atual.nivel || '') : (dirs.has(b.nivel) ? b.nivel : ''),
         acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, acessoAte, alunos: atual.alunos,
-        ...(atual.pesos ? { pesos: atual.pesos } : {}), ...(atual.rankingFinal ? { rankingFinal: atual.rankingFinal } : {}) };
+        ...(atual.pesos ? { pesos: atual.pesos } : {}), ...(atual.datasAulas ? { datasAulas: atual.datasAulas } : {}), ...(atual.rankingFinal ? { rankingFinal: atual.rankingFinal } : {}) };
       if (status === 'arquivada' && atual.status !== 'arquivada') novo.turmas[id].rankingFinal = P.ranking(novo, id, await d.listarSessoes(), await require('../lib/atividades').listar(id)).slice(0, 5).map((x) => ({ usuario: x.usuario, total: x.total })); // congela o Top 5
       if (status !== 'arquivada') delete novo.turmas[id].rankingFinal;
       msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
+    } else if (b.acao === 'datas_aulas') { // datas das aulas de uma turma (adiar uma aula e, se quiser, as seguintes)
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!novo.turmas[id]) return u.json(res, 400, { erro: 'Turma não encontrada.' });
+      if (!perm.includes('t_editar') && !perm.includes('presenca')) return nao();
+      const mapa = b.datas && typeof b.datas === 'object' ? b.datas : {};
+      const chavesOk = new Set(aulas.map((x) => x.chave));
+      const dt = Object.assign({}, novo.turmas[id].datasAulas || {});
+      for (const [k, v] of Object.entries(mapa)) {
+        if (!chavesOk.has(k)) continue;
+        if (v === '' || v === null) delete dt[k]; else if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) dt[k] = String(v);
+      }
+      if (Object.keys(dt).length) novo.turmas[id].datasAulas = dt; else delete novo.turmas[id].datasAulas;
+      msg = `Portal: ${usuario} mudou datas de aulas da turma ${id}`;
     } else if (b.acao === 'plano') {
       if (!perm.includes('tr_gerir')) return nao();
       const id = String(b.id || '').trim().toUpperCase();
