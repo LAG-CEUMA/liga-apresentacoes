@@ -39,3 +39,17 @@ const v2 = S.visao(e0, 2, 'bia'); assert.ok(v2.manter && v2.manter.id === 'caval
 assert.ok(!S.visao(e0, 2, 'bia').ofertas.some((o) => o.id === 'punho')); // ocupado por outro nesta semana
 assert.deepEqual(S.visao(e0, 3, 'ana').ofertas.map((o) => o.id), S.visao(e0, 3, 'ana').ofertas.map((o) => o.id)); // sorteio estável
 console.log('Stands: todos os testes passaram.');
+// Golpes próprios, furtividade com chance e plano de batalha
+{
+  const GP = require('../lib/golpes'); const S2 = require('../lib/stands');
+  for (const s of S2.BANCO) { const g = GP.G[s.id]; assert.ok(g && g.length === 3 && g.every((x) => x && x.length > 3), 'golpes de ' + s.id); assert.ok(GP.golpe(s, 'banana').nome === g[0] && GP.golpe(s, 'escudo').nome === g[2]); }
+  assert.ok(Object.keys(GP.G).length === S2.BANCO.length);
+  assert.ok(Object.keys(S2.ADV).every((t) => S2.ADV[t].length === 2));
+  const furt = S2.BANCO.find((s) => s.furtivo), rastro = S2.BANCO.find((s) => s.tipo === 'rastro' && !s.furtivo), corpo = S2.BANCO.find((s) => s.tipo === 'corpo'), truque = S2.BANCO.find((s) => s.tipo === 'truque' && !s.furtivo);
+  const orc = S2.criarOraculo({ base: '2026-01-05T00:00:00Z', semanas: { 1: { a: { stand: furt.id }, b: { stand: rastro.id }, c: { stand: corpo.id }, d: { stand: truque.id } } } }, new Date('2026-01-05T00:00:00Z').getTime());
+  const ms = new Date('2026-01-06T10:00:00Z').getTime(); let ocu = 0, ocuR = 0;
+  for (let i = 0; i < 400; i++) { const em = new Date(ms + i * 1000).toISOString(); if (orc.oculto('a', 'c', em)) ocu++; if (orc.oculto('a', 'b', em)) ocuR++; }
+  assert.ok(ocu > 230 && ocu < 330, 'chance ~70%: ' + ocu); assert.ok(ocuR > 70 && ocuR < 170, 'contra rastreador ~30%: ' + ocuR); assert.ok(!orc.oculto('c', 'a', new Date(ms).toISOString()));
+  assert.strictEqual(orc.duelo('c', 'd', ms).aj, 1); assert.strictEqual(orc.duelo('d', 'c', ms).aj, -1); assert.strictEqual(orc.duelo('c', 'c', ms).aj, 0);
+  console.log('Golpes/duelo: ok');
+}

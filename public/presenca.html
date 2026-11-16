@@ -258,14 +258,20 @@ async function telaRank(alvo){
   const r=await fetch('/api/presenca?acao=ranking&turma='+encodeURIComponent(TURMA));
   if(!r.ok){alvo.textContent='Não consegui carregar o ranking desta turma.';return}
   let R=await r.json();let PL=null;
-  if(ls.get('liga_rank_esc','nivel')==='plano'){try{const rp=await fetch('/api/presenca?acao=ranking_plano&turma='+encodeURIComponent(TURMA));if(rp.ok){const j=await rp.json();if(j.plano){PL=j;const mx=Math.max(100,...j.ranking.map(x=>x.possivel||0));R={...R,pesos:{presenca:mx,participacao:0,exercicios:0},ranking:j.ranking,planoT:{inicio:j.plano.inicio,fim:j.plano.fim}}}}}catch{}}
+  if(['plano','arena'].includes(ls.get('liga_rank_esc','nivel'))){try{const rp=await fetch('/api/presenca?acao=ranking_plano&turma='+encodeURIComponent(TURMA));if(rp.ok){const j=await rp.json();if(j.plano){PL=j;const mx=Math.max(100,...j.ranking.map(x=>x.possivel||0));R={...R,pesos:{presenca:mx,participacao:0,exercicios:0},ranking:j.ranking,planoT:{inicio:j.plano.inicio,fim:j.plano.fim}}}}}catch{}}
   let PP=null;if(!PL&&ls.get('liga_rank_vis','corrida')==='corrida'){try{PP=await postA({acao:'ativ_painel'})}catch{}}alvo.textContent='';const max=R.pesos.presenca+R.pesos.participacao+R.pesos.exercicios;
   const vis=ls.get('liga_rank_vis','corrida');const abas=h('div',{class:'barra livre'});
   for(const [v,t] of [['corrida','🏁 Corrida'],...(CTX.dono?[['copa','🏆 Copa (itens)']]:[]),['tabela','📋 Tabela']])abas.append(h('button',{class:'btn '+(vis===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_vis',v);alvo.textContent='';telaRank(alvo)}},t));
   abas.append(ajuda('rank_corrida'));alvo.append(abas);
   { const esc=ls.get('liga_rank_esc','nivel');const eb=h('div',{class:'barra livre'},h('span',{class:'sub'},'Ranking:'));
-    for(const [v,t] of [['nivel','Por nível (esta turma)'],['plano','Do plano (soma das turmas)']])eb.append(h('button',{class:'btn '+(esc===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_esc',v);alvo.textContent='';telaRank(alvo)}},t));
+    for(const [v,t] of [['nivel','Por nível (esta turma)'],['plano','Do plano (soma das turmas)'],['arena','🌐 Arena Global']])eb.append(h('button',{class:'btn '+(esc===v?'':'sec'),type:'button',onclick:()=>{ls.set('liga_rank_esc',v);alvo.textContent='';telaRank(alvo)}},t));
     alvo.append(eb);
+    if(esc==='arena'){const A=PL&&PL.arena;if(!A||!A.ligada){alvo.append(h('p',{class:'sub'},'🌐 A Arena Global está desligada.'));return}
+      alvo.append(h('p',{class:'sub'},'🌐 Arena Global: todas as trilhas juntas, ordenadas pela % dos pontos possíveis (justo para trilhas de tamanhos diferentes). Mostrando os 30 primeiros de '+A.total+'.'));
+      const tg=h('tbody',{});for(const x of A.global)tg.append(h('tr',{style:x.posicao<=3?'background:#f5b83d18':''},h('td',{},x.posicao+'º'),h('td',{},quem(x.usuario)),h('td',{},h('b',{},x.pct+'%')),h('td',{},String(x.total))));
+      alvo.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},h('thead',{},h('tr',{},...['#','Aluno','% do possível','Pontos'].map(t=>h('th',{},t)))),tg)));
+      for(const t of A.trilhas){const d=h('details',{});d.append(h('summary',{},'🏁 '+(t.trilha||t.nome)+' · top '+t.top.length));const tb2=h('tbody',{});for(const x of t.top)tb2.append(h('tr',{},h('td',{},x.posicao+'º'),h('td',{},quem(x.usuario)),h('td',{},h('b',{},String(x.total)))));d.append(h('div',{class:'rolagem'},h('table',{class:'tabela'},tb2)));alvo.append(d)}
+      return}
     if(esc==='plano'){alvo.append(PL?h('p',{class:'sub'},`${PL.plano.nome} · ${PL.plano.trilha} · soma simples dos pontos das turmas: ${PL.plano.turmas.map(x=>x.nome).join(', ')}.`+(PL.arena&&!PL.arena.ligada?' 🌐 '+PL.arena.aviso:'')):h('p',{class:'sub'},'Esta turma ainda não está em nenhum plano (Admin › Turmas › Planos). Mostrando o ranking da turma.'))} }
   if(vis==='copa'&&CTX.dono){const cx=h('div',{});alvo.append(cx);await telaCopaProf(cx);alvo.append(h('div',{class:'legenda'},'🏁 Corrida = pista · 🏆 Copa = configurar e ver itens · 📋 Tabela = detalhes de pontos'));return}
   if(vis==='corrida'){alvo.append(corridaRank(R,PP),h('div',{class:'legenda'},h('b',{},'Lembrete: '),'🏁 Corrida = visual para motivar a turma · 📋 Tabela = detalhes de pontos · a pista usa os mesmos pontos do ranking · nesta fase ela é visível só para o professor.'));return}

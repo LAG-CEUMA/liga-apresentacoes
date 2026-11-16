@@ -98,12 +98,19 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes(), await A.listar(q.turma)) });
       }
       if (q.acao === 'ranking_plano') {
+        const arenaDados = async (PLm, cfg2, sess2) => {
+          if (!PLm.arenaLigada(cfg2)) return { ligada: false, aviso: 'Arena Global desligada.' };
+          const por2 = {}; for (const p of Object.values(cfg2.planos || {})) for (const id of PLm.idsDe(p)) if (cfg2.turmas[id] && !por2[id]) por2[id] = await A.listar(id);
+          const glob = PLm.rankingArena(cfg2, sess2, por2);
+          const trilhas = Object.values(cfg2.planos || {}).map((p) => ({ id: p.id, nome: p.nome, trilha: p.trilha, top: PLm.rankingPlano(cfg2, p, sess2, por2).slice(0, 10).map((x) => ({ usuario: x.usuario, total: x.total, pct: x.pct, posicao: x.posicao })) }));
+          return { ligada: true, global: glob.slice(0, 30), total: glob.length, trilhas };
+        };
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !pode('pr_ranking', q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         const PL = require('../lib/planos'); const pl = PL.doPlano(cfg, q.turma);
         if (!pl) return u.json(res, 200, { plano: null });
         const sess = await d.listarSessoes(); const por = {}; for (const id of PL.idsDe(pl)) por[id] = await A.listar(id);
         const dt = PL.datas(cfg, pl);
-        return u.json(res, 200, { plano: { id: pl.id, nome: pl.nome, trilha: pl.trilha, inicio: dt.inicio, fim: dt.fim, turmas: PL.idsDe(pl).map((id) => ({ id, nome: cfg.turmas[id].nome })) }, ranking: PL.rankingPlano(cfg, pl, sess, por), arena: { ligada: PL.arenaLigada(cfg), aviso: 'Arena Global: disponível quando houver trilhas paralelas (previsto para 2027.2).' } });
+        return u.json(res, 200, { plano: { id: pl.id, nome: pl.nome, trilha: pl.trilha, inicio: dt.inicio, fim: dt.fim, turmas: PL.idsDe(pl).map((id) => ({ id, nome: cfg.turmas[id].nome })) }, ranking: PL.rankingPlano(cfg, pl, sess, por), arena: await arenaDados(PL, cfg, sess) });
       }
       if (q.acao === 'contexto') {
         let nomes = {}; // nome completo (dos Contatos) só para quem usa a Presença; o e-mail nunca sai daqui
