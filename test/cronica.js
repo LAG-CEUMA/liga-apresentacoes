@@ -18,8 +18,10 @@ assert.equal(K.modoDe({}, { plano: { id: 'x' } }), 'participa'); assert.equal(K.
 const agora = Date.now(); const em = new Date(agora).toISOString();
 const est = C.normalizar({ ativa: true, log: [{ em, de: 'segredo', item: 'banana', vit: 'vitima', para: 'vitima', faixa: 'normal', dado: 5 }, { em, de: 'a', item: 'alianca', evento: 'alianca', para: 'b' }, { em: new Date(agora - 30 * 864e5).toISOString(), de: 'x', item: 'banana', vit: 'velho', faixa: 'normal' }] });
 const f = K.fatos(est, agora, 7); assert.equal(f.length, 2);
-assert.ok(f.every((x) => !x.texto.includes('segredo'))); assert.ok(f.some((x) => x.texto.includes('@vitima')) && !f.some((x) => x.texto.includes('@velho')));
-const atq = f.find((x) => x.nome === 'Ataque'); assert.equal(atq.falas.length, 2); assert.deepEqual(atq.falas.map((x) => x.q), ['silas', 'tiao']);
+assert.ok(f.some((x) => x.texto.includes('@vitima')) && !f.some((x) => x.texto.includes('@velho')));
+assert.ok(f.some((x) => x.nome === 'Ataque' && x.texto.includes('@segredo'))); // ataques agora são públicos
+const f3 = K.fatos(est, agora, 7, null, (k) => k === 'segredo'); assert.ok(f3.every((x) => !x.texto.includes('segredo'))); // exceto Stand furtivo
+const atq = f3.find((x) => x.nome === 'Ataque'); assert.equal(atq.falas.length, 2); assert.deepEqual(atq.falas.map((x) => x.q), ['silas', 'tiao']);
 assert.ok(K.GRITOS.ataque.some((g) => atq.falas[1].t.includes(g)));
 assert.ok(K.NARRADORES.silas && K.NARRADORES.tiao);
 assert.ok(!/pixel|compil|bug|null|rollback|loop|commit|deploy/i.test(K.EVENTOS.map((e) => e.txt).join(' ')), 'catálogo fixo sem jargão digital');
@@ -28,12 +30,12 @@ assert.equal(typeof K.liberar, 'function');
 console.log('Crônica: todos os testes passaram.');
 // Stands: banco, rodízio e exclusividade
 const S = require('../lib/stands');
-assert.ok(S.BANCO.length >= 60 && new Set(S.BANCO.map((s) => s.id)).size === S.BANCO.length);
+assert.ok(S.BANCO.length >= 120 && new Set(S.BANCO.map((s) => s.id)).size === S.BANCO.length);
 assert.ok(S.BANCO.every((s) => s.nome && s.poder && s.fraqueza && s.tags.length && s.tipoNome));
 const e0 = S.norm({ semanas: { 1: { ana: { stand: 'punho' }, bia: { stand: 'caval' } }, 2: { ana: { stand: 'punho' } } } });
-const v3 = S.visao(e0, 'p', 3, 'ana'); assert.equal(v3.manter, null); assert.equal(v3.atualAcabou, true); // 2 semanas seguidas: precisa trocar
+const v3 = S.visao(e0, 3, 'ana'); assert.equal(v3.manter, null); assert.equal(v3.atualAcabou, true); // 2 semanas seguidas: precisa trocar
 assert.ok(v3.ofertas.length === 3 && !v3.ofertas.some((o) => o.id === 'punho'));
-const v2 = S.visao(e0, 'p', 2, 'bia'); assert.ok(v2.manter && v2.manter.id === 'caval'); // pode manter na 2ª semana
-assert.ok(!S.visao(e0, 'p', 2, 'bia').ofertas.some((o) => o.id === 'punho')); // ocupado por outro nesta semana
-assert.deepEqual(S.visao(e0, 'p', 3, 'ana').ofertas.map((o) => o.id), S.visao(e0, 'p', 3, 'ana').ofertas.map((o) => o.id)); // sorteio estável
+const v2 = S.visao(e0, 2, 'bia'); assert.ok(v2.manter && v2.manter.id === 'caval'); // pode manter na 2ª semana
+assert.ok(!S.visao(e0, 2, 'bia').ofertas.some((o) => o.id === 'punho')); // ocupado por outro nesta semana
+assert.deepEqual(S.visao(e0, 3, 'ana').ofertas.map((o) => o.id), S.visao(e0, 3, 'ana').ofertas.map((o) => o.id)); // sorteio estável
 console.log('Stands: todos os testes passaram.');

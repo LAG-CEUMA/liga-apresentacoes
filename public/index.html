@@ -66,15 +66,15 @@ function montarStand(j,d){
   if(!j||j.semCopa){delete BL.stand;return}
   let s=BL.stand;if(!s){s=el('section','card cronica');s.id='sec-stand';BL.stand=s}
   s.textContent='';s.style.cssText='border-left:6px solid #7c6cf0;padding:14px 18px;margin:12px 0';
-  const post=async(id,bt)=>{bt.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'stand_escolher',turma:j.copa.turma,id})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');carregarStand(d)}finally{bt.disabled=false}};
+  const post=async(id,bt)=>{bt.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'stand_escolher',id})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');carregarStand(d)}finally{bt.disabled=false}};
   const card=(st,extra)=>{const c=el('div');c.style.cssText='background:#7c6cf018;border:1px solid #7c6cf055;border-radius:10px;padding:10px 12px;margin:8px 0';
     const t=el('div');t.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';t.append(el('b','',st.ic+' '+st.nome),el('span','badge',st.tipoNome),el('span','badge',st.estilo),el('span','badge',st.dif));c.append(t);
     c.append(el('p','','⚡ '+st.poder),el('p','','🩹 Fraqueza: '+st.fraqueza));c.lastChild.style.margin='2px 0 0';c.children[1].style.margin='6px 0 0';if(extra)c.append(extra);return c};
-  if(j.dono){const dt=el('details');const sm=el('summary','',`👤 Stands da semana ${j.semana} · ${j.copa.nome}: ${j.escolheram} de ${j.total} escolheram (banco com ${j.banco})`);sm.style.cssText='cursor:pointer;font-weight:700';dt.append(sm);
+  if(j.dono){const dt=el('details');const sm=el('summary','',`👤 Stands da semana ${j.semana}: ${j.escolheram} de ${j.total} pilotos escolheram (banco com ${j.banco}, ${j.furtivos} furtivos)`);sm.style.cssText='cursor:pointer;font-weight:700';dt.append(sm);
     for(const x of j.lista){const l=el('p','',x.nome+' ('+x.usuario+'): '+(x.stand?x.stand+(x.manteve?' (manteve)':''):'ainda não escolheu'));l.style.margin='3px 0';dt.append(l)}lembrar(dt,'stand_dono',false);s.append(dt);return}
   s.append(el('h2','','👤 Seu Stand · semana '+j.semana));s.lastChild.style.margin='0 0 4px';
   if(j.escolhido){const e=j.escolhido;s.append(card(e));s.append(el('small','',e.seguidas>=2?'Você está na 2ª semana com este Stand. Na próxima, será preciso trocar.':'Você pode manter este Stand por mais 1 semana, se quiser.'));s.append(el('small','','Por enquanto o Stand é identidade e história: ele não muda pontos.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';return}
-  s.append(el('p','sub','Escolha 1 entre 3 Stands sorteados para você'+(j.manter?', ou mantenha o atual.':'.')+' Vale a semana inteira. Nenhum outro piloto da trilha terá o mesmo Stand nesta semana.'));
+  s.append(el('p','sub','Escolha 1 entre 3 Stands sorteados para você'+(j.manter?', ou mantenha o atual.':'.')+' Vale a semana inteira. Seu Stand é um só em todas as trilhas, e nenhum outro piloto terá o mesmo nesta semana.'));
   for(const o of j.ofertas){const b=el('button','btn','Escolher '+o.nome);b.type='button';b.addEventListener('click',()=>{if(confirm('Escolher '+o.nome+' para esta semana?'))post(o.id,b)});s.append(card(o,b))}
   if(j.manter){const b=el('button','btn sec','Manter '+j.manter.nome+' (mais 1 semana)');b.type='button';b.addEventListener('click',()=>post('manter',b));s.append(card(j.manter,b))}
   else if(j.atualAcabou)s.append(el('small','','Você ficou 2 semanas seguidas com o Stand anterior, então precisa trocar.'));
