@@ -112,7 +112,7 @@ const css=o=>Object.entries(o||{}).map(([k,v])=>'--'+k+':'+v).join(';');
 const img=(src,cl)=>`<image href="${String(src).replace(/"/g,'')}" ${cl}/>`;
 // v = {cavalo:{pele,pele2,crina,sela,casaco,casaco2,chapeu,cachecol}, arteCavalo, standCores:{s1,s2,s3}, arteStand}
 function cena(v){pronto();v=v||{};
-  const stand=v.arteStand?img(v.arteStand,'x="0" y="10" width="200" height="200"'):`<g transform="translate(10 20) scale(.8)" style="${css(v.standCores)}"><use href="#stand"/></g>`;
+  const stand=v.arteStand?img(v.arteStand,'x="0" y="10" width="200" height="200"'):`<g transform="translate(10 20) scale(.8)" style="${css(v.standCores||{s1:'#8e8e9a',s2:'#3a3a46',s3:'#e6e6f0'})}"><use href="#stand"/></g>`;
   const cav=v.arteCavalo?img(v.arteCavalo,'x="190" y="40" width="300" height="190"'):`<g transform="translate(250 56) scale(1.05)" style="${css(v.cavalo)}"><use href="#cavalo"/></g>`;
   return `<svg viewBox="0 0 520 250" role="img" aria-label="Seu cavaleiro e seu Stand" style="width:100%;max-width:520px;border:4px solid #2a1608;border-radius:6px;background:#f6c98a"><rect y="190" width="520" height="60" fill="#d9a766"/><rect y="190" width="520" height="60" fill="url(#pt)"/>${stand}${cav}</svg>`}
 window.Arte={cena};
