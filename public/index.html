@@ -83,28 +83,52 @@ function montarStand(j,d){
   else if(j.atualAcabou)s.append(el('small','','Você ficou 2 semanas seguidas com o Stand anterior, então precisa trocar.'));
   if(window.ajuda){const a=ajuda('ix_stand');a.style.marginTop='8px';s.append(a)}
 }
+function lerImagem(arq){return new Promise((ok,no)=>{if(!/^image\/(png|jpeg|webp|gif)$/.test(arq.type))return no(new Error('Use PNG, JPG, WEBP ou GIF.'));if(arq.size>3*1024*1024)return no(new Error('A imagem passa de 3 MB.'));const f=new FileReader();f.onload=()=>ok(f.result);f.onerror=()=>no(new Error('Não consegui ler o arquivo.'));f.readAsDataURL(arq)})}
+async function postArte(corpo){const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const x=await r.json().catch(()=>({}));return{r,x}}
+// Botão que abre o seletor de arquivo e envia a arte. extra = {tipo,id?}; pede confirmação extra quando o Stand já tem arte (professor).
+function botaoEnviar(rot,extra,aviso,opts){const o=opts||{};const b=el('button','btn'+(o.sec?' sec':''),rot);b.type='button';const f=el('input','');f.type='file';f.accept='image/png,image/jpeg,image/webp,image/gif';f.hidden=true;
+  b.addEventListener('click',()=>{if(o.confirmar&&!confirm(o.confirmar))return;f.click()});
+  f.addEventListener('change',async()=>{const a=f.files[0];if(!a)return;b.disabled=true;aviso('Enviando…');try{const dados=await lerImagem(a);const{r,x}=await postArte({acao:'arte_enviar',...extra,dados,substituir:!!o.confirmar});if(!r.ok)throw new Error(x.erro||'Não foi possível enviar.');aviso(x.pendente?'✅ Enviada! Agora é só aguardar o professor aprovar.':'✅ Arte salva.');await carregarArte()}catch(e){aviso(e.message);b.disabled=false}f.value=''});
+  const w=el('span','');w.append(b,f);return w}
+function miniatura(url,tam){const i=el('img','');i.src=url;i.alt='';i.style.cssText=`width:${tam||56}px;height:${tam||56}px;object-fit:contain;background:#f6c98a;border-radius:6px;border:2px solid #2a1608`;return i}
 function montarArte(j){
   if(!j||(!j.stand&&!j.dono)){delete BL.arte;return}
   let s=BL.arte;if(!s){s=el('section','card cronica');s.id='sec-arte';BL.arte=s}
   s.textContent='';s.style.cssText='border-left:6px solid #c0392b;padding:14px 18px;margin:12px 0';
   s.append(el('h3','','🎨 Seu visual na corrida'));
   const w=el('div','');w.innerHTML=window.Arte?Arte.cena(j.visual):'';s.append(w);
-  const pv=j.visual.provisoria||{};
-  s.append(el('p','sub',(pv.piloto||pv.stand?'Arte provisória: as cores foram sorteadas para você. ':'')+(pv.piloto&&pv.stand?'Seu cavaleiro e seu Stand ainda não têm arte final.':pv.piloto?'Seu cavaleiro e cavalo ainda não têm arte final.':pv.stand?'Seu Stand ainda não tem arte final.':'Você está com a arte final.')+' Quando a arte final é aprovada, ela sempre prevalece sobre a provisória.'));
-  s.append(el('small','','A arte de cada Stand é fixa: depois de definida, ela fica com o Stand, não importa quem o escolher.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';
-  if(j.dono){
-    const dt=el('details','');dt.append(el('summary','',`🛠️ Artes finais (${j.finais.stands} de Stands, ${j.finais.pilotos} de cavaleiros)`));
-    const aj=el('div','sub');aj.innerHTML='<b>Como usar:</b> 1) escolha o que vai definir; 2) escolha o Stand ou o aluno na lista; 3) cole o arquivo da arte (caminho como <code>/arte/stand-arco.gif</code> ou link https, em png, gif, webp ou svg); 4) clique em Definir.<br><b>Pode:</b> definir a arte de um Stand ou de um aluno; trocar a arte de um aluno quando quiser.<br><b>Não pode:</b> deixar campo vazio (o botão fica inativo). A arte de um Stand que já tem arte final fica bloqueada, e trocar pede uma confirmação extra.';dt.append(aj);
-    const tp=el('select','');tp.id='arte-tipo';for(const [v,t] of [['','1. O que definir?'],['stand','Arte de um Stand'],['piloto','Cavaleiro e cavalo de um aluno']]){const o=el('option','',t);o.value=v;tp.append(o)}
-    const id=el('select','');id.id='arte-id';id.disabled=true;const ar=el('input','');ar.id='arte-arq';ar.placeholder='3. Arquivo: /arte/arquivo.gif';ar.style.minWidth='220px';
-    const bt=el('button','btn','Definir arte final');bt.type='button';bt.disabled=true;const msg=el('small','','');
-    const ok=()=>{bt.disabled=!(tp.value&&id.value&&ar.value.trim())};
-    tp.addEventListener('change',()=>{id.textContent='';const lista=tp.value==='stand'?(j.standsBanco||[]):tp.value==='piloto'?(j.alunosBanco||[]):[];const o0=el('option','',tp.value==='stand'?'2. Escolha o Stand':tp.value==='piloto'?'2. Escolha o aluno':'2. (escolha antes o tipo)');o0.value='';id.append(o0);for(const x of lista){const o=el('option','',x.nome);o.value=x.id;id.append(o)}id.disabled=!tp.value;ok()});
-    id.addEventListener('change',ok);ar.addEventListener('input',ok);tp.dispatchEvent(new Event('change'));
-    bt.addEventListener('click',async()=>{bt.disabled=true;try{let corpo={acao:'arte_definir',tipo:tp.value,id:id.value,arquivo:ar.value.trim()};let r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});let x=await r.json();if(r.status===409&&confirm(x.erro+'\n\nSubstituir mesmo assim?')){corpo.substituir=true;r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});x=await r.json()}msg.textContent=r.ok?'✅ Arte definida.':(x.erro||'Erro.');if(r.ok)carregarArte()}catch{msg.textContent='Erro de conexão.'}ok()});
-    const lin=el('div','');lin.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center';lin.append(tp,id,ar,bt);dt.append(lin,msg);
-    if(j.finais.lista.length){const nomeDe=x=>{const l=(x.tipo==='stand'?j.standsBanco:j.alunosBanco)||[];const f=l.find(y=>y.id===x.id);return f?f.nome:x.id};const ul=el('ul','');for(const x of j.finais.lista)ul.append(el('li','',`${x.tipo==='stand'?'Stand':'Cavaleiro'} ${nomeDe(x)}: ${x.arquivo}`));dt.append(ul)}
-    s.append(dt)}
+  const pv=j.visual.provisoria||{};const msg=el('small','');msg.style.cssText='display:block;margin:6px 0;min-height:1em';
+  if(!j.dono){
+    s.append(el('p','sub',pv.piloto||pv.stand?'Esta é uma arte provisória, com cores sorteadas. Quando você criar a sua e o professor aprovar, ela passa a valer na corrida.':'Você está com a arte final. 🎉'));
+    const lin=el('div','');lin.style.cssText='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0';
+    const bloco=(tipo,titulo,pode,pend)=>{const c=el('div','');c.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap';if(pend)c.append(miniatura(pend.url,44),el('small','','⏳ '+titulo+': em análise, aguardando o professor'));
+      if(pode)c.append(botaoEnviar((pend?'Enviar outra: ':'📤 Enviar ')+titulo,{tipo},t=>{msg.textContent=t},{sec:!!pend}));return c};
+    if(j.enviar.piloto||j.pendente.piloto)lin.append(bloco('piloto','meu cavaleiro e cavalo',j.enviar.piloto,j.pendente.piloto));
+    if(j.stand&&(j.enviar.stand||j.pendente.stand))lin.append(bloco('stand','arte do meu Stand ('+j.stand.nome+')',j.enviar.stand,j.pendente.stand));
+    s.append(lin,msg);
+    const dc=el('details','');dc.append(el('summary','','Como fazer a minha arte'));dc.append(el('p','sub','Imagem PNG, WEBP ou GIF (GIF pode ser animado), até 3 MB. O ideal é fundo transparente e o personagem virado para a direita. Sem nomes nem logos de marcas reais. O professor aprova antes de valer. A arte de um Stand, depois de aprovada, fica fixa para sempre e vale para quem o escolher.'));s.append(dc);
+  }else{
+    s.append(msg);
+    const pend=j.pendentes||[];
+    const d1=el('details','');if(pend.length)d1.open=true;d1.append(el('summary','',`⏳ Artes aguardando aprovação (${pend.length})`));
+    if(!pend.length)d1.append(el('p','sub','Nenhuma por enquanto. Quando um aluno enviar a arte dele, ela aparece aqui.'));
+    for(const x of pend){const l=el('div','');l.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0';
+      const ap=el('button','btn','✅ Aprovar');ap.type='button';const re=el('button','btn sec','✖ Recusar');re.type='button';
+      const dec=async(aprovar,subst)=>{ap.disabled=re.disabled=true;const{r,x:y}=await postArte({acao:'arte_decidir',chave:x.chave,aprovar,substituir:subst});if(r.status===409&&aprovar&&!subst&&/bloqueado/.test(y.erro||'')&&confirm(y.erro+'\n\nSubstituir mesmo assim?'))return dec(true,true);if(!r.ok)msg.textContent=y.erro||'Erro.';await carregarArte()};
+      ap.addEventListener('click',()=>dec(true));re.addEventListener('click',()=>{if(confirm('Recusar esta arte? O aluno poderá enviar outra.'))dec(false)});
+      l.append(miniatura(x.url,72),el('span','',`${x.tipo==='stand'?'Stand':'Cavaleiro'} ${x.alvo}, enviada por ${x.por}`),ap,re);d1.append(l)}
+    s.append(d1);
+    const lista=(titulo,itens,tipo)=>{const dt=el('details','');const fin=itens.filter(x=>x.final).length;dt.append(el('summary','',`${titulo} (${fin} de ${itens.length} com arte final)`));
+      const bu=el('input','');bu.type='search';bu.placeholder='Buscar pelo nome';bu.style.cssText='margin:8px 0;max-width:260px';dt.append(bu);const corpo=el('div','');dt.append(corpo);
+      const desenhar=()=>{corpo.textContent='';const q=bu.value.trim().toLowerCase();for(const x of itens.filter(y=>!q||y.nome.toLowerCase().includes(q))){const l=el('div','');l.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid #fff2';
+        if(x.final)l.append(miniatura(x.final,40));else{const ph=el('span','','—');ph.style.cssText='width:40px;text-align:center;opacity:.5';l.append(ph)}
+        const nm=el('span','',x.nome);nm.style.flex='1 1 160px';l.append(nm,el('span','badge',x.final?(tipo==='stand'?'🔒 arte final':'arte final'):'provisória'));
+        if(x.final&&tipo==='stand')l.append(botaoEnviar('Trocar arte',{tipo,id:x.id},t=>{msg.textContent=t},{sec:true,confirmar:'A arte de um Stand é fixa. Trocar a arte final de "'+x.nome+'"? Isso muda para todos que o escolherem.'}));
+        else l.append(botaoEnviar(x.final?'Trocar arte':'📤 Enviar arte',{tipo,id:x.id},t=>{msg.textContent=t},{sec:!!x.final}));
+        corpo.append(l)}};
+      bu.addEventListener('input',desenhar);desenhar();return dt};
+    s.append(lista('🎭 Stands',j.standsBanco||[],'stand'),lista('🏇 Cavaleiros (alunos)',j.alunosBanco||[],'piloto'));
+  }
   if(window.ajuda){const a=ajuda('ix_arte');a.style.marginTop='8px';s.append(a)}
 }
 async function carregarArte(){try{const r=await fetch('/api/presenca?acao=arte');if(!r.ok)return;montarArte(await r.json());organizar()}catch{}}
