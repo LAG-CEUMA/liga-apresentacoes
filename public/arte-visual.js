@@ -115,5 +115,10 @@ function cena(v){pronto();v=v||{};
   const stand=v.arteStand?img(v.arteStand,'x="0" y="10" width="200" height="200"'):`<g transform="translate(10 20) scale(.8)" style="${css(v.standCores||{s1:'#8e8e9a',s2:'#3a3a46',s3:'#e6e6f0'})}"><use href="#stand"/></g>`;
   const cav=v.arteCavalo?img(v.arteCavalo,'x="190" y="40" width="300" height="190"'):`<g transform="translate(250 56) scale(1.05)" style="${css(v.cavalo)}"><use href="#cavalo"/></g>`;
   return `<svg viewBox="0 0 520 250" role="img" aria-label="Seu cavaleiro e seu Stand" style="width:100%;max-width:520px;border:4px solid #2a1608;border-radius:6px;background:#f6c98a"><rect y="190" width="520" height="60" fill="#d9a766"/><rect y="190" width="520" height="60" fill="url(#pt)"/>${stand}${cav}</svg>`}
-window.Arte={cena};
+// Peças separadas para montar cenas animadas: o Stand (viewBox 0 0 200 220) e o cavaleiro com cavalo (viewBox 190 30 300 210).
+function pecas(v){pronto();v=v||{};
+  const stand=v.arteStand?img(v.arteStand,'x="0" y="10" width="200" height="200"'):`<g transform="translate(10 20) scale(.8)" style="${css(v.standCores||{s1:'#8e8e9a',s2:'#3a3a46',s3:'#e6e6f0'})}"><use href="#stand"/></g>`;
+  const cav=v.arteCavalo?img(v.arteCavalo,'x="190" y="40" width="300" height="190"'):`<g transform="translate(250 56) scale(1.05)" style="${css(v.cavalo)}"><use href="#cavalo"/></g>`;
+  return {stand:`<svg viewBox="0 0 200 220" aria-hidden="true" style="overflow:visible;width:100%;height:100%">${stand}</svg>`,cavalo:`<svg viewBox="190 30 300 210" aria-hidden="true" style="overflow:visible;width:100%;height:100%">${cav}</svg>`}}
+window.Arte={cena,pecas};
 })();
