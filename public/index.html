@@ -6,7 +6,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
-<script src="/novidade.js"></script><script src="/corrida.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
+<script src="/novidade.js"></script><script src="/corrida.js"></script><script src="/arte-visual.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
@@ -14,9 +14,9 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
-const BL={},PAD=['boasVindas','cronica','stand','anuncios','agenda','vitrine','rankings'];let ORD={};
+const BL={},PAD=['boasVindas','cronica','stand','arte','anuncios','agenda','vitrine','rankings'];let ORD={};
 function porPeso(arr,fn,cls){const f=document.createDocumentFragment(),a=arr.slice().sort((x,y)=>(x.peso||0)-(y.peso||0));let i=0;while(i<a.length){let j=i;while(j<a.length&&a[j].peso===a[i].peso)j++;const r=el('div','cols c'+Math.min(j-i,3)+(cls?' '+cls:''));for(let k=i;k<j;k++)r.append(fn(a[k]));f.append(r);i=j}return f}
-function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||(k==='cronica'?2:k==='stand'?3:99),ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
+function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||(k==='cronica'?2:k==='stand'?3:k==='arte'?4:99),ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
   while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
 
 let CRON_TIMER=null,CRON_TURMA='';
@@ -80,6 +80,29 @@ function montarStand(j,d){
   else if(j.atualAcabou)s.append(el('small','','Você ficou 2 semanas seguidas com o Stand anterior, então precisa trocar.'));
   if(window.ajuda){const a=ajuda('ix_stand');a.style.marginTop='8px';s.append(a)}
 }
+function montarArte(j){
+  if(!j||(!j.stand&&!j.dono)){delete BL.arte;return}
+  let s=BL.arte;if(!s){s=el('section','card cronica');s.id='sec-arte';BL.arte=s}
+  s.textContent='';s.style.cssText='border-left:6px solid #c0392b;padding:14px 18px;margin:12px 0';
+  s.append(el('h3','','🎨 Seu visual na corrida'));
+  const w=el('div','');w.innerHTML=window.Arte?Arte.cena(j.visual):'';s.append(w);
+  const pv=j.visual.provisoria||{};
+  s.append(el('p','sub',(pv.piloto||pv.stand?'Arte provisória: as cores foram sorteadas para você. ':'')+(pv.piloto&&pv.stand?'Seu cavaleiro e seu Stand ainda não têm arte final.':pv.piloto?'Seu cavaleiro e cavalo ainda não têm arte final.':pv.stand?'Seu Stand ainda não tem arte final.':'Você está com a arte final.')+' Quando a arte final é aprovada, ela sempre prevalece sobre a provisória.'));
+  s.append(el('small','','A arte de cada Stand é fixa: depois de definida, ela fica com o Stand, não importa quem o escolher.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';
+  if(j.dono){
+    const dt=el('details','');dt.append(el('summary','',`🛠️ Artes finais (${j.finais.stands} de Stands, ${j.finais.pilotos} de pilotos)`));
+    dt.append(el('p','sub','Informe o arquivo da arte final (caminho como /arte/stand-arco.gif ou link https, em png, gif, webp ou svg). A arte de um Stand já definido fica bloqueada: trocar exige confirmar.'));
+    const tp=el('select','');for(const [v,t] of [['stand','Stand'],['piloto','Cavaleiro/cavalo de um piloto']]){const o=el('option','',t);o.value=v;tp.append(o)}
+    const id=el('input','');id.placeholder='id do Stand ou usuário do piloto';id.setAttribute('list','arte-ids');const dl=el('datalist','');dl.id='arte-ids';for(const x of j.standsBanco||[]){const o=el('option','',x.nome);o.value=x.id;dl.append(o)}
+    const ar=el('input','');ar.placeholder='/arte/arquivo.gif';const bt=el('button','btn','Definir arte final');bt.type='button';
+    const msg=el('small','','');
+    bt.addEventListener('click',async()=>{bt.disabled=true;try{let corpo={acao:'arte_definir',tipo:tp.value,id:id.value,arquivo:ar.value};let r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});let x=await r.json();if(r.status===409&&confirm(x.erro+'\n\nSubstituir mesmo assim?')){corpo.substituir=true;r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});x=await r.json()}msg.textContent=r.ok?'✅ Arte definida.':(x.erro||'Erro.');if(r.ok)carregarArte()}catch{msg.textContent='Erro de conexão.'}bt.disabled=false});
+    const lin=el('div','');lin.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';lin.append(tp,id,dl,ar,bt);dt.append(lin,msg);
+    if(j.finais.lista.length){const ul=el('ul','');for(const x of j.finais.lista)ul.append(el('li','',`${x.tipo==='stand'?'Stand':'Piloto'} ${x.id}: ${x.arquivo}`));dt.append(ul)}
+    s.append(dt)}
+  if(window.ajuda){const a=ajuda('ix_arte');a.style.marginTop='8px';s.append(a)}
+}
+async function carregarArte(){try{const r=await fetch('/api/presenca?acao=arte');if(!r.ok)return;montarArte(await r.json());organizar()}catch{}}
 async function carregarStand(d){try{const r=await fetch('/api/presenca?acao=stand');if(!r.ok)return;montarStand(await r.json(),d);organizar()}catch{}}
 async function carregarCronica(d){const r=await fetch('/api/presenca?acao=cronica'+(CRON_TURMA?'&turma='+encodeURIComponent(CRON_TURMA):''));if(!r.ok)return;const j=await r.json();if(j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}
 document.addEventListener('visibilitychange',()=>{});
@@ -121,7 +144,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
 
   // crônica da corrida (narrador): só para quem está logado e tem Copa ativa
-  if(d.usuario){carregarStand(d);setInterval(()=>{if(!document.hidden&&BL.cronica)carregarCronica(d)},180000);fetch('/api/presenca?acao=cronica').then(r=>r.ok?r.json():null).then(j=>{if(!j||j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}).catch(()=>{})}
+  if(d.usuario){carregarStand(d);carregarArte();setInterval(()=>{if(!document.hidden&&BL.cronica)carregarCronica(d)},180000);fetch('/api/presenca?acao=cronica').then(r=>r.ok?r.json():null).then(j=>{if(!j||j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}).catch(()=>{})}
   organizar();
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
   const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);if(d.usuario)conta.append(ajuda('ix_menu'));

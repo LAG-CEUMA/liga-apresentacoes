@@ -54,6 +54,7 @@ module.exports = async (req, res) => {
         lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
         return u.json(res, 200, { usuario, sessoes: lista, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
+      if (q.acao === 'arte') return require('../lib/arte').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (q.acao === 'stand') return require('../lib/stands').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (q.acao === 'cronica') return require('../lib/cronica').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (q.acao === 'copa') return require('../lib/copaapi').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
@@ -149,6 +150,7 @@ module.exports = async (req, res) => {
       try { const c = await require('../lib/pendentes').salvarPerfil(usuario, b); return u.json(res, 200, { ok: true, email: c.email || '', emailPessoal: c.emailPessoal || '', curso: c.curso || '', cpf: c.cpf || '' }); }
       catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
+      if (b.acao === 'arte_definir') return require('../lib/arte').definir(res, b, { dono: u.papel(cfg, usuario) === 'owner', usuario });
       if (b.acao === 'stand_escolher') return require('../lib/stands').escolher(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (b.acao === 'cronica_liberar') return require('../lib/cronica').liberar(res, b, { dono: u.papel(cfg, usuario) === 'owner' });
       if (b.acao === 'cronica_disparar') return require('../lib/cronica').disparar(res, b, { cfg, dono: u.papel(cfg, usuario) === 'owner', turmaOk: turmaMon });

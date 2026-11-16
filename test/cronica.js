@@ -53,3 +53,9 @@ console.log('Stands: todos os testes passaram.');
   assert.strictEqual(orc.duelo('c', 'd', ms).aj, 1); assert.strictEqual(orc.duelo('d', 'c', ms).aj, -1); assert.strictEqual(orc.duelo('c', 'c', ms).aj, 0);
   console.log('Golpes/duelo: ok');
 }
+{
+  const A = require('../lib/arte'); const a1 = A.provisoriaPiloto('ana'), a2 = A.provisoriaPiloto('ana');
+  assert.deepStrictEqual(a1, a2); assert.ok(A.provisoriaStand('punho').s1);
+  assert.ok(A.ARQUIVO_RE.test('/arte/stand-arco.gif') && !A.ARQUIVO_RE.test('javascript:alert(1)') && !A.ARQUIVO_RE.test('http://x.com/a.png'));
+  console.log('Arte: ok');
+}
