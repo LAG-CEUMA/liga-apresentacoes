@@ -154,3 +154,15 @@ input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;bo
 .tr-linha{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:12px 16px;border:1px solid #fff2;border-radius:12px;background:#ffffff08}
 .tr-nome{font-weight:700;font-size:17px}
 .tr-acoes{display:flex;align-items:center;gap:8px}
+
+/* Botões secundários e abas: fundo claro + borda firme + sombra, para parecerem clicáveis no fundo escuro */
+.btn.sec,.tabs button:not(.on),#abas button.sec{background:#2b3250;color:var(--txt);border:1px solid #6f7aa8;box-shadow:0 2px 0 #0007;transition:background .12s,border-color .12s,transform .08s}
+.btn.sec:hover:not(:disabled),.tabs button:not(.on):hover,#abas button.sec:hover{background:#3a4468;border-color:#9aa6d6}
+.btn.sec:active:not(:disabled),.tabs button:not(.on):active{transform:translateY(1px);box-shadow:none}
+.btn:focus-visible,.tabs button:focus-visible,.menu-ativ>summary:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.btn:not(.sec):hover:not(:disabled){filter:brightness(1.08)}
+.menu-ativ>summary{background:#2b3250;border-color:#6f7aa8;box-shadow:0 2px 0 #0007}
+.menu-ativ>summary:hover,.menu-ativ[open]>summary{background:#3a4468}
+.menu-itens .btn.sec{background:transparent;border:0;box-shadow:none}
+.menu-itens .btn.sec:hover:not(:disabled){background:#fff2}
+.btn:disabled,.btn[disabled]{box-shadow:none}
