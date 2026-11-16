@@ -32,7 +32,7 @@ function montarCronica(j,d){
   ab('🌍 Geral','geral','O mundo todo: a história e os acontecimentos que atingem todos os pilotos');
   for(const c of (j.copas||[])){const so=c.modo!=='participa';ab((so?'🔒 ':'🏁 ')+c.nome,c.turma,so?'Só donos veem esta Copa (modo: '+({owners:'só owners',fora:'fora do jogo'}[c.modo]||c.modo)+')':'Os fatos da sua trilha')}
   if((j.copas||[]).length||j.vista==='geral')s.append(abas);
-  if(j.narradores){const lg=el('small','','🕯️ Silas, o Cronista (sério) e 🎙️ Tião Trovão (cômico) narram a corrida.');lg.style.cssText='display:block;opacity:.8;margin:4px 0';s.append(lg)}
+  if(j.narradores){const lg=el('small','','🕯️ Silas, o Cronista e 🎙️ Tião Trovão narram a corrida.');lg.style.cssText='display:block;opacity:.8;margin:4px 0';s.append(lg)}
   if(j.vista==='geral'&&j.historia&&j.historia.length){
     const H=j.historia,lib=H.filter(c=>c.liberado).sort((x,y)=>y.n-x.n),rasc=H.filter(c=>!c.liberado).sort((x,y)=>x.n-y.n),dono=!!j.catalogo;
     const cap=(c,dest)=>{const i=el('div');i.style.cssText='background:#f5b83d14;padding:10px 12px;border-radius:8px;margin:8px 0;border-left:3px solid '+(c.liberado?'#f5b83d':'#8a8f9c');
