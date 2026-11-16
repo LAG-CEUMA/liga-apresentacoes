@@ -312,7 +312,7 @@ function desenharTurmas(){
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
       (D.permissoes.includes('presenca')||D.dono||D.papel==='monitor')?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'},
-        h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'chamada')},'Chamada'),h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'corr')},'Atividades e correção'),h('button',{class:'btn',type:'button',onclick:abrirPresenca(id,'rank')},'Ranking'),h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')):h('div',{style:'margin-bottom:8px'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')),
+        h('button',{class:'btn',type:'button',title:'Resumo do dia: o que corrigir, o que liberar e o roteiro da aula',onclick:abrirPresenca(id,'hoje')},'Hoje'),h('button',{class:'btn sec',type:'button',onclick:abrirPresenca(id,'chamada')},'Chamada'),h('button',{class:'btn sec',type:'button',onclick:abrirPresenca(id,'corr')},'Atividades e correção'),h('button',{class:'btn sec',type:'button',onclick:abrirPresenca(id,'rank')},'Ranking'),h('button',{class:'btn sec',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')):h('div',{style:'margin-bottom:8px'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')),
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
@@ -621,14 +621,14 @@ function desenharInicio(){
     const ch=h('button',{type:'button',class:'btn sec',style:'padding:6px 14px;font-size:14px',onclick:()=>document.getElementById(idG).scrollIntoView({behavior:'smooth',block:'start'})},nome+' ('+(L.length+extra)+')');chips[idG]=ch;nav.append(ch);
     p.append(h('h3',{id:idG,style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;scroll-margin-top:60px'},nome));
     const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px'});
-    if(extra)for(const id of idsAnd){const t=D.turmas[id];const bt=(txt,fn,extraEl)=>h('button',{class:'btn',type:'button',style:'padding:8px 14px;font-size:14px',onclick:fn},txt,extraEl||'');
+    if(extra)for(const id of idsAnd){const t=D.turmas[id];const bt=(txt,fn,extraEl,sec)=>h('button',{class:sec?'btn sec':'btn',type:'button',style:'padding:8px 14px;font-size:14px',onclick:fn},txt,extraEl||'');
       g.append(h('div',{class:'cartao2',style:'grid-column:1/-1'},
         h('div',{style:'display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap'},h('h3',{style:'margin:0'},t.nome),h('span',{class:'sub'},(t.alunos||[]).length+' alunos · '+(t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'em andamento'))),
         h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'},
-          bt('Chamada',abrirPresenca(id,'chamada')),
-          bt('Atividades e correção',abrirPresenca(id,'corr'),h('span',{class:'bdg',id:'corr-'+id,style:'margin-left:8px;background:#ff5d5d;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px',hidden:!((window.CORR_POR||{})[id])},String((window.CORR_POR||{})[id]||''))),
-          bt('Ranking',abrirPresenca(id,'rank')),
-          ...(D.aulas?[bt('Aulas e materiais',()=>materiaisDaTurma(id))]:[]))))}
+          bt('Hoje',abrirPresenca(id,'hoje')),bt('Chamada',abrirPresenca(id,'chamada'),'',1),
+          bt('Atividades e correção',abrirPresenca(id,'corr'),h('span',{class:'bdg',id:'corr-'+id,style:'margin-left:8px;background:#ff5d5d;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px',hidden:!((window.CORR_POR||{})[id])},String((window.CORR_POR||{})[id]||'')),1),
+          bt('Ranking',abrirPresenca(id,'rank'),'',1),
+          ...(D.aulas?[bt('Aulas e materiais',()=>materiaisDaTurma(id),'',1)]:[]))))}
     for(const [,alvo,t,d,id,sk] of L){const sts=(ST[sk||id]||[]);const a=h('a',{class:'cartao2',href:alvo.startsWith('#')?alvo:alvo,style:'text-decoration:none;color:inherit;display:block;position:relative'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),sts.length?h('div',{class:'kv',style:'margin-top:10px'},...sts.map(([n,l],i)=>h('div',{},h('div',{class:'num',...((sk||id)==='corr'?{id:'stat-corr'}:{}),style:typeof n==='string'&&n.length>6?'font-size:18px':''},String(n)),h('div',{class:'sub'},l)))):'',h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →'));
       if(alvo.startsWith('#'))a.onclick=e=>{e.preventDefault();mostrar(alvo.slice(1))};else a.target='liga-presenca';
       if(alvo.startsWith('/presenca')){const and=Object.keys(D.turmas).filter(k=>D.turmas[k].status==='andamento');if(and.length===1)a.addEventListener('click',()=>{try{localStorage.setItem('liga_turma',and[0])}catch{}})}

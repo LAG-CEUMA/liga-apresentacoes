@@ -867,10 +867,10 @@ function desenhar(){const c=$('corpo');c.textContent='';cabecalho();c.append(sel
   if(r.status===401){$('corpo').innerHTML='<p>Entre com o GitHub para fazer a chamada.</p><a class="btn" href="/api/login?next=/presenca">Entrar com GitHub</a>';return}
   if(r.status===403){$('corpo').innerHTML='<p>Você não tem permissão para fazer chamadas. Peça a um owner a permissão <b>Presença</b> (equipe) ou a liberação da sua aula (monitor).</p>';return}
   CTX=await r.json();CTX.roster=ord(CTX.roster);if(!CTX.aulas.some(a=>a.chave===CHAVE))CHAVE=CTX.aulas.length===1?CTX.aulas[0].chave:'';DATA=CTX.hoje;{const ids=Object.keys(CTX.turmas||{});if(ids.length&&!ids.includes(TURMA))TURMA=ids.find(t=>CTX.turmas[t].status==='andamento')||ids[0]}
-  {const hs=location.hash.slice(1);if(['chamada','part','ativ','corr','acomp','rank','hist'].includes(hs))ABA=hs}
+  {const hs=location.hash.slice(1);if(['hoje','chamada','part','ativ','corr','acomp','rank','hist'].includes(hs))ABA=hs}
   // aba reaproveitada pelo Painel (Aulas e materiais): atualiza turma, aula e aba sem recarregar
   addEventListener('storage',e=>{if(e.key==='liga_turma'||e.key==='liga_aula'){TURMA=ls.get('liga_turma',TURMA);CHAVE=ls.get('liga_aula',CHAVE);N=1;carregarSessao().then(desenhar)}});
-  addEventListener('hashchange',()=>{const hs=location.hash.slice(1);if(['chamada','part','ativ','corr','acomp','rank','hist'].includes(hs)){ABA=hs;desenhar()}});
+  addEventListener('hashchange',()=>{const hs=location.hash.slice(1);if(['hoje','chamada','part','ativ','corr','acomp','rank','hist'].includes(hs)){ABA=hs;desenhar()}});
   await carregarSessao();desenhar();if(CTX&&CTX.dono&&window.ligaCota)ligaCota($('cota-host'));checaCorr(true);setInterval(()=>{if(!document.hidden)checaCorr(false)},300000)})().catch(()=>{$('corpo').textContent='Não consegui carregar. Recarregue a página.'});
 </script><script src="/como.js"></script>
 <script src="/voltar.js"></script></body></html>
