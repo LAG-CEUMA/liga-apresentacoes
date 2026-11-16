@@ -311,8 +311,7 @@ function desenharTurmas(){
       h('div',{class:'sub'},id!==t.nome?`código ${id} · `:'',t.inicio?'início em '+t.inicio.split('-').reverse().join('/'):'sem data de início',t.fim?' · fim previsto '+t.fim.split('-').reverse().join('/'):''),
       h('div',{style:'margin:4px 0 8px'},h('span',{class:'pill m'},nomeNivel(t.nivel)),t.status==='arquivada'?h('span',{class:'pill t'},t.acessoApos?'material até '+(t.acessoAte||'').split('-').reverse().join('/'):'sem acesso após arquivar'):''),
       h('div',{class:'kv'},h('div',{},h('div',{class:'num'},String(t.alunos.length)),h('div',{class:'sub'},'alunos')),h('div',{},h('div',{class:'num'},String(mons)),h('div',{class:'sub'},'monitores'))),
-      (D.permissoes.includes('presenca')||D.dono||D.papel==='monitor')?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'},
-        h('button',{class:'btn',type:'button',title:'Resumo do dia: o que corrigir, o que liberar e o roteiro da aula',onclick:abrirPresenca(id,'hoje')},'Hoje'),h('button',{class:'btn sec',type:'button',onclick:abrirPresenca(id,'chamada')},'Chamada'),h('button',{class:'btn sec',type:'button',onclick:abrirPresenca(id,'corr')},'Atividades e correção'),h('button',{class:'btn sec',type:'button',onclick:abrirPresenca(id,'rank')},'Ranking'),h('button',{class:'btn sec',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')):h('div',{style:'margin-bottom:8px'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')),
+      (D.permissoes.includes('presenca')||D.dono||D.papel==='monitor')?h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'},h('button',{class:'btn',type:'button',title:'Chamada, atividades, correção e ranking desta turma',onclick:abrirPresenca(id,'hoje')},'Abrir o dia a dia'),h('button',{class:'btn sec',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')):h('div',{style:'margin-bottom:8px'},h('button',{class:'btn',type:'button',onclick:()=>materiaisDaTurma(id)},'Aulas e materiais')),
       h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;align-items:center'},h('button',{class:'btn sec',type:'button',onclick:()=>{TURMA_F=id;FILTRO='todos';BUSCA='';mostrar('pessoas')}},'Ver alunos'),D.dono?h('button',{class:'btn sec',type:'button',onclick:()=>reposDaTurma(id,t.nome)},'Repositórios dos alunos'):'',
         t.status==='planejada'?h('button',{class:'btn',type:'button',onclick:()=>trocar('andamento')},'Abrir a turma'):'',
         t.status==='andamento'?h('button',{class:'btn sec',type:'button',onclick:()=>trocar('arquivada')},'Arquivar'):'',
@@ -589,7 +588,8 @@ function desenharInicio(){
     corr:[['…','a corrigir']]
   };
   const G=[
-    ['Turmas (dia a dia)',[
+    ['Turmas',[
+      [tem('presenca')||D.papel==='monitor','/presenca#hoje','Dia a dia da turma','Hoje, chamada, atividades, correção e ranking. Você escolhe a turma lá dentro.','diaadia','corr'],
       [temAlgum(...VER_TURMAS),'#turmas','Trilhas e turmas','Criar trilhas (dia, horário, níveis), turmas, alunos, repositórios, promover e arquivar.','turmas'],
     ]],
     ['Conteúdo',[
@@ -615,8 +615,8 @@ function desenharInicio(){
   const nav=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px;position:sticky;top:0;z-index:5;padding:8px 0;background:var(--bg)'});const chips={};
   p.append(nav);
   const podePres=tem('presenca')||D.papel==='monitor';
-  const idsAnd=podePres?Object.keys(D.turmas||{}).filter(k=>D.turmas[k].status==='andamento'):[];
-  for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);const extra=nome==='Turmas (dia a dia)'?idsAnd.length:0;if(!L.length&&!extra)continue;
+  const idsAnd=[];
+  for(const [nome,itens] of G){const L=itens.filter(x=>x[0]);const extra=0;if(!L.length&&!extra)continue;
     const idG='grp-'+nome.replace(/\s+/g,'-');
     const ch=h('button',{type:'button',class:'btn sec',style:'padding:6px 14px;font-size:14px',onclick:()=>document.getElementById(idG).scrollIntoView({behavior:'smooth',block:'start'})},nome+' ('+(L.length+extra)+')');chips[idG]=ch;nav.append(ch);
     p.append(h('h3',{id:idG,style:'margin:20px 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;scroll-margin-top:60px'},nome));
@@ -648,7 +648,7 @@ function desenharFerramentas(){
 function mostrar(k){
   const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
   // Menu enxuto: o Início é o centro; dentro de uma área só aparecem "← Início" e as áreas irmãs do mesmo grupo.
-  const GRUPO={turmas:'Turmas (dia a dia)',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
+  const GRUPO={turmas:'Turmas',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
   const A=$('abas');A.textContent='';
   if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',onclick:()=>mostrar('inicio')},'← Início'));
     const gr=GRUPO[k],irm=disp.filter(x=>GRUPO[x[0]]===gr);
