@@ -120,13 +120,16 @@ function montarArte(j){
   const w=el('div','');w.innerHTML=window.Arte?Arte.cena(j.visual):'';s.append(w);
   const pv=j.visual.provisoria||{};const msg=el('small','');msg.style.cssText='display:block;margin:6px 0;min-height:1em';
   const regras=()=>{const dc=el('details','');dc.append(el('summary','','📋 Regras para enviar a arte'));const ul=el('ul','');for(const r of j.regras||[])ul.append(el('li','',r));dc.append(ul);return dc};
+  const modelos=()=>{const dm=el('details','');dm.append(el('summary','','🎞️ Modelos de cada animação (para baixar)'));const g=el('div','');g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:8px 0';
+    for(const k of['parado','andando','ataque','defesa','dano','montado','cavalgando','cavalo_parado','cavalo_correndo']){const c=el('a','');c.href='/modelos/'+k+'.gif';c.download=k+'-modelo.gif';c.style.cssText='display:block;text-align:center;font-size:.85em;text-decoration:none';const i=el('img','');i.src='/modelos/'+k+'.gif';i.alt='';i.style.cssText='width:100%;background:#fff;border-radius:6px';c.append(i,el('span','',(ICONE_ITEM[k]||'')+' '+(k.replace('_',' '))+' ⬇'));g.append(c)}
+    dm.append(g);return dm};
   if(!j.dono){
     s.append(el('p','sub',pv.piloto||pv.stand?'Esta é uma arte provisória, com cores sorteadas. Crie a sua: cada item enviado é aprovado pelo professor e passa a valer na corrida. Você pode enviar um item de cada vez, conforme for terminando.':'Você já tem arte final. 🎉'));
-    s.append(regras(),msg);
+    s.append(regras(),modelos(),msg);
     if(j.stand){const d1=el('details','');d1.open=true;d1.append(el('summary','',`🎭 Meu Stand: ${j.stand.nome}`));for(const it of j.itens.stand)d1.append(linhaItem(it,{tipo:'stand'},t=>{msg.textContent=t},false,j.stand.nome));s.append(d1)}
     const d2=el('details','');d2.open=true;d2.append(el('summary','','🏇 Meu cavaleiro e cavalo'));for(const it of j.itens.piloto)d2.append(linhaItem(it,{tipo:'piloto'},t=>{msg.textContent=t},false,'você'));s.append(d2);
   }else{
-    s.append(regras(),msg);
+    s.append(regras(),modelos(),msg);
     const pend=j.pendentes||[];
     const d1=el('details','');if(pend.length)d1.open=true;d1.append(el('summary','',`⏳ Aguardando aprovação (${pend.length})`));
     if(!pend.length)d1.append(el('p','sub','Nenhuma por enquanto. Quando um aluno enviar algo, aparece aqui.'));
