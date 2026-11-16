@@ -14,10 +14,35 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
-const BL={},PAD=['boasVindas','anuncios','agenda','vitrine','rankings'];let ORD={};
+const BL={},PAD=['boasVindas','cronica','anuncios','agenda','vitrine','rankings'];let ORD={};
 function porPeso(arr,fn,cls){const f=document.createDocumentFragment(),a=arr.slice().sort((x,y)=>(x.peso||0)-(y.peso||0));let i=0;while(i<a.length){let j=i;while(j<a.length&&a[j].peso===a[i].peso)j++;const r=el('div','cols c'+Math.min(j-i,3)+(cls?' '+cls:''));for(let k=i;k<j;k++)r.append(fn(a[k]));f.append(r);i=j}return f}
-function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||99,ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
+function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||(k==='cronica'?2:99),ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
   while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
+
+let CRON_TIMER=null,CRON_TURMA='';
+function quando(iso){const d=new Date(iso),h=new Date(),mesmo=d.toDateString()===h.toDateString();const hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');return mesmo?'hoje '+hh:d.getDate()+'/'+(d.getMonth()+1)+' '+hh}
+function montarCronica(j,d){
+  let s=BL.cronica;if(!s){s=el('section','card cronica');s.id='sec-cronica';BL.cronica=s}
+  s.textContent='';s.style.cssText='border-left:6px solid var(--ouro,#f5b83d);padding:14px 18px;margin:12px 0';
+  const topo=el('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap';
+  const tt=el('h2','','📜 Crônica da corrida');tt.style.margin='0';
+  topo.append(tt,el('small','',j.jogo+' · '+(j.trecho||'')+(j.semana?' · etapa '+j.semana:'')));s.append(topo);
+  if(j.copas&&j.copas.length>1){const sel=el('select');for(const c of j.copas){const o=el('option','',c.nome);o.value=c.turma;sel.append(o)}sel.value=j.copa.turma;sel.style.margin='8px 0';sel.addEventListener('change',()=>{CRON_TURMA=sel.value;carregarCronica(d)});s.append(sel)}
+  const L=j.entradas||[];
+  if(!L.length)s.append(el('p','sub','A pista está silenciosa por enquanto. Assim que algo acontecer, o narrador conta aqui.'));
+  const item=e=>{const i=el('div');i.style.cssText='padding:8px 0;border-top:1px solid #fff2';const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';
+    b.append(el('b','',(e.ic||'')+' '+(e.nome||'')));if(e.tipo&&j.tipos&&j.tipos[e.tipo]){const g=el('span','badge',j.tipos[e.tipo]);b.append(g)}b.append(el('small','',quando(e.em)));i.append(b,el('p','',e.texto));i.lastChild.style.margin='4px 0 0';return i};
+  L.slice(0,3).forEach(e=>s.append(item(e)));
+  if(L.length>3){const dt=el('details');dt.style.marginTop='6px';const sm=el('summary','',`Ver mais (${L.length-3})`);sm.style.cursor='pointer';sm.style.fontWeight='700';dt.append(sm);L.slice(3).forEach(e=>dt.append(item(e)));lembrar(dt,'cron_mais',false);s.append(dt)}
+  if(j.catalogo){const barra=el('div');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px';
+    const sel=el('select');const o0=el('option','','Acontecimento sorteado');o0.value='';sel.append(o0);for(const e of j.catalogo){const o=el('option','',e.ic+' '+e.nome);o.value=e.id;sel.append(o)}
+    const b=el('button','btn sec','🎲 Disparar acontecimento');b.type='button';b.title='O narrador conta um acontecimento agora (no máximo 5 por dia). Por enquanto só tem história, sem efeito nos pontos.';
+    b.addEventListener('click',async()=>{b.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'cronica_disparar',turma:j.copa.turma,evento:sel.value})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');await carregarCronica(d)}finally{b.disabled=false}});
+    barra.append(sel,b);if(window.ajuda)barra.append(ajuda('ix_cronica'));s.append(barra)}
+  else if(window.ajuda){const a=ajuda('ix_cronica');a.style.marginTop='8px';s.append(a)}
+}
+async function carregarCronica(d){const r=await fetch('/api/presenca?acao=cronica'+(CRON_TURMA?'&turma='+encodeURIComponent(CRON_TURMA):''));if(!r.ok)return;const j=await r.json();if(j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}
+document.addEventListener('visibilitychange',()=>{});
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
   if(d.usuario){const ident=el('span','badge ident',`${d.usuario} · ${d.titulo||d.papel}`);document.querySelector('.topo').append(ident);const P=d.permissoes||[];
@@ -54,6 +79,9 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   const vt=site.vitrine||[];
   if(vt.length){const s=secao('Vitrine da liga',vt.length+(vt.length===1?' destaque':' destaques'));s.id='sec-vitrine';LigaNovo.aplicar(s,'vitrine',vt.map(v=>[v.titulo,v.url,v.imagem]),false);
     s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
+
+  // crônica da corrida (narrador): só para quem está logado e tem Copa ativa
+  if(d.usuario){setInterval(()=>{if(!document.hidden&&BL.cronica)carregarCronica(d)},180000);fetch('/api/presenca?acao=cronica').then(r=>r.ok?r.json():null).then(j=>{if(!j||j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}).catch(()=>{})}
   organizar();
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
   const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);if(d.usuario)conta.append(ajuda('ix_menu'));
