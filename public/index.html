@@ -36,15 +36,18 @@ function montarCronica(j,d){
   if(j.vista==='geral'&&j.historia&&j.historia.length){
     const H=j.historia,lib=H.filter(c=>c.liberado).sort((x,y)=>y.n-x.n),rasc=H.filter(c=>!c.liberado).sort((x,y)=>x.n-y.n),dono=!!j.catalogo;
     const cap=(c,dest)=>{const i=el('div');i.style.cssText='background:#f5b83d14;padding:10px 12px;border-radius:8px;margin:8px 0;border-left:3px solid '+(c.liberado?'#f5b83d':'#8a8f9c');
-      const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';b.append(el('b','','📖 '+c.nome),el('span','badge',c.liberado?'História':'📝 rascunho: só você vê'));if(c.liberado&&c.em)b.append(el('small','','liberado '+quando(c.em)));i.append(b);
+      if(dest){i.style.background='#f5b83d2e';i.style.borderLeftWidth='6px';i.style.boxShadow='0 0 0 1px #f5b83d66'}const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';b.append(el('b','','📖 '+c.nome),el('span','badge',c.liberado?(dest?'⭐ Último capítulo':'História'):'📝 rascunho: só você vê'));if(c.liberado&&c.em)b.append(el('small','','liberado '+quando(c.em)));i.append(b);
       const N=j.narradores||{},n=N.silas||{ic:'🕯️'};const l=el('p');l.style.cssText='margin:6px 0 0;color:#cfc6b4;font-style:italic';l.textContent=c.texto;i.append(l);
       if(dono){const bt=el('button','btn'+(c.liberado?' sec':''),c.liberado?'↩ Recolher (voltar a rascunho)':'📢 Liberar para os alunos');bt.type='button';bt.style.marginTop='8px';
         bt.title=c.liberado?'Só o último capítulo liberado pode ser recolhido':'Os alunos passam a ver este capítulo agora';
         bt.addEventListener('click',async()=>{if(!c.liberado&&!confirm('Liberar o capítulo '+c.n+' para todos os alunos agora?'))return;bt.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'cronica_liberar',n:c.n,liberar:!c.liberado})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');await carregarCronica(d)}finally{bt.disabled=false}});
         if(c.liberado&&c.n!==lib[0].n){bt.disabled=true}if(!c.liberado&&c.n!==rasc[0].n){bt.disabled=true}i.append(bt)}
       return i};
-    if(lib.length)s.append(cap(lib[0]));else if(!dono)s.append(el('p','sub','A história ainda não começou. Fique de olho.'));
-    if(lib.length>1){const dt=el('details');const sm=el('summary','',`Capítulos anteriores (${lib.length-1})`);sm.style.cssText='cursor:pointer;font-weight:700;margin:6px 0';dt.append(sm);lib.slice(1).forEach(c=>dt.append(cap(c)));lembrar(dt,'cron_caps',false);s.append(dt)}
+    // Ordem de lançamento (1, 2, 3...). Até o capítulo 5 todos ficam abertos em ordem; do 6 em diante os anteriores ficam recolhidos e o último liberado aparece em destaque, embaixo.
+    if(!lib.length){if(!dono)s.append(el('p','sub','A história ainda não começou. Fique de olho.'))}
+    else{const asc=lib.slice().reverse(),ult=lib[0];
+      if(ult.n<=5)asc.forEach(c=>s.append(cap(c,c===ult)));
+      else{const dt=el('details');const sm=el('summary','',`Capítulos anteriores (${asc.length-1})`);sm.style.cssText='cursor:pointer;font-weight:700;margin:6px 0';dt.append(sm);asc.slice(0,-1).forEach(c=>dt.append(cap(c)));lembrar(dt,'cron_caps',false);s.append(dt);s.append(cap(ult,true))}}
     if(dono&&rasc.length){const dt=el('details');const sm=el('summary','',`📝 Próximos capítulos, rascunho só seu (${rasc.length})`);sm.style.cssText='cursor:pointer;font-weight:700;margin:6px 0';dt.append(sm);rasc.forEach(c=>dt.append(cap(c)));lembrar(dt,'cron_rasc',false);s.append(dt)}
     const t2=el('h3','','Acontecimentos');t2.style.cssText='margin:14px 0 0;font-size:1rem';s.append(t2)}
   const L=j.entradas||[];
