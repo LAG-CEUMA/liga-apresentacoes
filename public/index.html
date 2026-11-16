@@ -29,7 +29,7 @@ function montarCronica(j,d){
   topo.append(tt,el('small','',j.cabecalho||j.jogo));s.append(topo);
   const abas=el('div');abas.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin:8px 0';
   const ab=(rot,id,tit)=>{const bt=el('button','btn'+((j.vista==='geral'?'geral':j.alvo)===id?'':' sec'),rot);bt.type='button';if(tit)bt.title=tit;bt.addEventListener('click',()=>{CRON_TURMA=id==='geral'?'':id;carregarCronica(d)});abas.append(bt)};
-  ab('🌍 Geral','geral','O mundo todo: a história e os acontecimentos que atingem todos os pilotos');
+  ab('🌍 Geral','geral','O mundo todo: a história e os acontecimentos que atingem todos os cavaleiros');
   for(const c of (j.copas||[])){const so=c.modo!=='participa';ab((so?'🔒 ':'🏁 ')+c.nome,c.turma,so?'Só donos veem esta Copa (modo: '+({owners:'só owners',fora:'fora do jogo'}[c.modo]||c.modo)+')':'Os fatos da sua trilha')}
   if((j.copas||[]).length||j.vista==='geral')s.append(abas);
   if(j.narradores){const lg=el('small','','🕯️ Silas, o Cronista e 🎙️ Tião Trovão narram a corrida.');lg.style.cssText='display:block;opacity:.8;margin:4px 0';s.append(lg)}
@@ -73,11 +73,11 @@ function montarStand(j,d){
   const card=(st,extra)=>{const c=el('div');c.style.cssText='background:#7c6cf018;border:1px solid #7c6cf055;border-radius:10px;padding:10px 12px;margin:8px 0';
     const t=el('div');t.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';t.append(el('b','',st.ic+' '+st.nome),el('span','badge',st.tipoNome),el('span','badge',st.estilo),el('span','badge',st.dif));c.append(t);
     c.append(el('p','','⚡ '+st.poder),el('p','','🩹 Fraqueza: '+st.fraqueza));c.lastChild.style.margin='2px 0 0';c.children[1].style.margin='6px 0 0';if(extra)c.append(extra);return c};
-  if(j.dono){const dt=el('details');const sm=el('summary','',`👤 Stands da semana ${j.semana}: ${j.escolheram} de ${j.total} pilotos escolheram (banco com ${j.banco}, ${j.furtivos} furtivos)`);sm.style.cssText='cursor:pointer;font-weight:700';dt.append(sm);
+  if(j.dono){const dt=el('details');const sm=el('summary','',`👤 Stands da semana ${j.semana}: ${j.escolheram} de ${j.total} cavaleiros escolheram (banco com ${j.banco}, ${j.furtivos} furtivos)`);sm.style.cssText='cursor:pointer;font-weight:700';dt.append(sm);
     for(const x of j.lista){const l=el('p','',x.nome+' ('+x.usuario+'): '+(x.stand?x.stand+(x.manteve?' (manteve)':''):'ainda não escolheu'));l.style.margin='3px 0';dt.append(l)}lembrar(dt,'stand_dono',false);s.append(dt);return}
   s.append(el('h2','','👤 Seu Stand · semana '+j.semana));s.lastChild.style.margin='0 0 4px';
   if(j.escolhido){const e=j.escolhido;s.append(card(e));s.append(el('small','',e.seguidas>=2?'Você está na 2ª semana com este Stand. Na próxima, será preciso trocar.':'Você pode manter este Stand por mais 1 semana, se quiser.'));s.append(el('small','','Por enquanto o Stand é identidade e história: ele não muda pontos.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';return}
-  s.append(el('p','sub','Escolha 1 entre 3 Stands sorteados para você'+(j.manter?', ou mantenha o atual.':'.')+' Vale a semana inteira. Seu Stand é um só em todas as trilhas, e nenhum outro piloto terá o mesmo nesta semana.'));
+  s.append(el('p','sub','Escolha 1 entre 3 Stands sorteados para você'+(j.manter?', ou mantenha o atual.':'.')+' Vale a semana inteira. Seu Stand é um só em todas as trilhas, e nenhum outro cavaleiro terá o mesmo nesta semana.'));
   for(const o of j.ofertas){const b=el('button','btn','Escolher '+o.nome);b.type='button';b.addEventListener('click',()=>{if(confirm('Escolher '+o.nome+' para esta semana?'))post(o.id,b)});s.append(card(o,b))}
   if(j.manter){const b=el('button','btn sec','Manter '+j.manter.nome+' (mais 1 semana)');b.type='button';b.addEventListener('click',()=>post('manter',b));s.append(card(j.manter,b))}
   else if(j.atualAcabou)s.append(el('small','','Você ficou 2 semanas seguidas com o Stand anterior, então precisa trocar.'));
@@ -93,15 +93,15 @@ function montarArte(j){
   s.append(el('p','sub',(pv.piloto||pv.stand?'Arte provisória: as cores foram sorteadas para você. ':'')+(pv.piloto&&pv.stand?'Seu cavaleiro e seu Stand ainda não têm arte final.':pv.piloto?'Seu cavaleiro e cavalo ainda não têm arte final.':pv.stand?'Seu Stand ainda não tem arte final.':'Você está com a arte final.')+' Quando a arte final é aprovada, ela sempre prevalece sobre a provisória.'));
   s.append(el('small','','A arte de cada Stand é fixa: depois de definida, ela fica com o Stand, não importa quem o escolher.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';
   if(j.dono){
-    const dt=el('details','');dt.append(el('summary','',`🛠️ Artes finais (${j.finais.stands} de Stands, ${j.finais.pilotos} de pilotos)`));
+    const dt=el('details','');dt.append(el('summary','',`🛠️ Artes finais (${j.finais.stands} de Stands, ${j.finais.pilotos} de cavaleiros)`));
     dt.append(el('p','sub','Informe o arquivo da arte final (caminho como /arte/stand-arco.gif ou link https, em png, gif, webp ou svg). A arte de um Stand já definido fica bloqueada: trocar exige confirmar.'));
-    const tp=el('select','');for(const [v,t] of [['stand','Stand'],['piloto','Cavaleiro/cavalo de um piloto']]){const o=el('option','',t);o.value=v;tp.append(o)}
-    const id=el('input','');id.placeholder='id do Stand ou usuário do piloto';id.setAttribute('list','arte-ids');const dl=el('datalist','');dl.id='arte-ids';for(const x of j.standsBanco||[]){const o=el('option','',x.nome);o.value=x.id;dl.append(o)}
+    const tp=el('select','');for(const [v,t] of [['stand','Stand'],['piloto','Cavaleiro/cavalo de um aluno']]){const o=el('option','',t);o.value=v;tp.append(o)}
+    const id=el('input','');id.placeholder='id do Stand ou usuário do aluno';id.setAttribute('list','arte-ids');const dl=el('datalist','');dl.id='arte-ids';for(const x of j.standsBanco||[]){const o=el('option','',x.nome);o.value=x.id;dl.append(o)}
     const ar=el('input','');ar.placeholder='/arte/arquivo.gif';const bt=el('button','btn','Definir arte final');bt.type='button';
     const msg=el('small','','');
     bt.addEventListener('click',async()=>{bt.disabled=true;try{let corpo={acao:'arte_definir',tipo:tp.value,id:id.value,arquivo:ar.value};let r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});let x=await r.json();if(r.status===409&&confirm(x.erro+'\n\nSubstituir mesmo assim?')){corpo.substituir=true;r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});x=await r.json()}msg.textContent=r.ok?'✅ Arte definida.':(x.erro||'Erro.');if(r.ok)carregarArte()}catch{msg.textContent='Erro de conexão.'}bt.disabled=false});
     const lin=el('div','');lin.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';lin.append(tp,id,dl,ar,bt);dt.append(lin,msg);
-    if(j.finais.lista.length){const ul=el('ul','');for(const x of j.finais.lista)ul.append(el('li','',`${x.tipo==='stand'?'Stand':'Piloto'} ${x.id}: ${x.arquivo}`));dt.append(ul)}
+    if(j.finais.lista.length){const ul=el('ul','');for(const x of j.finais.lista)ul.append(el('li','',`${x.tipo==='stand'?'Stand':'Cavaleiro'} ${x.id}: ${x.arquivo}`));dt.append(ul)}
     s.append(dt)}
   if(window.ajuda){const a=ajuda('ix_arte');a.style.marginTop='8px';s.append(a)}
 }
