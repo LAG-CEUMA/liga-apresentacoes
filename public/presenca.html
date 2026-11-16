@@ -46,7 +46,7 @@ table.acomp>thead>tr>th{position:sticky;top:0;z-index:4}table.acomp>thead>tr>th:
 </style>
 </head>
 <body data-pg="painel"><main>
-<div class="topo"><div><p class="tag" data-site="tag" id="tag-pg">TURMA</p><h1 id="tit-pg">Carregando…</h1></div><div class="acoes"><span id="cota-host"></span><a class="btn sec" href="/">&larr; Início</a></div></div>
+<div class="topo"><div><p class="tag" data-site="tag" id="tag-pg">TURMA</p><h1 id="tit-pg">Carregando…</h1></div><div class="acoes"><span id="cota-host"></span><a class="btn sec" href="/" onclick="event.preventDefault();voltar()">&larr; Voltar</a></div></div>
 <div id="intro"></div>
 <div id="corpo"><p>Carregando…</p></div>
 </main><div id="msg" class="msg" hidden></div>
@@ -132,14 +132,16 @@ function seletores(){
 const GRUPOS=[['hoje','Hoje',['hoje']],['chamada','Chamada',['chamada','part']],['atividades','Atividades',['ativ','corr']],['alunos','Alunos',['acomp','hist']],['rank','Ranking',['rank']]];
 const PODE_K={chamada:'chamada',part:'part',ativ:'ativ',corr:'corr',acomp:'hist',hist:'hist',rank:'rank'};
 const permiteAba=k=>!CTX||!CTX.pode||CTX.pode[PODE_K[k]]!==false;
+function irAba(k){if(location.hash.slice(1)===k){ABA=k;desenhar()}else location.hash=k} // cada aba entra no histórico: o Voltar do navegador volta à aba anterior
+function voltar(){if(history.length>1&&document.referrer&&new URL(document.referrer).origin===location.origin)history.back();else location.href='/'}
 function aba(){
   const G=GRUPOS.map(g=>[g[0],g[1],g[2].filter(permiteAba)]).filter(g=>g[2].length);
   if(!G.length)return h('p',{class:'sub'},'Seu cargo não inclui nenhuma função desta página.');
   if(!G.some(g=>g[2].includes(ABA))){ABA=G[0][2][0]}
   const gAtual=G.find(g=>g[2].includes(ABA))||G[0];
-  const topo=h('div',{class:'tabs'},...G.map(g=>h('button',{type:'button','data-aba':g[0],class:g===gAtual?'on':'',onclick:()=>{ABA=g[2][0];desenhar()}},g[1],g[0]==='atividades'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA));
+  const topo=h('div',{class:'tabs'},...G.map(g=>h('button',{type:'button','data-aba':g[0],class:g===gAtual?'on':'',onclick:()=>irAba(g[2][0])},g[1],g[0]==='atividades'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')),ajuda('aba_'+ABA));
   if(gAtual[2].length<2)return topo;
-  const sub=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px'},...gAtual[2].map(k=>h('button',{type:'button','data-aba':k,class:'btn '+(ABA===k?'':'sec'),style:'padding:6px 14px;font-size:14px',onclick:()=>{ABA=k;desenhar()}},TITA[k],k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')));
+  const sub=h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px'},...gAtual[2].map(k=>h('button',{type:'button','data-aba':k,class:'btn '+(ABA===k?'':'sec'),style:'padding:6px 14px;font-size:14px',onclick:()=>irAba(k)},TITA[k],k==='corr'&&BADGE>0?h('span',{class:'bdg'},String(BADGE)):'')));
   return h('div',{},topo,sub)}
 function telaChamada(){
   if(!CHAVE)return h('p',{},'Escolha uma aula para começar.');
@@ -288,7 +290,7 @@ async function telaHoje(alvo){
   alvo.append(h('p',{class:'sub'},'Carregando o resumo da turma…'));
   let A=null;try{const r=await fetch('/api/presenca?acao=atividades&turma='+encodeURIComponent(TURMA));if(r.ok){A=await r.json();A.roster=ord(A.roster)}}catch{}
   alvo.textContent='';
-  const ir=k=>()=>{ABA=k;desenhar()};
+  const ir=k=>()=>irAba(k);
   const cartao=(cor,tit,txt,bt)=>h('div',{class:'box',style:'padding:12px 14px;border-left:4px solid '+cor+';margin:10px 0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap'},h('div',{},h('b',{},tit),h('div',{class:'sub'},txt)),bt||'');
   const btn=(t,f,forte)=>h('button',{class:forte?'btn':'btn sec',type:'button',onclick:f},t);
   alvo.append(h('h2',{style:'margin:0 0 4px'},'Hoje na turma'),h('p',{class:'sub',style:'margin:0 0 8px'},'O que precisa de atenção e o roteiro da aula.'));
@@ -301,7 +303,7 @@ async function telaHoje(alvo){
     if(naoLib)alertas.append(h('p',{class:'sub',style:'margin:6px 0'},naoLib+' atividade(s) ainda não liberada(s). Libere quando a aula chegar nelas.'));
     const sv=h('div');alertas.append(sv);
     if(typeof SOU_PROF==='function'&&SOU_PROF()){sv.append(h('p',{class:'sub'},'🔍 Conferindo as Issues no GitHub…'));
-      postA({acao:'ativ_verificar'}).then(r=>{const prob=r.alunos.filter(a=>a.repo!=='ok'||a.problemas.length);sv.replaceChildren(prob.length?cartao('#f08a8a','Issues quebradas em '+prob.length+' aluno(s)','Links que dão 404 ou Issues que não existem.',btn('Ver e corrigir',()=>{ABA='ativ';desenhar()},true)):h('p',{class:'sub',style:'margin:6px 0'},'✅ Issues de '+r.verificados+' aluno(s) conferidas no GitHub.'))}).catch(()=>sv.replaceChildren())}
+      postA({acao:'ativ_verificar'}).then(r=>{const prob=r.alunos.filter(a=>a.repo!=='ok'||a.problemas.length);sv.replaceChildren(prob.length?cartao('#f08a8a','Issues quebradas em '+prob.length+' aluno(s)','Links que dão 404 ou Issues que não existem.',btn('Ver e corrigir',()=>irAba('ativ'),true)):h('p',{class:'sub',style:'margin:6px 0'},'✅ Issues de '+r.verificados+' aluno(s) conferidas no GitHub.'))}).catch(()=>sv.replaceChildren())}
     }
   const linha=(rot,f,dica)=>h('button',{class:'btn sec',type:'button',title:dica||'',style:'width:100%;text-align:left;margin:0',onclick:f},rot);
   const col=(n,t,...bs)=>h('div',{class:'box',style:'padding:14px;flex:1 1 220px;min-width:220px;display:flex;flex-direction:column;gap:8px'},h('div',{class:'sub',style:'font-size:12px;letter-spacing:.06em;text-transform:uppercase'},n),h('b',{style:'font-size:17px;margin-bottom:2px'},t),...bs);

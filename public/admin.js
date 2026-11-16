@@ -657,12 +657,12 @@ function desenharFerramentas(){
   const g=h('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px'});
   for(const [,url,t,d] of L)g.append(h('a',{class:'cartao2',href:url,style:'text-decoration:none;color:inherit;display:block'},h('b',{style:'font-size:17px'},t),h('div',{class:'sub',style:'margin-top:6px'},d),h('div',{style:'margin-top:10px;color:var(--ouro);font-weight:700'},'Abrir →')));
   if(!L.length)p.append(h('p',{class:'sub'},'Nenhuma ferramenta liberada ainda.'));p.append(g)}
-function mostrar(k){
-  const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{history.replaceState(null,'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
+function mostrar(k,semPush){
+  const disp=abasDisponiveis();if(!disp.some(x=>x[0]===k))k=disp[0][0];ABA=k;try{if(!semPush&&location.hash!=='#'+k)history.pushState({n:((history.state&&history.state.n)||0)+1},'','#'+k);localStorage.setItem('liga_admin_aba',k)}catch{}
   // Menu enxuto: o Início é o centro; dentro de uma área só aparecem "← Início" e as áreas irmãs do mesmo grupo.
   const GRUPO={turmas:'Turmas',pessoas:'Acesso',cargos:'Acesso',pontos:'Site',reservadas:'Site',aulas:'Conteúdo',imagens:'Conteúdo',wiki:'Conteúdo',guia:'Ajuda'};
   const A=$('abas');A.textContent='';
-  if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',onclick:()=>mostrar('inicio')},'← Início'));
+  if(k!=='inicio'){A.append(h('button',{type:'button',class:'sec',title:'Volta à tela anterior',onclick:()=>{if(history.state&&history.state.n>0)history.back();else mostrar('inicio')}},'← Voltar'));
     const gr=GRUPO[k],irm=disp.filter(x=>GRUPO[x[0]]===gr);
     if(gr&&irm.length>1)A.append(h('span',{class:'sub',style:'align-self:center;margin:0 4px 0 8px;text-transform:uppercase;letter-spacing:.06em;font-size:12px'},gr));
     if(irm.length>1)for(const [id,t] of irm)A.append(h('button',{type:'button',class:id===k?'on':'',onclick:()=>mostrar(id)},t));
@@ -670,6 +670,7 @@ function mostrar(k){
   A.append(ajuda('adm_'+k));
   for(const [id] of [['inicio'],['ferramentas'],['pessoas'],['cargos'],['turmas'],['pontos'],['reservadas'],['imagens'],['wiki'],['aulas'],['guia']])$('p-'+id).hidden=id!==k;
   if(k==='inicio')desenharInicio();else if(k==='ferramentas')desenharFerramentas();else if(k==='pessoas')desenharPessoas();else if(k==='cargos')desenharCargos();else if(k==='turmas')desenharTurmas();else if(k==='pontos')desenharPontos();else if(k==='reservadas')desenharReservadas();else if(k==='imagens')desenharImagens();else if(k==='wiki')desenharWiki();else if(k==='aulas')desenharAulas(D)}
+addEventListener('popstate',()=>{const k=location.hash.slice(1);if(k&&typeof D!=='undefined'&&D)mostrar(k,true)});
 async function carregar(){
   const r=await fetch('/api/admin');
   if(r.status===403){document.querySelector('main').innerHTML='<h1>Sem permissão</h1><p>Esta tela é para owners e para a equipe com permissão. Entre com a sua conta do GitHub ou peça acesso a um owner.</p><a class="btn" href="/api/login?next=/admin">Entrar com GitHub</a> <a class="btn sec" href="/">Início</a>';return}
