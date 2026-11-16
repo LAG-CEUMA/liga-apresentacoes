@@ -59,3 +59,17 @@ console.log('Stands: todos os testes passaram.');
   assert.ok(A.ARQUIVO_RE.test('/arte/stand-arco.gif') && !A.ARQUIVO_RE.test('javascript:alert(1)') && !A.ARQUIVO_RE.test('http://x.com/a.png'));
   console.log('Arte: ok');
 }
+
+// Arte: conferência do arquivo (parado x animado, tamanho)
+{
+  const A = require('../lib/arte'); const assert = require('assert');
+  const gif = (n, w = 64) => { const q = [Buffer.from('GIF89a'), Buffer.from([w & 255, w >> 8, w & 255, w >> 8, 0x80, 0, 0]), Buffer.from([0, 0, 0, 255, 255, 255])]; for (let i = 0; i < n; i++) q.push(Buffer.from([0x21, 0xf9, 4, 0, 10, 0, 0, 0, 0x2c, 0, 0, 0, 0, w & 255, w >> 8, w & 255, w >> 8, 0, 2, 2, 0x44, 1, 0])); q.push(Buffer.from([0x3b])); return Buffer.concat(q); };
+  assert(A.conferir('ataque', gif(1)).includes('parada'));
+  assert.strictEqual(A.conferir('ataque', gif(8)), '');
+  assert(A.conferir('ataque', gif(30)).includes('24'));
+  assert(A.conferir('arte', gif(8)).includes('parada'));
+  assert.strictEqual(A.conferir('arte', gif(1)), '');
+  assert(A.conferir('arte', gif(1, 600)).includes('512'));
+  assert(A.conferir('cavalo', Buffer.from('lixo')).includes('ler'));
+  console.log('Arte conferir: ok');
+}

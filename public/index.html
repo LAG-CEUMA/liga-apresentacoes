@@ -132,7 +132,7 @@ function montarArte(j){
     if(!pend.length)d1.append(el('p','sub','Nenhuma por enquanto. Quando um aluno enviar algo, aparece aqui.'));
     for(const x of pend){const l=el('div','');l.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0';
       const ap=el('button','btn','✅ Aprovar');ap.type='button';const re=el('button','btn sec','✖ Recusar');re.type='button';
-      const dec=async(aprovar)=>{ap.disabled=re.disabled=true;const{r,x:y}=await postArte({acao:'arte_decidir',chave:x.chave,aprovar});if(!r.ok)msg.textContent=y.erro||'Erro.';await carregarArte()};
+      const dec=async(aprovar)=>{ap.disabled=re.disabled=true;const{r,x:y}=await postArte({acao:'arte_decidir',chave:x.chave,aprovar});if(!r.ok){msg.textContent=y.erro||'Erro.';if(r.status!==409){ap.disabled=re.disabled=false;return}}else l.remove();await carregarArte()};
       ap.addEventListener('click',()=>dec(true));re.addEventListener('click',()=>{if(confirm('Recusar? O aluno poderá enviar de novo.'))dec(false)});
       if(x.texto){const b=el('b','',`"${x.valor}"`);l.append(b)}else l.append(miniatura(x.valor,72));
       l.append(el('span','',`${x.rotulo} · ${x.tipo==='stand'?'Stand':'Cavaleiro'} ${x.alvo} · enviado por ${x.por}`),ap,re);d1.append(l)}
