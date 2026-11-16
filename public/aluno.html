@@ -257,7 +257,7 @@ function vidaChefao(m){const w=el('div','');w.style.cssText='margin:8px 0';const
   w.append(el('b','',`👹 Chefão da semana · vida ${v}%`),barra,el('small','',v===0||m.cumprida?'Derrotado! A turma toda ganhou itens.':'Cada entrega no prazo da turma tira vida dele. Se todos entregarem no prazo, ele cai e todo mundo ganha 1 item.'));return w}
 // Prévia para professor/owner: eles ficam fora do ranking (não são alunos), então não jogam; aqui só enxergam o que o aluno vê.
 async function previa(C,qual){
-  C.append(el('p','sub','👀 Prévia do professor: você não está no ranking de nenhuma turma como aluno, então não joga nem tem kart. Aqui você vê o que os alunos veem. Para jogar de verdade, entre com uma conta de aluno de teste.'));
+  C.append(el('p','sub','👀 Prévia do professor: você não está no ranking de nenhuma turma como aluno, então não joga nem tem cavalo. Aqui você vê o que os alunos veem. Para jogar de verdade, entre com uma conta de aluno de teste.'));
   const sel=el('select','');for(const [k,t] of Object.entries(PREV.turmas)){const o=el('option','',t.nome+' ('+k+')');o.value=k;sel.append(o)}sel.value=PREVT;sel.onchange=()=>{PREVT=sel.value;desenhar()};
   const bar=el('div','');bar.style.cssText='margin:8px 0';bar.append(el('label','','Turma: '),sel);C.append(bar);
   const corpo=el('div','');C.append(corpo);corpo.append(el('p','sub','Carregando…'));
@@ -278,7 +278,7 @@ async function previa(C,qual){
   if(c.missao&&c.missao.vida!=null&&c.ativa)corpo.append(vidaChefao(c.missao));
   if(c.monitor)corpo.append(el('p','sub','Você entra como monitor: joga como Chefão com alvo sorteado, e só o dono vê o placar completo e configura a Copa.'));
   if(!c.ativa&&!c.monitor)corpo.append(el('p','','🔒 A Copa está desligada nesta turma. Para ligar: Presença › Ranking › 🏆 Copa (itens) › "Copa ativa nesta turma" › Salvar. Enquanto estiver desligada, os alunos veem esta aba como "ainda não foi aberta".'));
-  else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio kart',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
+  else corpo.append(el('p','sub',`Copa ativa · visibilidade: ${{oculta:'escondida dos alunos',propria:'cada aluno vê só o próprio cavalo',completa:'pista completa'}[c.visibilidade]||c.visibilidade} · semana ${c.semana||0}.`+(c.evento?` ${c.evento.ic} ${c.evento.nome}.`:'')));
   if(c.placar&&c.placar.length){const nomeP=k=>nome(k);const linhas=c.placar.map(x=>({usuario:x.usuario,pontos:x.copa,posicao:x.posCopa,icones:x.escudo?[{ic:'🛡️',tx:'escudo ativo'}]:[]}));
     const max=Math.max(100,...c.placar.map(x=>x.copa));corpo.append(Corrida.pista({linhas,max,inicio:c.inicio,fim:c.fim,nome:nomeP,titulo:'COPA DA LIGA'}));
     const tb=el('div','');for(const x of c.placar){const inv=(c.inventario[x.usuario]||[]).map(i=>(c.itens[i.tipo]||{}).ic||'').join(' ');tb.append(el('p','sub',`${x.posCopa}º ${nome(x.usuario)} · ${x.copa} pts na Copa (oficial ${x.oficial})${x.efeito?` · efeito ${x.efeito>0?'+':''}${x.efeito}`:''} · itens: ${inv||'–'}${x.escudo?' 🛡️':''}`))}corpo.append(tb)}
