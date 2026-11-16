@@ -291,24 +291,24 @@ async function telaHoje(alvo){
   const ir=k=>()=>{ABA=k;desenhar()};
   const cartao=(cor,tit,txt,bt)=>h('div',{class:'box',style:'padding:12px 14px;border-left:4px solid '+cor+';margin:10px 0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap'},h('div',{},h('b',{},tit),h('div',{class:'sub'},txt)),bt||'');
   const btn=(t,f,forte)=>h('button',{class:forte?'btn':'btn sec',type:'button',onclick:f},t);
-  alvo.append(h('h2',{style:'margin:0 0 4px'},'Hoje na turma'),h('p',{class:'sub'},'O que precisa da sua atenção agora e o roteiro da aula, na ordem.'));
+  alvo.append(h('h2',{style:'margin:0 0 4px'},'Hoje na turma'),h('p',{class:'sub',style:'margin:0 0 8px'},'O que precisa de atenção e o roteiro da aula.'));
   const alertas=h('div');alvo.append(alertas);
   if(A){
     const FA=a=>a.liberada?A.roster.filter(k=>(!a.alvo||!a.alvo.length||a.alvo.includes(k))&&!((a.disparos||{})[k]||{}).numero).length:0;
     const naoLib=A.atividades.filter(a=>!a.liberada).length,falta=A.atividades.filter(a=>FA(a)>0).length;
     if(BADGE>0)alertas.append(cartao('#f5b83d',BADGE+' entrega(s) para corrigir','Alunos já responderam nas Issues.',btn('Corrigir agora',ir('corr'),true)));
     if(falta)alertas.append(cartao('#f08a8a',falta+' atividade(s) liberada(s) com aluno sem Issue','Alguns alunos não receberam a Issue.',btn('Ver atividades',ir('ativ'))));
-    if(naoLib)alertas.append(cartao('#6aa6ff',naoLib+' atividade(s) ainda não liberada(s)','Libere quando a aula chegar nelas.',btn('Ver atividades',ir('ativ'))));
+    if(naoLib)alertas.append(h('p',{class:'sub',style:'margin:6px 0'},naoLib+' atividade(s) ainda não liberada(s). Libere quando a aula chegar nelas.'));
     const sv=h('div');alertas.append(sv);
     if(typeof SOU_PROF==='function'&&SOU_PROF()){sv.append(h('p',{class:'sub'},'🔍 Conferindo as Issues no GitHub…'));
-      postA({acao:'ativ_verificar'}).then(r=>{const prob=r.alunos.filter(a=>a.repo!=='ok'||a.problemas.length);sv.replaceChildren(prob.length?cartao('#f08a8a','Issues quebradas em '+prob.length+' aluno(s)','Links que dão 404 ou Issues que não existem.',btn('Ver e corrigir',()=>{ABA='ativ';desenhar()},true)):cartao('#5fd1b3','Issues em dia','As Issues de '+r.verificados+' aluno(s) existem no GitHub.'))}).catch(()=>sv.replaceChildren())}
-    if(!alertas.children.length)alertas.append(cartao('#5fd1b3','Nada pendente','Sem entregas para corrigir e Issues em dia.'))}
-  const passo=(t,f,rot)=>h('li',{style:'margin:6px 0'},t+' ',f?btn(rot,f):'');
-  const sec=(t,...li)=>h('div',{class:'box',style:'padding:12px 14px;margin:10px 0'},h('b',{},t),h('ol',{style:'line-height:1.5;margin:8px 0 0 18px'},...li));
-  alvo.append(sec('1 · Antes da aula',passo('Conferir os slides e o roteiro da aula.',()=>{location.href='/'},'Abrir aulas'),passo('Liberar as atividades da aula, se ainda não estiverem.',ir('ativ'),'Atividades')),
-    sec('2 · Durante a aula',passo('Fazer a chamada.',ir('chamada'),'Chamada'),passo('Registrar participações.',ir('part'),'Participações')),
-    sec('3 · Depois da aula',passo('Corrigir as respostas dos alunos.',ir('corr'),'Correção'),passo('Ver quem está atrasado.',ir('acomp'),'Acompanhamento')))}
-
+      postA({acao:'ativ_verificar'}).then(r=>{const prob=r.alunos.filter(a=>a.repo!=='ok'||a.problemas.length);sv.replaceChildren(prob.length?cartao('#f08a8a','Issues quebradas em '+prob.length+' aluno(s)','Links que dão 404 ou Issues que não existem.',btn('Ver e corrigir',()=>{ABA='ativ';desenhar()},true)):h('p',{class:'sub',style:'margin:6px 0'},'✅ Issues de '+r.verificados+' aluno(s) conferidas no GitHub.'))}).catch(()=>sv.replaceChildren())}
+    }
+  const linha=(rot,f,dica)=>h('button',{class:'btn sec',type:'button',title:dica||'',style:'width:100%;text-align:left;margin:0',onclick:f},rot);
+  const col=(n,t,...bs)=>h('div',{class:'box',style:'padding:14px;flex:1 1 220px;min-width:220px;display:flex;flex-direction:column;gap:8px'},h('div',{class:'sub',style:'font-size:12px;letter-spacing:.06em;text-transform:uppercase'},n),h('b',{style:'font-size:17px;margin-bottom:2px'},t),...bs);
+  alvo.append(h('div',{style:'display:flex;gap:12px;flex-wrap:wrap;margin-top:14px'},
+    col('Antes','Preparar a aula',linha('Slides e roteiro',()=>{location.href='/'},'Abrir as aulas'),linha('Liberar atividades',ir('ativ'),'Criar as Issues dos alunos')),
+    col('Durante','Em sala',linha('Fazer a chamada',ir('chamada')),linha('Registrar participações',ir('part'))),
+    col('Depois','Fechar a aula',linha('Corrigir respostas',ir('corr')),linha('Ver quem está atrasado',ir('acomp')))))}
 async function telaAtiv(alvo){ATV_ALVO=alvo;
   alvo.textContent='';alvo.append(h('p',{},'Carregando…'));
   const r=await fetch('/api/presenca?acao=atividades&turma='+encodeURIComponent(TURMA));
