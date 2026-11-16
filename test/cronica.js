@@ -26,3 +26,14 @@ assert.ok(!/pixel|compil|bug|null|rollback|loop|commit|deploy/i.test(K.EVENTOS.m
 const f2 = K.fatos(est, agora, 7, (k) => (k === 'vitima' ? 'Ana (vitima)' : k)); assert.ok(f2.some((x) => x.texto.includes('Ana (vitima)')));
 assert.equal(typeof K.liberar, 'function');
 console.log('Crônica: todos os testes passaram.');
+// Stands: banco, rodízio e exclusividade
+const S = require('../lib/stands');
+assert.ok(S.BANCO.length >= 60 && new Set(S.BANCO.map((s) => s.id)).size === S.BANCO.length);
+assert.ok(S.BANCO.every((s) => s.nome && s.poder && s.fraqueza && s.tags.length && s.tipoNome));
+const e0 = S.norm({ semanas: { 1: { ana: { stand: 'punho' }, bia: { stand: 'caval' } }, 2: { ana: { stand: 'punho' } } } });
+const v3 = S.visao(e0, 'p', 3, 'ana'); assert.equal(v3.manter, null); assert.equal(v3.atualAcabou, true); // 2 semanas seguidas: precisa trocar
+assert.ok(v3.ofertas.length === 3 && !v3.ofertas.some((o) => o.id === 'punho'));
+const v2 = S.visao(e0, 'p', 2, 'bia'); assert.ok(v2.manter && v2.manter.id === 'caval'); // pode manter na 2ª semana
+assert.ok(!S.visao(e0, 'p', 2, 'bia').ofertas.some((o) => o.id === 'punho')); // ocupado por outro nesta semana
+assert.deepEqual(S.visao(e0, 'p', 3, 'ana').ofertas.map((o) => o.id), S.visao(e0, 'p', 3, 'ana').ofertas.map((o) => o.id)); // sorteio estável
+console.log('Stands: todos os testes passaram.');

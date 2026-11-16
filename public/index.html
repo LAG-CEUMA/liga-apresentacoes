@@ -14,9 +14,9 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
-const BL={},PAD=['boasVindas','cronica','anuncios','agenda','vitrine','rankings'];let ORD={};
+const BL={},PAD=['boasVindas','cronica','stand','anuncios','agenda','vitrine','rankings'];let ORD={};
 function porPeso(arr,fn,cls){const f=document.createDocumentFragment(),a=arr.slice().sort((x,y)=>(x.peso||0)-(y.peso||0));let i=0;while(i<a.length){let j=i;while(j<a.length&&a[j].peso===a[i].peso)j++;const r=el('div','cols c'+Math.min(j-i,3)+(cls?' '+cls:''));for(let k=i;k<j;k++)r.append(fn(a[k]));f.append(r);i=j}return f}
-function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||(k==='cronica'?2:99),ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
+function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||(k==='cronica'?2:k==='stand'?3:99),ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
   while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
 
 let CRON_TIMER=null,CRON_TURMA='';
@@ -62,6 +62,25 @@ function montarCronica(j,d){
     barra.append(sel,b);if(window.ajuda)barra.append(ajuda('ix_cronica'));s.append(barra)}
   else if(window.ajuda){const a=ajuda('ix_cronica');a.style.marginTop='8px';s.append(a)}
 }
+function montarStand(j,d){
+  if(!j||j.semCopa){delete BL.stand;return}
+  let s=BL.stand;if(!s){s=el('section','card cronica');s.id='sec-stand';BL.stand=s}
+  s.textContent='';s.style.cssText='border-left:6px solid #7c6cf0;padding:14px 18px;margin:12px 0';
+  const post=async(id,bt)=>{bt.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'stand_escolher',turma:j.copa.turma,id})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');carregarStand(d)}finally{bt.disabled=false}};
+  const card=(st,extra)=>{const c=el('div');c.style.cssText='background:#7c6cf018;border:1px solid #7c6cf055;border-radius:10px;padding:10px 12px;margin:8px 0';
+    const t=el('div');t.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';t.append(el('b','',st.ic+' '+st.nome),el('span','badge',st.tipoNome),el('span','badge',st.estilo),el('span','badge',st.dif));c.append(t);
+    c.append(el('p','','⚡ '+st.poder),el('p','','🩹 Fraqueza: '+st.fraqueza));c.lastChild.style.margin='2px 0 0';c.children[1].style.margin='6px 0 0';if(extra)c.append(extra);return c};
+  if(j.dono){const dt=el('details');const sm=el('summary','',`👤 Stands da semana ${j.semana} · ${j.copa.nome}: ${j.escolheram} de ${j.total} escolheram (banco com ${j.banco})`);sm.style.cssText='cursor:pointer;font-weight:700';dt.append(sm);
+    for(const x of j.lista){const l=el('p','',x.nome+' ('+x.usuario+'): '+(x.stand?x.stand+(x.manteve?' (manteve)':''):'ainda não escolheu'));l.style.margin='3px 0';dt.append(l)}lembrar(dt,'stand_dono',false);s.append(dt);return}
+  s.append(el('h2','','👤 Seu Stand · semana '+j.semana));s.lastChild.style.margin='0 0 4px';
+  if(j.escolhido){const e=j.escolhido;s.append(card(e));s.append(el('small','',e.seguidas>=2?'Você está na 2ª semana com este Stand. Na próxima, será preciso trocar.':'Você pode manter este Stand por mais 1 semana, se quiser.'));s.append(el('small','','Por enquanto o Stand é identidade e história: ele não muda pontos.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';return}
+  s.append(el('p','sub','Escolha 1 entre 3 Stands sorteados para você'+(j.manter?', ou mantenha o atual.':'.')+' Vale a semana inteira. Nenhum outro piloto da trilha terá o mesmo Stand nesta semana.'));
+  for(const o of j.ofertas){const b=el('button','btn','Escolher '+o.nome);b.type='button';b.addEventListener('click',()=>{if(confirm('Escolher '+o.nome+' para esta semana?'))post(o.id,b)});s.append(card(o,b))}
+  if(j.manter){const b=el('button','btn sec','Manter '+j.manter.nome+' (mais 1 semana)');b.type='button';b.addEventListener('click',()=>post('manter',b));s.append(card(j.manter,b))}
+  else if(j.atualAcabou)s.append(el('small','','Você ficou 2 semanas seguidas com o Stand anterior, então precisa trocar.'));
+  if(window.ajuda){const a=ajuda('ix_stand');a.style.marginTop='8px';s.append(a)}
+}
+async function carregarStand(d){try{const r=await fetch('/api/presenca?acao=stand');if(!r.ok)return;montarStand(await r.json(),d);organizar()}catch{}}
 async function carregarCronica(d){const r=await fetch('/api/presenca?acao=cronica'+(CRON_TURMA?'&turma='+encodeURIComponent(CRON_TURMA):''));if(!r.ok)return;const j=await r.json();if(j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}
 document.addEventListener('visibilitychange',()=>{});
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
@@ -102,7 +121,7 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
     s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
 
   // crônica da corrida (narrador): só para quem está logado e tem Copa ativa
-  if(d.usuario){setInterval(()=>{if(!document.hidden&&BL.cronica)carregarCronica(d)},180000);fetch('/api/presenca?acao=cronica').then(r=>r.ok?r.json():null).then(j=>{if(!j||j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}).catch(()=>{})}
+  if(d.usuario){carregarStand(d);setInterval(()=>{if(!document.hidden&&BL.cronica)carregarCronica(d)},180000);fetch('/api/presenca?acao=cronica').then(r=>r.ok?r.json():null).then(j=>{if(!j||j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}).catch(()=>{})}
   organizar();
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
   const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);if(d.usuario)conta.append(ajuda('ix_menu'));
