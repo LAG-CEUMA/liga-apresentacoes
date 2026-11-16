@@ -81,3 +81,16 @@ console.log('Stands: todos os testes passaram.');
   assert.strictEqual(L.ELENCO.filter((x) => x.stand).length, 3);
   console.log('Laboratório: ok');
 }
+
+// Ataque exclusivo por Stand, assinatura por tipo e evolução
+{
+  const assert = require('assert'); const GP = require('../lib/golpes'); const SS = require('../lib/stands'); const C = require('../lib/copa');
+  const ataques = SS.BANCO.map((s) => GP.golpe(s, 'banana').nome); assert.strictEqual(new Set(ataques).size, 120, 'ataques exclusivos');
+  assert(SS.BANCO.every((s) => C.ASSINATURAS[s.tipo]), 'todo tipo tem assinatura'); assert.strictEqual(Object.keys(C.ASSINATURAS).length, 8);
+  const s = SS.BANCO[0]; assert.strictEqual(GP.golpe(s, 'casco').nome, GP.golpe(s, 'banana').nome);
+  assert.strictEqual(GP.golpe({ ...s, evoluido: true }, 'casco').nome, GP.G[s.id][1]); assert.notStrictEqual(GP.G[s.id][1], GP.G[s.id][0]);
+  const est = { semanas: { 1: { u: { stand: s.id, em: new Date().toISOString() } }, 2: { u: { stand: s.id, em: new Date().toISOString() } } } };
+  const base = Date.now() - 8 * 864e5; const o = SS.criarOraculo(est, base); assert.strictEqual(o.stand('u', Date.now()).evoluido, true);
+  assert.strictEqual(SS.criarOraculo({ semanas: { 2: est.semanas[2] } }, base).stand('u', Date.now()).evoluido, false);
+  console.log('Ataques/assinaturas/evolução: ok');
+}

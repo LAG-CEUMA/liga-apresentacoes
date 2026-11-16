@@ -152,6 +152,7 @@ module.exports = async (req, res) => {
       catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
       if (b.acao === 'lab_usar') return require('../lib/lab').usar(res, b, { dono: u.papel(cfg, usuario) === 'owner', usuario });
+      if (b.acao === 'lab_stand') return require('../lib/lab').trocarStand(res, b, { dono: u.papel(cfg, usuario) === 'owner', usuario });
       if (b.acao === 'lab_zerar') return require('../lib/lab').zerar(res, { dono: u.papel(cfg, usuario) === 'owner', usuario });
       if (b.acao === 'arte_enviar') return require('../lib/arte').enviar(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (b.acao === 'arte_reabrir') return require('../lib/arte').reabrir(res, b, { dono: u.papel(cfg, usuario) === 'owner' });

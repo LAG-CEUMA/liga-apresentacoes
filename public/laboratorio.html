@@ -49,7 +49,8 @@
  <div class="resultado" id="res"><div class="dado" id="dado">?</div><div id="txt"><b>Monte um duelo</b><p style="margin:4px 0 0">Escolha quem age, o item e o alvo. Depois clique em Duelo.</p></div></div>
  <div class="lab-passos">
   <div><h3>1 · Quem age?</h3><div class="fichas" id="f-de"></div></div>
-  <div><h3>2 · Qual item?</h3><div class="fichas" id="f-item"></div></div>
+  <div id="f-stand" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+  <div><h3>2 · Qual item ou ataque?</h3><div class="fichas" id="f-item"></div></div>
   <div id="p-alvo"><h3>3 · Em quem?</h3><div class="fichas" id="f-alvo"></div></div>
   <div class="acao"><button class="btn btn-duelo" id="go" disabled>⚔️ Duelo!</button><span id="dica" class="sel"></span></div>
  </div>
@@ -80,7 +81,12 @@ function palco(){const p=$('palco');p.textContent='';const a=cav(de),b=item==='b
 function ficha(rot,sub,on,fn,off){const b=el('button','ficha');b.type='button';b.setAttribute('aria-pressed',on?'true':'false');b.append(document.createTextNode(rot));if(sub)b.append(el('small','',sub));b.disabled=!!off;b.addEventListener('click',fn);return b}
 function atualizar(){
   const f1=$('f-de');f1.textContent='';for(const c of D.cavaleiros)f1.append(ficha(c.nome,c.stand?c.stand.ic+' '+c.stand.nome:'sem Stand',c.id===de,()=>{de=c.id;if(alvo===de)alvo='';atualizar()}));
-  const f2=$('f-item');f2.textContent='';for(const k of Object.keys(D.itens))f2.append(ficha(NOMES_ITEM[k]||k,D.itens[k].alvo==='outro'?'ataque':'em você',k===item,()=>{item=k;atualizar()}));
+  const quem=cav(de),st=quem&&quem.stand;
+  const rot=k=>!st?[NOMES_ITEM[k]||k,D.itens[k].alvo==='outro'?'ataque comum (sem Stand)':'em você']:k==='banana'?['💥 '+st.ataque,'ataque exclusivo de '+st.tipo]:k==='casco'?(st.evoluido?['☄️ '+st.casco,'segundo golpe (Stand evoluído), só em quem está à frente']:['☄️ '+st.ataque,'mesmo ataque, só em quem está à frente']):k==='escudo'?['🛡️ '+st.defesa,'defesa do Stand']:['🏇 Galope de '+st.nome,'turbo do Stand'];
+  const f2=$('f-item');f2.textContent='';for(const k of Object.keys(D.itens)){const [a,b]=rot(k);f2.append(ficha(a,b,k===item,()=>{item=k;atualizar()}))}
+  const ps=$('f-stand');ps.textContent='';if(quem){const sel=el('select');sel.setAttribute('aria-label','Stand de '+quem.nome);const o0=el('option','','Sem Stand');o0.value='';sel.append(o0);let tp='',og=null;for(const b of D.banco){if(b.tipo!==tp){tp=b.tipo;og=el('optgroup');og.label=b.ic+' '+b.tipo;sel.append(og)}const o=el('option','',b.nome);o.value=b.id;og.append(o)}sel.value=st?st.id:'';sel.addEventListener('change',async()=>{await api({acao:'lab_stand',id:quem.id,stand:sel.value});await carregar();atualizar()});ps.append(el('span','sel','Stand de '+quem.nome+':'),sel);
+    if(st){const lb=el('label','sel');const cb=el('input');cb.type='checkbox';cb.checked=!!st.evoluido;cb.addEventListener('change',async()=>{await api({acao:'lab_stand',id:quem.id,evoluido:cb.checked});await carregar();atualizar()});lb.append(cb,document.createTextNode(' Evoluído (2ª semana seguida)'));lb.style.cursor='pointer';ps.append(lb)}
+    if(st&&st.assinatura){const a=el('div','sel',st.assinatura.ic+' '+st.assinatura.nome+' ('+st.tipo+'): '+st.assinatura.txt);a.style.cssText='display:block;margin-top:8px;border-radius:10px;padding:6px 10px';ps.append(a)}}
   const ataque=D.itens[item].alvo==='outro';$('p-alvo').style.display=ataque?'':'none';
   const f3=$('f-alvo');f3.textContent='';for(const c of D.cavaleiros)f3.append(ficha(c.nome,c.stand?c.stand.ic+' '+c.stand.nome:'sem Stand',c.id===alvo,()=>{alvo=c.id;atualizar()},c.id===de));
   const ok=!!de&&(!ataque||!!alvo)&&!ocupado;$('go').disabled=!ok;
