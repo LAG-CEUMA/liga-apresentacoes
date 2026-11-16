@@ -67,9 +67,8 @@ console.log('Stands: todos os testes passaram.');
   assert(A.conferir('ataque', gif(1)).includes('parada'));
   assert.strictEqual(A.conferir('ataque', gif(8)), '');
   assert(A.conferir('ataque', gif(30)).includes('24'));
-  assert(A.conferir('arte', gif(8)).includes('parada'));
-  assert.strictEqual(A.conferir('arte', gif(1)), '');
-  assert(A.conferir('arte', gif(1, 600)).includes('512'));
+  assert(A.conferir('dano', gif(1, 600)).includes('512'));
+  assert(A.conferir('cavalo_correndo', gif(1)).includes('parada'));
   assert(A.conferir('cavalo', Buffer.from('lixo')).includes('ler'));
   console.log('Arte conferir: ok');
 }
