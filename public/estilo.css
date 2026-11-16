@@ -150,3 +150,7 @@ input[type=number]{background:#12141c;color:var(--txt);border:1px solid #fff3;bo
 .menu-itens{position:absolute;right:0;top:calc(100% + 4px);z-index:20;min-width:230px;display:flex;flex-direction:column;gap:2px;padding:6px;background:#1d2130;border:1px solid #fff3;border-radius:12px;box-shadow:0 8px 24px #0008}
 .menu-itens .btn{width:100%;text-align:left;border:0;background:transparent;margin:0!important;padding:9px 12px;font-size:14px}
 .menu-itens .btn:hover:not(:disabled){background:#fff1}
+
+.tr-linha{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:12px 16px;border:1px solid #fff2;border-radius:12px;background:#ffffff08}
+.tr-nome{font-weight:700;font-size:17px}
+.tr-acoes{display:flex;align-items:center;gap:8px}
