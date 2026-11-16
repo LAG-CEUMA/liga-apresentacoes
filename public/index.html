@@ -121,7 +121,7 @@ function montarArte(j){
   const pv=j.visual.provisoria||{};const msg=el('small','');msg.style.cssText='display:block;margin:6px 0;min-height:1em';
   const regras=()=>{const dc=el('details','');dc.append(el('summary','','📋 Regras para enviar a arte'));const ul=el('ul','');for(const r of j.regras||[])ul.append(el('li','',r));dc.append(ul);return dc};
   const modelos=()=>{const dm=el('details','');dm.append(el('summary','','🎞️ Exemplos de cada animação (só para ilustrar)'));const g=el('div','');g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:8px 0';
-    for(const k of['parado','andando','ataque','defesa','dano','montado','cavalgando','cavalo_parado','cavalo_correndo']){const c=el('div','');c.style.cssText='text-align:center;font-size:.85em';const i=el('img','');i.src='/modelos/'+k+'.gif';i.alt='';i.style.cssText='width:100%;background:#fff;border-radius:6px';c.append(i,el('span','',(ICONE_ITEM[k]||'')+' '+(k.replace('_',' ')))));g.append(c)}
+    for(const k of['parado','andando','ataque','defesa','dano','montado','cavalgando','cavalo_parado','cavalo_correndo']){const c=el('div','');c.style.cssText='text-align:center;font-size:.85em';const i=el('img','');i.src='/modelos/'+k+'.gif';i.alt='';i.style.cssText='width:100%;background:#fff;border-radius:6px';c.append(i,el('span','',(ICONE_ITEM[k]||'')+' '+(k.replace('_',' '))));g.append(c)}
     dm.append(g);return dm};
   if(!j.dono){
     s.append(el('p','sub',pv.piloto||pv.stand?'Esta é uma arte provisória, com cores sorteadas. Crie a sua: cada item enviado é aprovado pelo professor e passa a valer na corrida. Você pode enviar um item de cada vez, conforme for terminando.':'Você já tem arte final. 🎉'));
