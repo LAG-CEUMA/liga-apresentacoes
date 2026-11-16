@@ -26,18 +26,22 @@ function montarCronica(j,d){
   s.textContent='';s.style.cssText='border-left:6px solid var(--ouro,#f5b83d);padding:14px 18px;margin:12px 0';
   const topo=el('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap';
   const tt=el('h2','','📜 Crônica da corrida');tt.style.margin='0';
-  topo.append(tt,el('small','',j.jogo+' · '+(j.trecho||'')+(j.semana?' · etapa '+j.semana:'')));s.append(topo);
-  if(j.copas&&j.copas.length>1){const sel=el('select');for(const c of j.copas){const o=el('option','',c.nome);o.value=c.turma;sel.append(o)}sel.value=j.copa.turma;sel.style.margin='8px 0';sel.addEventListener('change',()=>{CRON_TURMA=sel.value;carregarCronica(d)});s.append(sel)}
+  topo.append(tt,el('small','',j.cabecalho||j.jogo));s.append(topo);
+  const abas=el('div');abas.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin:8px 0';
+  const ab=(rot,id,tit)=>{const bt=el('button','btn'+((j.vista==='geral'?'geral':j.alvo)===id?'':' sec'),rot);bt.type='button';if(tit)bt.title=tit;bt.addEventListener('click',()=>{CRON_TURMA=id==='geral'?'':id;carregarCronica(d)});abas.append(bt)};
+  ab('🌍 Geral','geral','O mundo todo: a história e os acontecimentos que atingem todos os pilotos');
+  for(const c of (j.copas||[])){const so=c.modo!=='participa';ab((so?'🔒 ':'🏁 ')+c.nome,c.turma,so?'Só donos veem esta Copa (modo: '+({owners:'só owners',fora:'fora do jogo'}[c.modo]||c.modo)+')':'Os fatos da sua trilha')}
+  if((j.copas||[]).length||j.vista==='geral')s.append(abas);
   const L=j.entradas||[];
   if(!L.length)s.append(el('p','sub','A pista está silenciosa por enquanto. Assim que algo acontecer, o narrador conta aqui.'));
-  const item=e=>{const i=el('div');i.style.cssText='padding:8px 0;border-top:1px solid #fff2';const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';
+  const item=e=>{const i=el('div');i.style.cssText='padding:8px 0;border-top:1px solid #fff2'+(e.tipo==='capitulo'?';background:#f5b83d14;padding:10px 12px;border-radius:8px;margin:6px 0':'');const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';
     b.append(el('b','',(e.ic||'')+' '+(e.nome||'')));if(e.tipo&&j.tipos&&j.tipos[e.tipo]){const g=el('span','badge',j.tipos[e.tipo]);b.append(g)}b.append(el('small','',quando(e.em)));i.append(b,el('p','',e.texto));i.lastChild.style.margin='4px 0 0';return i};
   L.slice(0,3).forEach(e=>s.append(item(e)));
   if(L.length>3){const dt=el('details');dt.style.marginTop='6px';const sm=el('summary','',`Ver mais (${L.length-3})`);sm.style.cursor='pointer';sm.style.fontWeight='700';dt.append(sm);L.slice(3).forEach(e=>dt.append(item(e)));lembrar(dt,'cron_mais',false);s.append(dt)}
-  if(j.catalogo){const barra=el('div');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px';
+  if(j.catalogo&&j.vista==='geral'){const barra=el('div');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px';
     const sel=el('select');const o0=el('option','','Acontecimento sorteado');o0.value='';sel.append(o0);for(const e of j.catalogo){const o=el('option','',e.ic+' '+e.nome);o.value=e.id;sel.append(o)}
     const b=el('button','btn sec','🎲 Disparar acontecimento');b.type='button';b.title='O narrador conta um acontecimento agora (no máximo 5 por dia). Por enquanto só tem história, sem efeito nos pontos.';
-    b.addEventListener('click',async()=>{b.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'cronica_disparar',turma:j.copa.turma,evento:sel.value})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');await carregarCronica(d)}finally{b.disabled=false}});
+    b.addEventListener('click',async()=>{b.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'cronica_disparar',turma:'geral',evento:sel.value})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');await carregarCronica(d)}finally{b.disabled=false}});
     barra.append(sel,b);if(window.ajuda)barra.append(ajuda('ix_cronica'));s.append(barra)}
   else if(window.ajuda){const a=ajuda('ix_cronica');a.style.marginTop='8px';s.append(a)}
 }
