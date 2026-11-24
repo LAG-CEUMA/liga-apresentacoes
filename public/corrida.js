@@ -27,7 +27,7 @@ function pista(o){
     E('text',{x:400,y:292,'font-size':'15',fill:'#cfd3e6'},dec===null?'Defina início e fim da turma para contar as semanas':(N-semAtual)+' volta'+(N-semAtual===1?'':'s')+' (semanas) restante'+(N-semAtual===1?'':'s')));
   svg.append(hud);
   // cavaleiros (cavalo galopando de lado) e o cavalo-fantasma do ritmo ideal
-  const karts=[];
+  const cavs=[];
   const COR=[['#8b5a2b','#6e4420','#2a1608'],['#c8a06a','#a98250','#e8d9b8'],['#3b3b44','#2c2c34','#111'],['#d9d2c4','#bdb5a4','#7a6a55'],['#a0522d','#7d3f20','#2a1608'],['#e0b050','#c29438','#f2e2b0'],['#5c4033','#473025','#1d120b'],['#b87333','#955d28','#3a2410']];
   const ROUPA=['#c0392b','#2e86c1','#27ae60','#8e44ad','#d68910','#16a085','#cb4335','#2874a6'];
   const hs=u=>{let n=0;for(const c of u)n=(n*31+c.charCodeAt(0))>>>0;return n};
@@ -36,7 +36,7 @@ function pista(o){
     const c=COR[hs(u||'x')%COR.length],r=ROUPA[(hs(u||'x')>>3)%ROUPA.length];
     const v=dour?{cavalo:{pele:'#f5d27a',pele2:'#e0b84a',crina:'#fff3c4',sela:'#b8860b',casaco:'#fff3c4',casaco2:'#e0b84a',chapeu:'#b8860b',cachecol:'#fff'}}:{cavalo:{pele:c[0],pele2:c[1],crina:c[2],sela:'#6b3f1d',casaco:r,casaco2:r,chapeu:'#3a2410',cachecol:'#f5b83d'}};
     try{return Arte.pecas(v).cavalo.replace(/style="overflow:visible;width:100%;height:100%"/,'x="-40" y="-26" width="80" height="56" style="overflow:visible"')}catch(e){return null}};
-  const mkKart=(u,voltas,eh,pos,pts)=>{const g=E('g',{class:'kart'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':(o.nome?o.nome(u):u)+' · '+pos+'º · '+pts+' ponto'+(pts===1?'':'s')));
+  const mkCav=(u,voltas,eh,pos,pts)=>{const g=E('g',{class:'cavaleiro'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':(o.nome?o.nome(u):u)+' · '+pos+'º · '+pts+' ponto'+(pts===1?'':'s')));
     const cav=E('g',{class:'cv',opacity:eh?'.55':'1'});const sv=cavaloSvg(u,eh);
     if(sv)cav.innerHTML=sv;else cav.append(E('text',{y:8,'text-anchor':'middle','font-size':'30'},'🐎'));
     g.append(cav);
@@ -51,12 +51,12 @@ function pista(o){
     if(its.length)g.querySelector('title').append(' · '+its.map(it=>it.ic+' '+it.tx).join(' · '));
     return{g,cav,voltas,eh,off:((pos%3)-1)*14,u,turbo:its.some(it=>it.ic==='🍄')}};
   const mov=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
-  if(dec!==null)karts.push(mkKart(null,dec,true,0));
-  lista.forEach(x=>karts.push(mkKart(x.usuario,Math.max(0,Math.min(1,x.pontos/max))*N,false,x.posicao,x.pontos)));
-  const trail=E('g',{});svg.append(trail);for(const k of karts)svg.append(k.g);
-  const gaps=karts.filter(k=>!k.eh).map(k=>k.voltas-(dec===null?0:dec));const M=Math.max(1,...gaps.map(Math.abs));
-  for(const k of karts)k.f=k.eh?0:(dec===null?Math.max(0,Math.min(1,k.voltas/N))*.9:((k.voltas-dec)/(2*M))*.9);
-  const pose=(t,ph=0)=>{trail.textContent='';for(const k of karts){const v=k.f*t+ph;const p=pt(v);const x=p.x+p.nx*k.off,y=p.y+p.ny*k.off;k.g.setAttribute('transform','translate('+x+','+y+')');{const dx=Math.cos(p.an)*(k.f<0?-1:1);k.cav.setAttribute('transform','scale('+(dx<0?-1:1)+',1)')}
+  if(dec!==null)cavs.push(mkCav(null,dec,true,0));
+  lista.forEach(x=>cavs.push(mkCav(x.usuario,Math.max(0,Math.min(1,x.pontos/max))*N,false,x.posicao,x.pontos)));
+  const trail=E('g',{});svg.append(trail);for(const k of cavs)svg.append(k.g);
+  const gaps=cavs.filter(k=>!k.eh).map(k=>k.voltas-(dec===null?0:dec));const M=Math.max(1,...gaps.map(Math.abs));
+  for(const k of cavs)k.f=k.eh?0:(dec===null?Math.max(0,Math.min(1,k.voltas/N))*.9:((k.voltas-dec)/(2*M))*.9);
+  const pose=(t,ph=0)=>{trail.textContent='';for(const k of cavs){const v=k.f*t+ph;const p=pt(v);const x=p.x+p.nx*k.off,y=p.y+p.ny*k.off;k.g.setAttribute('transform','translate('+x+','+y+')');{const dx=Math.cos(p.an)*(k.f<0?-1:1);k.cav.setAttribute('transform','scale('+(dx<0?-1:1)+',1)')}
       if(mov&&(t<1||ph>0)&&!k.eh)for(let i=1;i<=(k.turbo?6:3);i++){const q=pt(v-i*.012*Math.sign(k.f||1));trail.append(E('circle',{cx:q.x+q.nx*k.off,cy:q.y+q.ny*k.off,r:(k.turbo?9:6)-i,fill:k.turbo?(i%2?'#ff7a45':'#ffd54a'):'#e8d3a8',opacity:(k.turbo?.6:.4)-i*.07}))}}};
   pose(mov?0:1);
   if(mov){const t0=performance.now(),dur=9500;const VOLTA=30000;const passo=n=>{if(!document.body.contains(svg))return;const t=Math.min(1,(n-t0)/dur);if(t<1)pose(1-Math.pow(1-t,3));else pose(1,(((n-t0-dur)/VOLTA)%1));requestAnimationFrame(passo)};requestAnimationFrame(passo)}
