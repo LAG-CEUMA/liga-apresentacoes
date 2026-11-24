@@ -23,7 +23,12 @@ module.exports = async (req, res) => {
       const limA = perm.includes('aulas') && !dono ? escs(['aulas']) : null;
       let niveisOk = null; // aulas visíveis ao painel: só dos níveis do alcance, quando o cargo é limitado
       { const es = [...(limP || []), ...(limA || [])]; if (!dono && es.length && es.every((e) => e !== null)) niveisOk = uniao(es, 'niveis'); }
-      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.filter((a) => !niveisOk || niveisOk.has(a.dir)).map((a) => ({ dir: a.dir, chave: a.chave, nivel: a.nivel, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
+      // Trilha (dia da semana) de cada nível, pelos calendários: o plano liga a turma, e a turma liga o nível. Níveis com o mesmo número (ex.: um de Godot e um de Artes) ganham o assunto no nome para não se misturarem.
+      const trilhaDe = {}, ordemTrilha = {}; for (const p of Object.values(cfg.planos || {})) for (const tid of p.turmas || []) { const d = cfg.turmas[tid] && cfg.turmas[tid].nivel; if (d && !trilhaDe[d]) { trilhaDe[d] = p.trilha; ordemTrilha[p.trilha] = ordemTrilha[p.trilha] === undefined ? (p.diaSemana === '' ? 9 : ((p.diaSemana + 6) % 7)) : ordemTrilha[p.trilha]; } }
+      const dirsPorNivel = {}; for (const a of aulas) (dirsPorNivel[a.nivel] = dirsPorNivel[a.nivel] || new Set()).add(a.dir);
+      const assuntoDe = (dir) => { const e = Object.values(cfg.assuntos || {}).find((x) => (x.niveis || []).includes(dir)); return e ? e.nome : ''; };
+      const rotuloNivel = (a) => (dirsPorNivel[a.nivel].size > 1 ? `${a.nivel} · ${assuntoDe(a.dir) || a.dir}` : a.nivel);
+      if (perm.includes('aulas') || perm.includes('pessoas')) v.aulas = aulas.filter((a) => !niveisOk || niveisOk.has(a.dir)).map((a) => ({ dir: a.dir, chave: a.chave, nivel: rotuloNivel(a), trilha: trilhaDe[a.dir] || '', ordem_trilha: trilhaDe[a.dir] ? ordemTrilha[trilhaDe[a.dir]] : 99, titulo: a.titulo, id: a.id, tem_roteiro: !!a.roteiro,
         acesso: u.nivelDe(cfg, a.chave), url: `/aula/${a.chave}`, roteiro: a.roteiro ? `/aula/${a.chave}/roteiro` : null }));
       if (!perm.includes('pessoas') && (papelU === 'monitor' || grupoPr.length)) { // monitor ou cargo de presença: só as turmas dele (atalhos de chamada, atividades e ranking)
         const m = cfg.monitores[usuario]; let ids = (m && m.turmas && m.turmas.length) ? m.turmas : (m ? Object.keys(cfg.turmas) : []);
@@ -47,6 +52,7 @@ module.exports = async (req, res) => {
       if (perm.includes('pessoas')) { v.contatos = (await require('../lib/pendentes').ler()).lista.filter((x) => !permitidos || permitidos.has(x.usuario)).map((x) => (dono ? { ...x, cpf: undefined, cpfOk: !!x.cpf } : { ...x, email: '', emailPessoal: '', cpf: undefined, cpfOk: !!x.cpf })); }
       if (dono) { v.pontuacao = cfg.pontuacao; v.tiposParticipacao = d.TIPOS; }
       if (dono) { v.equipe = cfg.equipe; v.editores = cfg.editores; v.reservadas = await require('../lib/reservado').listar(); const W = require('../lib/wiki'); v.wiki = { paginas: await W.listar(), vis: W.VIS, categorias: W.CATEGORIAS }; }
+      if (v.turmas) { const CR = require('../lib/cronograma'); v.turmas = Object.fromEntries(Object.entries(v.turmas).map(([k, t]) => [k, { ...t, cronograma: CR.calcular(cfg, k, aulas) }])); }
       v.listaPermissoes = u.PERMISSOES;
       return u.json(res, 200, v);
     }
@@ -353,10 +359,23 @@ module.exports = async (req, res) => {
       novo.turmas[id] = { nome: String(b.nome || id).trim().slice(0, 40) || id, status, inicio, fim,
         nivel: b.nivel === undefined ? (atual.nivel || '') : (dirs.has(b.nivel) ? b.nivel : ''),
         acessoApos: b.acessoApos === undefined ? atual.acessoApos !== false : b.acessoApos !== false, acessoAte, alunos: atual.alunos,
-        ...(atual.pesos ? { pesos: atual.pesos } : {}), ...(atual.rankingFinal ? { rankingFinal: atual.rankingFinal } : {}) };
+        ...(atual.pesos ? { pesos: atual.pesos } : {}), ...(atual.datasAulas ? { datasAulas: atual.datasAulas } : {}), ...(atual.rankingFinal ? { rankingFinal: atual.rankingFinal } : {}) };
       if (status === 'arquivada' && atual.status !== 'arquivada') novo.turmas[id].rankingFinal = P.ranking(novo, id, await d.listarSessoes(), await require('../lib/atividades').listar(id)).slice(0, 5).map((x) => ({ usuario: x.usuario, total: x.total })); // congela o Top 5
       if (status !== 'arquivada') delete novo.turmas[id].rankingFinal;
       msg = `Portal: ${usuario} salvou a turma ${id} (${status})`;
+    } else if (b.acao === 'datas_aulas') { // datas das aulas de uma turma (adiar uma aula e, se quiser, as seguintes)
+      const id = String(b.id || '').trim().toUpperCase();
+      if (!novo.turmas[id]) return u.json(res, 400, { erro: 'Turma não encontrada.' });
+      if (!perm.includes('t_editar') && !perm.includes('presenca')) return nao();
+      const mapa = b.datas && typeof b.datas === 'object' ? b.datas : {};
+      const chavesOk = new Set(aulas.map((x) => x.chave));
+      const dt = Object.assign({}, novo.turmas[id].datasAulas || {});
+      for (const [k, v] of Object.entries(mapa)) {
+        if (!chavesOk.has(k)) continue;
+        if (v === '' || v === null) delete dt[k]; else if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) dt[k] = String(v);
+      }
+      if (Object.keys(dt).length) novo.turmas[id].datasAulas = dt; else delete novo.turmas[id].datasAulas;
+      msg = `Portal: ${usuario} mudou datas de aulas da turma ${id}`;
     } else if (b.acao === 'plano') {
       if (!perm.includes('tr_gerir')) return nao();
       const id = String(b.id || '').trim().toUpperCase();

@@ -541,7 +541,7 @@ const CH = (n) => 'nivel-00-tutorial/aula-0' + n;
       assert.equal(pn.duvidas.length, 1); assert.equal(pn.duvidas[0].usuario, 'alu3'); assert.equal(pn.duvidas[0].numero, 9); // a Issue da atividade (nº 1) e PRs não contam como dúvida
       assert(pn.resumo.acorrigir >= 2 && pn.resumo.duvidas === 1);
       { // aluno respondeu abrindo uma Issue nova (fora do lugar): conta como resposta, sem prejuízo, e sai das dúvidas
-        const extra = { number: 11, title: 'Minha primeira cena pronta', body: 'segue a cena', html_url: 'https://github.com/LAG-CEUMA/aluno-alu3/issues/11', created_at: '2026-11-10T12:00:00Z', updated_at: '2026-11-10T12:00:00Z', comments: 0, user: { login: 'alu3' } };
+        const extra = { number: 11, title: 'Minha primeira cena pronta', body: 'segue a cena', html_url: 'https://github.com/LAG-CEUMA/aluno-alu3/issues/11', created_at: new Date(Date.now() + 60000).toISOString(), updated_at: new Date(Date.now() + 60000).toISOString(), comments: 0, user: { login: 'alu3' } }; // sempre depois da liberação (a data fixa envelhecia)
         comentarios['alu3#undefined'].push(extra);
         const pf = JSON.parse((await ap({ acao: 'ativ_painel', atualizar: true })).body); const lf = pf.atividades.find((x) => x.id === id1).linhas.alu3;
         assert.equal(lf.respondeu, true); assert.equal(lf.fora, 'issue'); assert.equal(lf.status, 'acorrigir'); assert.equal(pf.duvidas.length, 1);

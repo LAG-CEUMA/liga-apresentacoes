@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
     const q = { ...(req.query || {}) }; if (q.turma) q.turma = String(q.turma).toUpperCase();
     const turmaMon = (turma) => ehOwner || monTurma(turma) || PRS.some((p) => cargoPara(p, turma));
     const alunosDe = (turma) => (cfg.turmas[turma] ? cfg.turmas[turma].alunos : cfg.alunos);
-    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos, inicio: t.inicio || '', fim: t.fim || '' }]));
+    const turmasVisiveis = Object.fromEntries(Object.entries(cfg.turmas).filter(([id, t]) => t.status !== 'arquivada' && turmaMon(id)).map(([id, t]) => [id, { nome: t.nome, status: t.status, nivel: t.nivel, alunos: t.alunos, inicio: t.inicio || '', fim: t.fim || '', cronograma: require('../lib/cronograma').calcular(cfg, id, aulas) }]));
     const validaSessao = (turma, chave) => d.TURMA_RE.test(String(turma || '')) && turmaMon(turma) && aulas.some((a) => a.chave === chave) && podeChamar(chave);
 
     if (req.method === 'GET') {
@@ -54,6 +54,9 @@ module.exports = async (req, res) => {
         lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
         return u.json(res, 200, { usuario, sessoes: lista, aluno: Object.values(cfg.turmas || {}).some((t) => (t.alunos || []).includes(usuario)) });
       }
+      if (q.acao === 'arte') return require('../lib/arte').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
+      if (q.acao === 'stand') return require('../lib/stands').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
+      if (q.acao === 'cronica') return require('../lib/cronica').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (q.acao === 'copa') return require('../lib/copaapi').ler(req, res, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
       if (q.acao === 'minhapontuacao') {
         const sess = await d.listarSessoes(); const ativs = await A.listar(); const conf = P.configPontos(cfg); const out = [];
@@ -96,12 +99,19 @@ module.exports = async (req, res) => {
         return u.json(res, 200, { turma: q.turma, pesos: P.pesosDa(cfg, q.turma), config: P.configPontos(cfg), ranking: P.ranking(cfg, q.turma, await d.listarSessoes(), await A.listar(q.turma)) });
       }
       if (q.acao === 'ranking_plano') {
+        const arenaDados = async (PLm, cfg2, sess2) => {
+          if (!PLm.arenaLigada(cfg2)) return { ligada: false, aviso: 'Arena Global desligada.' };
+          const por2 = {}; for (const p of Object.values(cfg2.planos || {})) for (const id of PLm.idsDe(p)) if (cfg2.turmas[id] && !por2[id]) por2[id] = await A.listar(id);
+          const glob = PLm.rankingArena(cfg2, sess2, por2);
+          const trilhas = Object.values(cfg2.planos || {}).map((p) => ({ id: p.id, nome: p.nome, trilha: p.trilha, top: PLm.rankingPlano(cfg2, p, sess2, por2).slice(0, 10).map((x) => ({ usuario: x.usuario, total: x.total, pct: x.pct, posicao: x.posicao })) }));
+          return { ligada: true, global: glob.slice(0, 30), total: glob.length, trilhas };
+        };
         if (!d.TURMA_RE.test(String(q.turma || '')) || !cfg.turmas[q.turma] || !pode('pr_ranking', q.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
         const PL = require('../lib/planos'); const pl = PL.doPlano(cfg, q.turma);
         if (!pl) return u.json(res, 200, { plano: null });
         const sess = await d.listarSessoes(); const por = {}; for (const id of PL.idsDe(pl)) por[id] = await A.listar(id);
         const dt = PL.datas(cfg, pl);
-        return u.json(res, 200, { plano: { id: pl.id, nome: pl.nome, trilha: pl.trilha, inicio: dt.inicio, fim: dt.fim, turmas: PL.idsDe(pl).map((id) => ({ id, nome: cfg.turmas[id].nome })) }, ranking: PL.rankingPlano(cfg, pl, sess, por), arena: { ligada: PL.arenaLigada(cfg), aviso: 'Arena Global: disponível quando houver trilhas paralelas (previsto para 2027.2).' } });
+        return u.json(res, 200, { plano: { id: pl.id, nome: pl.nome, trilha: pl.trilha, inicio: dt.inicio, fim: dt.fim, turmas: PL.idsDe(pl).map((id) => ({ id, nome: cfg.turmas[id].nome })) }, ranking: PL.rankingPlano(cfg, pl, sess, por), arena: await arenaDados(PL, cfg, sess) });
       }
       if (q.acao === 'contexto') {
         let nomes = {}; // nome completo (dos Contatos) só para quem usa a Presença; o e-mail nunca sai daqui
@@ -140,11 +150,18 @@ module.exports = async (req, res) => {
       try { const c = await require('../lib/pendentes').salvarPerfil(usuario, b); return u.json(res, 200, { ok: true, email: c.email || '', emailPessoal: c.emailPessoal || '', curso: c.curso || '', cpf: c.cpf || '' }); }
       catch (e) { if (e && e.status === 400) return u.json(res, 400, { erro: e.message }); throw e; }
     }
+      if (b.acao === 'lab') return require('../lib/lab').operar(res, b, { dono: u.papel(cfg, usuario) === 'owner' });
+      if (b.acao === 'arte_enviar') return require('../lib/arte').enviar(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
+      if (b.acao === 'arte_reabrir') return require('../lib/arte').reabrir(res, b, { dono: u.papel(cfg, usuario) === 'owner' });
+      if (b.acao === 'arte_decidir') return require('../lib/arte').decidir(res, b, { dono: u.papel(cfg, usuario) === 'owner', usuario });
+      if (b.acao === 'stand_escolher') return require('../lib/stands').escolher(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
+      if (b.acao === 'cronica_liberar') return require('../lib/cronica').liberar(res, b, { dono: u.papel(cfg, usuario) === 'owner' });
+      if (b.acao === 'cronica_disparar') return require('../lib/cronica').disparar(res, b, { cfg, dono: u.papel(cfg, usuario) === 'owner', turmaOk: turmaMon });
       if (b.acao === 'copa_usar' || b.acao === 'copa_aliar' || b.acao === 'copa_aliar_resp' || b.acao === 'copa_config' || b.acao === 'copa_chuva' || b.acao === 'copa_evento' || b.acao === 'copa_chefao') return require('../lib/copaapi').escrever(res, b, { cfg, usuario, dono: u.papel(cfg, usuario) === 'owner', monitor: u.papel(cfg, usuario) === 'monitor', turmaOk: turmaMon });
     if (!ehOwner && !mon && !geral) return u.json(res, 403, { erro: 'Você não tem permissão para fazer chamadas.' });
     if (String(b.acao || '').startsWith('ativ_')) {
       if (!d.TURMA_RE.test(String(b.turma || '')) || !cfg.turmas[b.turma] || !turmaMon(b.turma)) return u.json(res, 400, { erro: 'Turma inválida.' });
-      const NEC = { ativ_salvar: ['at_criar'], ativ_liberar: ['at_liberar'], ativ_recolher: ['at_liberar'], ativ_atualizar: ['at_liberar'], ativ_deslocar: ['at_prazos'], ativ_nota: ['at_corrigir'], ativ_notas_lote: ['at_corrigir'], ativ_conferir: ['at_corrigir'], ativ_entregas: ['at_corrigir'], ativ_avisar: ['at_avisar'], ativ_avisar_lote: ['at_avisar'], ativ_remover: ['at_remover'], ativ_painel: ['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'] };
+      const NEC = { ativ_salvar: ['at_criar'], ativ_liberar: ['at_liberar'], ativ_recolher: ['at_liberar'], ativ_atualizar: ['at_liberar'], ativ_verificar: ['at_liberar'], ativ_reparar: ['at_liberar'], ativ_deslocar: ['at_prazos'], ativ_nota: ['at_corrigir'], ativ_notas_lote: ['at_corrigir'], ativ_conferir: ['at_corrigir'], ativ_entregas: ['at_corrigir'], ativ_avisar: ['at_avisar'], ativ_avisar_lote: ['at_avisar'], ativ_remover: ['at_remover'], ativ_painel: ['at_criar', 'at_liberar', 'at_prazos', 'at_corrigir', 'at_avisar', 'at_remover'] };
       if (!podeQualquer(NEC[b.acao] || ['at_criar'], b.turma)) return u.json(res, 403, { erro: 'Seu cargo não inclui esta ação nas atividades desta turma. Peça a um owner.' });
       const r = await A.tratar(b, { usuario, alunosDe }); return u.json(res, r.status, r.corpo);
     }
