@@ -6,7 +6,7 @@
 <div id="corpo"><p>Carregando…</p></div>
 <div class="dica"><b>Dica da Liga:</b> use termos e programas em inglês. Tutoriais, pesquisas e IA falam de código em inglês.</div>
 </main>
-<script src="/novidade.js"></script><script src="/corrida.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
+<script src="/novidade.js"></script><script src="/corrida.js"></script><script src="/arte-visual.js"></script><script src="/ajuda.js"></script><script src="/ajuda-textos.js"></script><script src="/site.js"></script><script src="/vitrine.js"></script>
 <script>
 const NOME={owners:'só owners',membros:'membros',publico:'público'};
 const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
@@ -14,10 +14,145 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==u
 function secao(titulo,contagem,aberta){const d=el('details','nivel');d.open=aberta;const s=el('summary');s.append(el('span','nvt',titulo),el('span','nvc',contagem));d.append(s);return d}
 function lembrar(d,chave,padrao){let a=padrao;try{const v=localStorage.getItem('liga_'+chave);if(v!==null)a=v==='1'}catch{}d.open=a;d.addEventListener('toggle',()=>{try{localStorage.setItem('liga_'+chave,d.open?'1':'0')}catch{}})}
 function link(t,u){const a=el('a','',t);a.href=u;a.target='_blank';a.rel='noopener noreferrer';return a}
-const BL={},PAD=['boasVindas','anuncios','agenda','vitrine','rankings'];let ORD={};
+const BL={},PAD=['boasVindas','cronica','stand','arte','anuncios','agenda','vitrine','rankings'];let ORD={};
 function porPeso(arr,fn,cls){const f=document.createDocumentFragment(),a=arr.slice().sort((x,y)=>(x.peso||0)-(y.peso||0));let i=0;while(i<a.length){let j=i;while(j<a.length&&a[j].peso===a[i].peso)j++;const r=el('div','cols c'+Math.min(j-i,3)+(cls?' '+cls:''));for(let k=i;k<j;k++)r.append(fn(a[k]));f.append(r);i=j}return f}
-function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||99,ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
+function organizar(){const c=document.getElementById('corpo');c.textContent='';const w=k=>ORD[k]||(k==='cronica'?2:k==='stand'?3:k==='arte'?4:99),ks=PAD.filter(k=>BL[k]).sort((a,b)=>w(a)-w(b)||PAD.indexOf(a)-PAD.indexOf(b));let i=0;
   while(i<ks.length){let j=i;while(j<ks.length&&w(ks[j])===w(ks[i]))j++;const r=el('div','cols c'+Math.min(j-i,3));for(let k=i;k<j;k++)r.append(BL[ks[k]]);c.append(r);i=j}}
+
+let CRON_TIMER=null,CRON_TURMA='';
+function quando(iso){const d=new Date(iso),h=new Date(),mesmo=d.toDateString()===h.toDateString();const hh=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');return mesmo?'hoje '+hh:d.getDate()+'/'+(d.getMonth()+1)+' '+hh}
+function montarCronica(j,d){
+  let s=BL.cronica;if(!s){s=el('section','card cronica');s.id='sec-cronica';BL.cronica=s}
+  s.textContent='';s.style.cssText='border-left:6px solid var(--ouro,#f5b83d);padding:14px 18px;margin:12px 0';
+  const topo=el('div');topo.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap';
+  const tt=el('h2','','📜 Crônica da corrida');tt.style.margin='0';
+  topo.append(tt,el('small','',j.cabecalho||j.jogo));s.append(topo);
+  const abas=el('div');abas.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin:8px 0';
+  const ab=(rot,id,tit)=>{const bt=el('button','btn'+((j.vista==='geral'?'geral':j.alvo)===id?'':' sec'),rot);bt.type='button';if(tit)bt.title=tit;bt.addEventListener('click',()=>{CRON_TURMA=id==='geral'?'':id;carregarCronica(d)});abas.append(bt)};
+  ab('🌍 Geral','geral','O mundo todo: a história e os acontecimentos que atingem todos os cavaleiros');
+  for(const c of (j.copas||[])){const so=c.modo!=='participa';ab((so?'🔒 ':'🏁 ')+c.nome,c.turma,so?'Só donos veem esta Copa (modo: '+({owners:'só owners',fora:'fora do jogo'}[c.modo]||c.modo)+')':'Os fatos da sua trilha')}
+  if((j.copas||[]).length||j.vista==='geral')s.append(abas);
+  if(j.narradores){const lg=el('small','','🕯️ Silas, o Cronista e 🎙️ Tião Trovão narram a corrida.');lg.style.cssText='display:block;opacity:.8;margin:4px 0';s.append(lg)}
+  if(j.vista==='geral'&&j.historia&&j.historia.length){
+    const H=j.historia,lib=H.filter(c=>c.liberado).sort((x,y)=>y.n-x.n),rasc=H.filter(c=>!c.liberado).sort((x,y)=>x.n-y.n),dono=!!j.catalogo;
+    const cap=(c,dest)=>{const i=el('div');i.style.cssText='background:#f5b83d14;padding:10px 12px;border-radius:8px;margin:8px 0;border-left:3px solid '+(c.liberado?'#f5b83d':'#8a8f9c');
+      if(dest){i.style.background='#f5b83d2e';i.style.borderLeftWidth='6px';i.style.boxShadow='0 0 0 1px #f5b83d66'}const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';b.append(el('b','','📖 '+c.nome),el('span','badge',c.liberado?(dest?'⭐ Último capítulo':'História'):'📝 rascunho: só você vê'));if(c.liberado&&c.em)b.append(el('small','','liberado '+quando(c.em)));i.append(b);
+      const N=j.narradores||{},n=N.silas||{ic:'🕯️'};const l=el('p');l.style.cssText='margin:6px 0 0;color:#cfc6b4;font-style:italic';l.textContent=c.texto;i.append(l);
+      if(dono){const bt=el('button','btn'+(c.liberado?' sec':''),c.liberado?'↩ Recolher (voltar a rascunho)':'📢 Liberar para os alunos');bt.type='button';bt.style.marginTop='8px';
+        bt.title=c.liberado?'Só o último capítulo liberado pode ser recolhido':'Os alunos passam a ver este capítulo agora';
+        bt.addEventListener('click',async()=>{if(!c.liberado&&!confirm('Liberar o capítulo '+c.n+' para todos os alunos agora?'))return;bt.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'cronica_liberar',n:c.n,liberar:!c.liberado})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');await carregarCronica(d)}finally{bt.disabled=false}});
+        if(c.liberado&&c.n!==lib[0].n){bt.disabled=true}if(!c.liberado&&c.n!==rasc[0].n){bt.disabled=true}i.append(bt)}
+      return i};
+    // Ordem de lançamento (1, 2, 3...). Até o capítulo 5 todos ficam abertos em ordem; do 6 em diante os anteriores ficam recolhidos e o último liberado aparece em destaque, embaixo.
+    if(!lib.length){if(!dono)s.append(el('p','sub','A história ainda não começou. Fique de olho.'))}
+    else{const asc=lib.slice().reverse(),ult=lib[0];
+      if(ult.n<=5)asc.forEach(c=>s.append(cap(c,c===ult)));
+      else{const dt=el('details');const sm=el('summary','',`Capítulos anteriores (${asc.length-1})`);sm.style.cssText='cursor:pointer;font-weight:700;margin:6px 0';dt.append(sm);asc.slice(0,-1).forEach(c=>dt.append(cap(c)));lembrar(dt,'cron_caps',false);s.append(dt);s.append(cap(ult,true))}}
+    if(dono&&rasc.length){const dt=el('details');const sm=el('summary','',`📝 Próximos capítulos, rascunho só seu (${rasc.length})`);sm.style.cssText='cursor:pointer;font-weight:700;margin:6px 0';dt.append(sm);rasc.forEach(c=>dt.append(cap(c)));lembrar(dt,'cron_rasc',false);s.append(dt)}
+    const t2=el('h3','','Acontecimentos');t2.style.cssText='margin:14px 0 0;font-size:1rem';s.append(t2)}
+  const L=j.entradas||[];
+  if(!L.length)s.append(el('p','sub','A pista está silenciosa por enquanto. Assim que algo acontecer, o narrador conta aqui.'));
+  const item=e=>{const i=el('div');i.style.cssText='padding:8px 0;border-top:1px solid #fff2'+(e.tipo==='capitulo'?';background:#f5b83d14;padding:10px 12px;border-radius:8px;margin:6px 0':'');const b=el('div');b.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';
+    b.append(el('b','',(e.ic||'')+' '+(e.nome||'')));if(e.rascunho){const r=el('span','badge','📝 rascunho: só você vê');b.append(r)}else if(e.tipo&&j.tipos&&j.tipos[e.tipo]){const g=el('span','badge',j.tipos[e.tipo]);b.append(g)}b.append(el('small','',quando(e.em)));i.append(b);
+    const N=j.narradores||{};const falas=e.falas&&e.falas.length?e.falas:[{q:'silas',t:e.texto}];
+    for(const f of falas){const n=N[f.q]||{nome:'',ic:''};const l=el('p');l.style.cssText='margin:6px 0 0;display:flex;gap:8px;align-items:baseline;'+(f.q==='tiao'?'font-weight:700;color:#ffd36b':'color:#cfc6b4;font-style:italic');const tg=el('small',n.nome?'':'',n.ic+' '+(f.q==='tiao'?'Tião':'Silas')+':');tg.style.cssText='flex:none;font-style:normal;font-weight:800;opacity:.9';tg.title=n.nome;l.append(tg,el('span','',f.t));i.append(l)}return i};
+  L.slice(0,3).forEach(e=>s.append(item(e)));
+  if(L.length>3){const dt=el('details');dt.style.marginTop='6px';const sm=el('summary','',`Ver mais (${L.length-3})`);sm.style.cursor='pointer';sm.style.fontWeight='700';dt.append(sm);L.slice(3).forEach(e=>dt.append(item(e)));lembrar(dt,'cron_mais',false);s.append(dt)}
+  if(j.catalogo&&j.vista==='geral'){const barra=el('div');barra.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px';
+    const sel=el('select');const o0=el('option','','Acontecimento sorteado');o0.value='';sel.append(o0);for(const e of j.catalogo){const o=el('option','',e.ic+' '+e.nome);o.value=e.id;sel.append(o)}
+    const b=el('button','btn sec','🎲 Disparar acontecimento');b.type='button';b.title='O narrador conta um acontecimento agora (no máximo 5 por dia). Por enquanto só tem história, sem efeito nos pontos.';
+    b.addEventListener('click',async()=>{b.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'cronica_disparar',turma:'geral',evento:sel.value})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');await carregarCronica(d)}finally{b.disabled=false}});
+    barra.append(sel,b);if(window.ajuda)barra.append(ajuda('ix_cronica'));s.append(barra)}
+  else if(window.ajuda){const a=ajuda('ix_cronica');a.style.marginTop='8px';s.append(a)}
+}
+function montarStand(j,d){
+  if(!j||j.semCopa){delete BL.stand;return}
+  let s=BL.stand;if(!s){s=el('section','card cronica');s.id='sec-stand';BL.stand=s}
+  s.textContent='';s.style.cssText='border-left:6px solid #7c6cf0;padding:14px 18px;margin:12px 0';
+  const post=async(id,bt)=>{bt.disabled=true;try{const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acao:'stand_escolher',id})});const x=await r.json().catch(()=>({}));if(!r.ok)alert(x.erro||'Não foi possível.');carregarStand(d)}finally{bt.disabled=false}};
+  const card=(st,extra)=>{const c=el('div');c.style.cssText='background:#7c6cf018;border:1px solid #7c6cf055;border-radius:10px;padding:10px 12px;margin:8px 0';
+    const t=el('div');t.style.cssText='display:flex;gap:8px;align-items:baseline;flex-wrap:wrap';t.append(el('b','',st.ic+' '+st.nome),el('span','badge',st.tipoNome),el('span','badge',st.estilo),el('span','badge',st.dif));c.append(t);
+    c.append(el('p','','⚡ '+st.poder),el('p','','🩹 Fraqueza: '+st.fraqueza));c.lastChild.style.margin='2px 0 0';c.children[1].style.margin='6px 0 0';if(extra)c.append(extra);return c};
+  if(j.dono){const dt=el('details');const sm=el('summary','',`👤 Stands da semana ${j.semana}: ${j.escolheram} de ${j.total} cavaleiros escolheram (banco com ${j.banco}, ${j.furtivos} furtivos)`);sm.style.cssText='cursor:pointer;font-weight:700';dt.append(sm);
+    for(const x of j.lista){const l=el('p','',x.nome+' ('+x.usuario+'): '+(x.stand?x.stand+(x.manteve?' (manteve)':''):'ainda não escolheu'));l.style.margin='3px 0';dt.append(l)}lembrar(dt,'stand_dono',false);s.append(dt);return}
+  s.append(el('h2','','👤 Seu Stand · semana '+j.semana));s.lastChild.style.margin='0 0 4px';
+  if(j.escolhido){const e=j.escolhido;s.append(card(e));s.append(el('small','',e.seguidas>=2?'Você está na 2ª semana com este Stand. Na próxima, será preciso trocar.':'Você pode manter este Stand por mais 1 semana, se quiser.'));s.append(el('small','','Por enquanto o Stand é identidade e história: ele não muda pontos.'));s.lastChild.style.cssText='display:block;opacity:.75;margin-top:4px';return}
+  s.append(el('p','sub','Escolha 1 entre 3 Stands sorteados para você'+(j.manter?', ou mantenha o atual.':'.')+' Vale a semana inteira. Seu Stand é um só em todas as trilhas, e nenhum outro cavaleiro terá o mesmo nesta semana.'));
+  for(const o of j.ofertas){const b=el('button','btn','Escolher '+o.nome);b.type='button';b.addEventListener('click',()=>{if(confirm('Escolher '+o.nome+' para esta semana?'))post(o.id,b)});s.append(card(o,b))}
+  if(j.manter){const b=el('button','btn sec','Manter '+j.manter.nome+' (mais 1 semana)');b.type='button';b.addEventListener('click',()=>post('manter',b));s.append(card(j.manter,b))}
+  else if(j.atualAcabou)s.append(el('small','','Você ficou 2 semanas seguidas com o Stand anterior, então precisa trocar.'));
+  if(window.ajuda){const a=ajuda('ix_stand');a.style.marginTop='8px';s.append(a)}
+}
+function lerImagem(arq){return new Promise((ok,no)=>{if(!/^image\/(png|jpeg|webp|gif)$/.test(arq.type))return no(new Error('Use PNG, JPG, WEBP ou GIF.'));if(arq.size>3*1024*1024)return no(new Error('A imagem passa de 3 MB.'));const f=new FileReader();f.onload=()=>ok(f.result);f.onerror=()=>no(new Error('Não consegui ler o arquivo.'));f.readAsDataURL(arq)})}
+async function postArte(corpo){const r=await fetch('/api/presenca',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});const x=await r.json().catch(()=>({}));return{r,x}}
+// Botão que abre o seletor de arquivo e envia a arte do item (tipo, slot, id). confirmar = pede confirmação (professor trocando item travado).
+function botaoEnviar(rot,extra,aviso,opts){const o=opts||{};const b=el('button','btn'+(o.sec?' sec':''),rot);b.type='button';const f=el('input','');f.type='file';f.accept='image/png,image/jpeg,image/webp,image/gif';f.hidden=true;
+  b.addEventListener('click',()=>{if(o.confirmar&&!confirm(o.confirmar))return;f.click()});
+  f.addEventListener('change',async()=>{const a=f.files[0];if(!a)return;b.disabled=true;aviso('Enviando…');try{const dados=await lerImagem(a);const{r,x}=await postArte({acao:'arte_enviar',...extra,dados,substituir:!!o.confirmar});if(!r.ok)throw new Error(x.erro||'Não foi possível enviar.');aviso(x.pendente?'✅ Enviada! Agora é só aguardar o professor aprovar.':'✅ Salvo.');await carregarArte()}catch(e){aviso(e.message);b.disabled=false}f.value=''});
+  const w=el('span','');w.append(b,f);return w}
+// Campo de texto (nome do Stand) com botão de enviar.
+function campoNome(extra,aviso,rot,valorIni){const w=el('span','');w.style.cssText='display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center';const i=el('input','');i.type='text';i.maxLength=30;i.placeholder='Nome novo (3 a 30 letras)';i.value=valorIni||'';const b=el('button','btn',rot);b.type='button';b.disabled=!i.value.trim();
+  i.addEventListener('input',()=>{b.disabled=i.value.trim().length<3});
+  b.addEventListener('click',async()=>{b.disabled=true;aviso('Enviando…');try{const{r,x}=await postArte({acao:'arte_enviar',...extra,valor:i.value});if(!r.ok)throw new Error(x.erro||'Não foi possível enviar.');aviso(x.pendente?'✅ Sugestão enviada! Aguarde o professor aprovar.':'✅ Salvo.');await carregarArte()}catch(e){aviso(e.message);b.disabled=false}});w.append(i,b);return w}
+function miniatura(url,tam){const i=el('img','');i.src=url;i.alt='';i.style.cssText=`width:${tam||56}px;height:${tam||56}px;object-fit:contain;background:#f6c98a;border-radius:6px;border:2px solid #2a1608`;return i}
+const ICONE_ITEM={nome:'✏️',parado:'🧍',andando:'🚶',ataque:'💥',defesa:'🛡️',dano:'💢',montado:'🤠',cavalgando:'🏇',cavalo_parado:'🐴',cavalo_correndo:'🐎'};
+const DICA_ITEM={nome:'Sugira um nome novo para o seu Stand.',parado:'GIF dele parado, respirando ou flutuando.',andando:'GIF dele se movendo.',ataque:'GIF do golpe de ataque.',defesa:'GIF dele se defendendo.',dano:'GIF dele sofrendo dano.',montado:'GIF do cavaleiro montado, parado.',cavalgando:'GIF do cavaleiro cavalgando (galope em loop).',cavalo_parado:'GIF do cavalo parado, sem cavaleiro.',cavalo_correndo:'GIF do cavalo correndo, sem cavaleiro.'};
+// Uma linha por item: estado (livre / em análise / travado) e a ação possível.
+function linhaItem(it,extra,aviso,dono,nomeAlvo){const l=el('div','');l.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid #fff2';
+  const t=el('div','');t.style.cssText='flex:1 1 220px;min-width:0';t.append(el('b','',(ICONE_ITEM[it.slot]||'')+' '+it.rotulo));const sm=el('small','',DICA_ITEM[it.slot]||'');sm.style.cssText='display:block;opacity:.75';t.append(sm);l.append(t);
+  const mostra=v=>{if(!v)return;if(it.slot==='nome'){const b=el('b','',v);b.style.cssText='padding:0 6px';l.append(b)}else l.append(miniatura(v,48))};
+  if(it.estado==='final'){mostra(it.valor);l.append(el('span','badge',it.reaberto?'🔓 reaberto para novo envio':'🔒 travado'))}
+  if(it.estado==='analise'){mostra(it.pendente);l.append(el('span','badge','⏳ em análise'))}
+  if(!dono){ if(it.pode){const ex={...extra,slot:it.slot};l.append(it.slot==='nome'?campoNome(ex,aviso,it.estado==='final'?'Sugerir outro nome':'Sugerir nome'):botaoEnviar(it.estado==='final'?'Enviar de novo':'📤 Enviar',ex,aviso,{sec:it.estado==='final'}))} }
+  else{
+    const ex={...extra,slot:it.slot};
+    if(it.estado==='final'){ if(it.reaberto){const b=el('button','btn sec','Travar de novo');b.type='button';b.addEventListener('click',async()=>{await postArte({acao:'arte_reabrir',chave:`${extra.tipo}:${extra.id}:${it.slot}`,reabrir:false});await carregarArte()});l.append(b)}
+      else{const b=el('button','btn sec','🔓 Reabrir para o aluno');b.type='button';b.addEventListener('click',async()=>{if(!confirm('Reabrir "'+it.rotulo+'" de '+nomeAlvo+'? O aluno poderá enviar de novo e o novo envio passará pela sua aprovação.'))return;await postArte({acao:'arte_reabrir',chave:`${extra.tipo}:${extra.id}:${it.slot}`});await carregarArte()});l.append(b)}}
+    if(it.estado!=='analise'){const conf=it.estado==='final'?'"'+it.rotulo+'" de '+nomeAlvo+' já está travado. Trocar agora pelo seu envio?':null;
+      l.append(it.slot==='nome'?campoNome({...ex,substituir:it.estado==='final'},aviso,'Definir nome',''):botaoEnviar(it.estado==='final'?'Trocar (professor)':'📤 Enviar',ex,aviso,{sec:true,confirmar:conf}))}
+  }
+  return l}
+function montarArte(j){
+  if(!j||(!j.stand&&!j.dono)){delete BL.arte;return}
+  let s=BL.arte;if(!s){s=el('section','card cronica');s.id='sec-arte';BL.arte=s}
+  s.textContent='';s.style.cssText='border-left:6px solid #c0392b;padding:14px 18px;margin:12px 0';
+  s.append(el('h3','','🎨 Seu visual na corrida'));
+  const w=el('div','');w.innerHTML=window.Arte?Arte.cena(j.visual):'';s.append(w);
+  const pv=j.visual.provisoria||{};const msg=el('small','');msg.style.cssText='display:block;margin:6px 0;min-height:1em';
+  const regras=()=>{const dc=el('details','');dc.append(el('summary','','📋 Regras para enviar a arte'));const ul=el('ul','');for(const r of j.regras||[])ul.append(el('li','',r));dc.append(ul);return dc};
+  const modelos=()=>{const dm=el('details','');dm.append(el('summary','','🎞️ Exemplos de cada animação (só para ilustrar)'));const g=el('div','');g.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:8px 0';
+    for(const k of['parado','andando','ataque','defesa','dano','montado','cavalgando','cavalo_parado','cavalo_correndo']){const c=el('div','');c.style.cssText='text-align:center;font-size:.85em';const i=el('img','');i.src='/modelos/'+k+'.gif';i.alt='';i.style.cssText='width:100%;background:#fff;border-radius:6px';c.append(i,el('span','',(ICONE_ITEM[k]||'')+' '+(k.replace('_',' '))));g.append(c)}
+    dm.append(g);return dm};
+  if(!j.dono){
+    s.append(el('p','sub',pv.piloto||pv.stand?'Esta é uma arte provisória, com cores sorteadas. Crie a sua: cada item enviado é aprovado pelo professor e passa a valer na corrida. Você pode enviar um item de cada vez, conforme for terminando.':'Você já tem arte final. 🎉'));
+    s.append(regras(),modelos(),msg);
+    if(j.stand){const d1=el('details','');d1.open=true;d1.append(el('summary','',`🎭 Meu Stand: ${j.stand.nome}`));for(const it of j.itens.stand)d1.append(linhaItem(it,{tipo:'stand'},t=>{msg.textContent=t},false,j.stand.nome));s.append(d1)}
+    const d2=el('details','');d2.open=true;d2.append(el('summary','','🏇 Meu cavaleiro e cavalo'));for(const it of j.itens.piloto)d2.append(linhaItem(it,{tipo:'piloto'},t=>{msg.textContent=t},false,'você'));s.append(d2);
+  }else{
+    const lab=el('a','btn sec','🧪 Laboratório de Duelos (liga de testes)');lab.href='/laboratorio';lab.style.margin='6px 0';s.append(lab);
+    s.append(regras(),modelos(),msg);
+    const pend=j.pendentes||[];
+    const d1=el('details','');if(pend.length)d1.open=true;d1.append(el('summary','',`⏳ Aguardando aprovação (${pend.length})`));
+    if(!pend.length)d1.append(el('p','sub','Nenhuma por enquanto. Quando um aluno enviar algo, aparece aqui.'));
+    for(const x of pend){const l=el('div','');l.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0';
+      const ap=el('button','btn','✅ Aprovar');ap.type='button';const re=el('button','btn sec','✖ Recusar');re.type='button';
+      const dec=async(aprovar)=>{ap.disabled=re.disabled=true;const{r,x:y}=await postArte({acao:'arte_decidir',chave:x.chave,aprovar});if(!r.ok){msg.textContent=y.erro||'Erro.';if(r.status!==409){ap.disabled=re.disabled=false;return}}else l.remove();await carregarArte()};
+      ap.addEventListener('click',()=>dec(true));re.addEventListener('click',()=>{if(confirm('Recusar? O aluno poderá enviar de novo.'))dec(false)});
+      if(x.texto){const b=el('b','',`"${x.valor}"`);l.append(b)}else l.append(miniatura(x.valor,72));
+      l.append(el('span','',`${x.rotulo} · ${x.tipo==='stand'?'Stand':'Cavaleiro'} ${x.alvo} · enviado por ${x.por}`),ap,re);d1.append(l)}
+    s.append(d1);
+    const lista=(titulo,itens,tipo)=>{const dt=el('details','');const fin=itens.filter(x=>x.itens.some(i=>i.estado==='final')).length;dt.append(el('summary','',`${titulo} (${fin} de ${itens.length} com algo definido)`));
+      const bu=el('input','');bu.type='search';bu.placeholder='Buscar pelo nome';bu.style.cssText='margin:8px 0;max-width:260px';dt.append(bu);const corpo=el('div','');dt.append(corpo);
+      const desenhar=()=>{corpo.textContent='';const q=bu.value.trim().toLowerCase();for(const x of itens.filter(y=>!q||y.nome.toLowerCase().includes(q))){const n=x.itens.filter(i=>i.estado==='final').length;const d=el('details','');d.append(el('summary','',`${x.nome}  ·  ${n} de ${x.itens.length} definidos`));for(const it of x.itens)d.append(linhaItem(it,{tipo,id:x.id},t=>{msg.textContent=t},true,x.nome));corpo.append(d)}};
+      bu.addEventListener('input',desenhar);desenhar();return dt};
+    s.append(lista('🎭 Stands',j.standsBanco||[],'stand'),lista('🏇 Cavaleiros (alunos)',j.alunosBanco||[],'piloto'));
+  }
+  if(window.ajuda){const a=ajuda('ix_arte');a.style.marginTop='8px';s.append(a)}
+}
+async function carregarArte(){try{const r=await fetch('/api/presenca?acao=arte');if(!r.ok)return;montarArte(await r.json());organizar()}catch{}}
+async function carregarStand(d){try{const r=await fetch('/api/presenca?acao=stand');if(!r.ok)return;montarStand(await r.json(),d);organizar()}catch{}}
+async function carregarCronica(d){const r=await fetch('/api/presenca?acao=cronica'+(CRON_TURMA?'&turma='+encodeURIComponent(CRON_TURMA):''));if(!r.ok)return;const j=await r.json();if(j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}
+document.addEventListener('visibilitychange',()=>{});
 Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,site])=>{
   const conta=document.getElementById('conta');
   if(d.usuario){const ident=el('span','badge ident',`${d.usuario} · ${d.titulo||d.papel}`);document.querySelector('.topo').append(ident);const P=d.permissoes||[];
@@ -54,6 +189,9 @@ Promise.all([fetch('/api/aulas').then(r=>r.json()),window.LIGA_SITE]).then(([d,s
   const vt=site.vitrine||[];
   if(vt.length){const s=secao('Vitrine da liga',vt.length+(vt.length===1?' destaque':' destaques'));s.id='sec-vitrine';LigaNovo.aplicar(s,'vitrine',vt.map(v=>[v.titulo,v.url,v.imagem]),false);
     s.append(porPeso(vt,v=>LigaVitrine.render(v),'vit'));BL.vitrine=s}
+
+  // crônica da corrida (narrador): só para quem está logado e tem Copa ativa
+  if(d.usuario){carregarStand(d);carregarArte();setInterval(()=>{if(!document.hidden&&BL.cronica)carregarCronica(d)},180000);fetch('/api/presenca?acao=cronica').then(r=>r.ok?r.json():null).then(j=>{if(!j||j.semCopa||j.inativa||j.oculta)return;montarCronica(j,d);organizar()}).catch(()=>{})}
   organizar();
   // Área do aluno: aulas, atividades e progresso ficam fora da Início para manter o foco
   const ba=el('a','btn',d.usuario?'Área do aluno':'Aulas');ba.href='/aluno';conta.insertBefore(ba,conta.firstChild);if(d.usuario)conta.append(ajuda('ix_menu'));

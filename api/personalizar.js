@@ -1,15 +1,19 @@
 'use strict';
 // Painel de personalização (só owners): ler e salvar o site, enviar imagens.
 const u = require('../lib/util'); const s = require('../lib/site');
+// Cada parte do site tem a sua permissão.
+const SECOES = { site_visual: ['nome', 'tag', 'logo', 'tema', 'raio', 'fundos', 'temas', 'ordem'], site_boasvindas: ['boasVindas'], site_avisos: ['anuncios'], site_agenda: ['agenda'], site_redes: ['redes'], site_destaques: ['vitrine', 'rankings'] };
+const ROTULO = { site_visual: 'Aparência (cores, logo, fundos)', site_boasvindas: 'Texto de boas-vindas', site_avisos: 'Avisos', site_agenda: 'Agenda', site_redes: 'Redes sociais', site_destaques: 'Vitrine e destaques' };
 module.exports = async (req, res) => {
   try {
     const usuario = u.usuarioDaSessao(req);
     const { cfg } = await u.lerConfig();
     if (!u.temPerm(cfg, usuario, 'site')) return u.json(res, 403, { erro: 'Só owners.' });
+    const perm = u.permissoes(cfg, usuario);
     if (req.method === 'GET') {
       const [{ site }, imagens] = await Promise.all([s.lerSite(), s.listarImagensDo('site')]);
       const turmas = Object.entries(cfg.turmas || {}).map(([id, t]) => ({ id, nome: t.nome || id, status: t.status || 'andamento', alunos: (t.alunos || []).length }));
-      return u.json(res, 200, { usuario, site, imagens, redes: s.REDES, padrao: s.padrao(), turmas });
+      return u.json(res, 200, { usuario, site, imagens, redes: s.REDES, padrao: s.padrao(), turmas, pode: Object.fromEntries([...Object.keys(SECOES), 'site_imagens'].map((p) => [p, perm.includes(p)])) });
     }
     if (req.method !== 'POST') return u.json(res, 405, { erro: 'Método inválido.' });
     if (!u.origemOk(req) || !String(req.headers['content-type'] || '').includes('application/json')) return u.json(res, 403, { erro: 'Requisição recusada.' });
@@ -17,11 +21,15 @@ module.exports = async (req, res) => {
     if (!b || typeof b !== 'object') return u.json(res, 400, { erro: 'Corpo inválido.' });
     if (b.acao === 'salvar') {
       const falta = s.faltaPeso(b.site); if (falta) return u.json(res, 400, { erro: falta });
+      { const atual = s.sanitizar((await s.lerSite()).site), novo = s.sanitizar(b.site); const barradas = [];
+        for (const [p, chaves] of Object.entries(SECOES)) if (!perm.includes(p) && chaves.some((k) => JSON.stringify(atual[k]) !== JSON.stringify(novo[k]))) barradas.push(ROTULO[p]);
+        if (barradas.length) return u.json(res, 403, { erro: 'Seu cargo não permite mexer em: ' + barradas.join(', ') + '. Desfaça essas mudanças ou peça a um owner.' }); }
       const resumo = String(b.resumo || 'ajustes').replace(/[^\p{L}\p{N} ,.()\-]/gu, '').slice(0, 80) || 'ajustes';
       await s.gravarSite(b.site, `Portal: ${usuario} atualizou o site (${resumo})`);
       return u.json(res, 200, { ok: true });
     }
     if (b.acao === 'ranking_gerar') {
+      if (!perm.includes('site_destaques')) return u.json(res, 403, { erro: 'Seu cargo não inclui a vitrine e os destaques.' });
       const t = (cfg.turmas || {})[String(b.turma || '')]; if (!t) return u.json(res, 400, { erro: 'Turma inválida.' });
       const n = [3, 5, 10].includes(Number(b.quantos)) ? Number(b.quantos) : 5;
       const rk = t.status === 'arquivada' && t.rankingFinal ? t.rankingFinal.map((x, i) => ({ posicao: i + 1, usuario: x.usuario, total: x.total }))
@@ -31,6 +39,7 @@ module.exports = async (req, res) => {
       return u.json(res, 200, { ok: true, itens, turmaNome: t.nome || String(b.turma), foto: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) });
     }
     if (b.acao === 'upload') {
+      if (!perm.includes('site_imagens')) return u.json(res, 403, { erro: 'Seu cargo não inclui enviar imagens.' });
       const m = /^data:image\/[a-z+]+;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.dados || ''));
       if (!m) return u.json(res, 400, { erro: 'Imagem inválida.' });
       const nome = await s.enviarImagem(b.nome, Buffer.from(m[1], 'base64'), usuario, ['site']);
