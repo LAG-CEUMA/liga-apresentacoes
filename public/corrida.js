@@ -10,13 +10,13 @@ function pista(o){
   const NS='http://www.w3.org/2000/svg';const E=(t,at,...f)=>{const e=document.createElementNS(NS,t);for(const[k,v]of Object.entries(at||{}))e.setAttribute(k,v);e.append(...f);return e};
   const svg=E('svg',{viewBox:'0 0 800 470',class:'circ',role:'img','aria-label':'Pista de corrida da turma'});
   const D='M160,340 C60,340 40,205 140,165 C230,128 300,195 400,152 C500,108 560,66 665,108 C775,154 775,335 650,368 C560,392 480,325 400,356 C320,388 250,368 160,340 Z';
-  const defs=E('defs',{});defs.append(E('radialGradient',{id:'gr',cx:'50%',cy:'50%',r:'70%'},E('stop',{offset:'0','stop-color':'#1f5a35'}),E('stop',{offset:'1','stop-color':'#123a24'})));
+  const defs=E('defs',{});defs.append(E('radialGradient',{id:'gr',cx:'50%',cy:'50%',r:'70%'},E('stop',{offset:'0','stop-color':'#b98a4e'}),E('stop',{offset:'1','stop-color':'#8c5f2f'})));
   svg.append(defs,E('rect',{x:0,y:0,width:800,height:470,rx:18,fill:'url(#gr)'}));
-  for(const[x,y,r]of[[90,60,16],[130,90,11],[720,60,14],[60,420,13],[740,420,15],[690,430,10],[300,60,12]])svg.append(E('circle',{cx:x,cy:y,r,fill:'#1d6b3c',opacity:'.6'}));
-  svg.append(E('path',{d:D,fill:'none',stroke:'#fff','stroke-width':'58','stroke-linejoin':'round',opacity:'.9'}));
-  svg.append(E('path',{d:D,fill:'none',stroke:'#e63946','stroke-width':'58','stroke-dasharray':'14 14','stroke-linejoin':'round'}));
-  svg.append(E('path',{d:D,fill:'none',stroke:'#2b2f3d','stroke-width':'48','stroke-linejoin':'round'}));
-  const centro=E('path',{d:D,id:'tr',fill:'none',stroke:'#ffffff55','stroke-width':'2','stroke-dasharray':'10 12'});svg.append(centro);
+  for(const[x,y,r]of[[90,60,16],[130,90,11],[720,60,14],[60,420,13],[740,420,15],[690,430,10],[300,60,12]])svg.append(E('circle',{cx:x,cy:y,r,fill:'#7a8a3a',opacity:'.55'}));
+  svg.append(E('path',{d:D,fill:'none',stroke:'#d9b27a','stroke-width':'58','stroke-linejoin':'round',opacity:'.95'}));
+  svg.append(E('path',{d:D,fill:'none',stroke:'#5b3a1c','stroke-width':'58','stroke-dasharray':'4 22','stroke-linejoin':'round'}));
+  svg.append(E('path',{d:D,fill:'none',stroke:'#c98f4f','stroke-width':'48','stroke-linejoin':'round'}));
+  const centro=E('path',{d:D,id:'tr',fill:'none',stroke:'#7a4a1f66','stroke-width':'2','stroke-dasharray':'10 12'});svg.append(centro);
   const L=centro.getTotalLength();const pt=f=>{f=((f%1)+1)%1;const a=centro.getPointAtLength(f*L),b=centro.getPointAtLength(((f+.004)%1)*L);const an=Math.atan2(b.y-a.y,b.x-a.x);return{x:a.x,y:a.y,nx:-Math.sin(an),ny:Math.cos(an),an}};
   const s0=pt(0);svg.append(E('rect',{x:s0.x-4,y:s0.y-26,width:8,height:52,fill:'url(#chk)',stroke:'#fff','stroke-width':'1',transform:'rotate('+(s0.an*180/Math.PI)+' '+s0.x+' '+s0.y+')'}));
   defs.append(E('pattern',{id:'chk',width:8,height:8,patternUnits:'userSpaceOnUse'},E('rect',{width:8,height:8,fill:'#fff'}),E('rect',{width:4,height:4,fill:'#111'}),E('rect',{x:4,y:4,width:4,height:4,fill:'#111'})));
@@ -26,26 +26,38 @@ function pista(o){
     E('text',{x:400,y:268,'font-size':'38','font-weight':'800'},semAtual===null?'Volta ? / '+N:'Volta '+semAtual+' / '+N),
     E('text',{x:400,y:292,'font-size':'15',fill:'#cfd3e6'},dec===null?'Defina início e fim da turma para contar as semanas':(N-semAtual)+' volta'+(N-semAtual===1?'':'s')+' (semanas) restante'+(N-semAtual===1?'':'s')));
   svg.append(hud);
-  // pace car e karts
+  // cavaleiros (cavalo galopando de lado) e o cavalo-fantasma do ritmo ideal
   const karts=[];
+  const COR=[['#8b5a2b','#6e4420','#2a1608'],['#c8a06a','#a98250','#e8d9b8'],['#3b3b44','#2c2c34','#111'],['#d9d2c4','#bdb5a4','#7a6a55'],['#a0522d','#7d3f20','#2a1608'],['#e0b050','#c29438','#f2e2b0'],['#5c4033','#473025','#1d120b'],['#b87333','#955d28','#3a2410']];
+  const ROUPA=['#c0392b','#2e86c1','#27ae60','#8e44ad','#d68910','#16a085','#cb4335','#2874a6'];
+  const hs=u=>{let n=0;for(const c of u)n=(n*31+c.charCodeAt(0))>>>0;return n};
+  const cavaloSvg=(u,dour)=>{
+    if(!(window.Arte&&Arte.pecas))return null;
+    const c=COR[hs(u||'x')%COR.length],r=ROUPA[(hs(u||'x')>>3)%ROUPA.length];
+    const v=dour?{cavalo:{pele:'#f5d27a',pele2:'#e0b84a',crina:'#fff3c4',sela:'#b8860b',casaco:'#fff3c4',casaco2:'#e0b84a',chapeu:'#b8860b',cachecol:'#fff'}}:{cavalo:{pele:c[0],pele2:c[1],crina:c[2],sela:'#6b3f1d',casaco:r,casaco2:r,chapeu:'#3a2410',cachecol:'#f5b83d'}};
+    try{return Arte.pecas(v).cavalo.replace(/style="overflow:visible;width:100%;height:100%"/,'x="-40" y="-26" width="80" height="56" style="overflow:visible"')}catch(e){return null}};
   const mkKart=(u,voltas,eh,pos,pts)=>{const g=E('g',{class:'kart'},E('title',{},eh?'Ritmo ideal da turma (semana '+semAtual+')':(o.nome?o.nome(u):u)+' · '+pos+'º · '+pts+' ponto'+(pts===1?'':'s')));
-    if(eh){g.append(E('circle',{r:15,fill:'#f5b83d',stroke:'#fff','stroke-width':2}),E('text',{y:5,'text-anchor':'middle','font-size':'16'},'🚓'));return{g,voltas,eh,off:0,u:null}}
-    const cid='cp'+u.replace(/\W/g,'');defs.append(E('clipPath',{id:cid},E('circle',{r:15})));
-    g.append(E('circle',{r:eu===u?20:17,fill:'#2a2e42',stroke:eu===u?'#4aa3ff':(pos===1?'#ffd54a':'#f5b83d'),'stroke-width':eu===u||pos===1?4:2.5}),E('text',{y:5,'text-anchor':'middle','font-size':'15',fill:'#fff','font-weight':'800'},u[0].toUpperCase()));
-    const im=E('image',{href:'https://github.com/'+encodeURIComponent(u)+'.png?size=64',x:-15,y:-15,width:30,height:30,'clip-path':'url(#'+cid+')',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.remove());g.append(im);
-    if(eu===u)g.append(E('text',{y:-24,'text-anchor':'middle','font-size':'11',fill:'#4aa3ff','font-weight':'800',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'VOCÊ'));else if(pos===1)g.append(E('text',{y:-22,'text-anchor':'middle','font-size':'15'},'👑'));
-    g.append(E('text',{y:32,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'700',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},pos+'º'));
-    const its=(porU[u]&&porU[u].icones)||[];its.forEach((it,i)=>{g.append(E('text',{x:22+i*15,y:-8,'font-size':'14'},it.ic))});
+    const cav=E('g',{class:'cv',opacity:eh?'.55':'1'});const sv=cavaloSvg(u,eh);
+    if(sv)cav.innerHTML=sv;else cav.append(E('text',{y:8,'text-anchor':'middle','font-size':'30'},'🐎'));
+    g.append(cav);
+    if(eh){g.append(E('text',{y:-26,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'800',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'RITMO'));return{g,cav,voltas,eh,off:0,u:null}}
+    const cid='cp'+u.replace(/\W/g,'');defs.append(E('clipPath',{id:cid},E('circle',{r:11})));
+    const b=E('g',{transform:'translate(0,-28)'});
+    b.append(E('circle',{r:eu===u?14:12,fill:'#2a2e42',stroke:eu===u?'#4aa3ff':(pos===1?'#ffd54a':'#f5b83d'),'stroke-width':eu===u||pos===1?3.5:2}),E('text',{y:4,'text-anchor':'middle','font-size':'12',fill:'#fff','font-weight':'800'},u[0].toUpperCase()));
+    const im=E('image',{href:'https://github.com/'+encodeURIComponent(u)+'.png?size=64',x:-11,y:-11,width:22,height:22,'clip-path':'url(#'+cid+')',referrerpolicy:'no-referrer'});im.addEventListener('error',()=>im.remove());b.append(im);g.append(b);
+    if(eu===u)g.append(E('text',{y:-48,'text-anchor':'middle','font-size':'11',fill:'#4aa3ff','font-weight':'800',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},'VOCÊ'));else if(pos===1)g.append(E('text',{y:-44,'text-anchor':'middle','font-size':'14'},'👑'));
+    g.append(E('text',{y:38,'text-anchor':'middle','font-size':'10',fill:'#fff','font-weight':'700',style:'paint-order:stroke;stroke:#000;stroke-width:3px'},pos+'º'));
+    const its=(porU[u]&&porU[u].icones)||[];its.forEach((it,i)=>{g.append(E('text',{x:26+i*15,y:-8,'font-size':'14'},it.ic))});
     if(its.length)g.querySelector('title').append(' · '+its.map(it=>it.ic+' '+it.tx).join(' · '));
-    return{g,voltas,eh,off:((pos%3)-1)*12,u,turbo:its.some(it=>it.ic==='🍄')}};
+    return{g,cav,voltas,eh,off:((pos%3)-1)*14,u,turbo:its.some(it=>it.ic==='🍄')}};
   const mov=!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
   if(dec!==null)karts.push(mkKart(null,dec,true,0));
   lista.forEach(x=>karts.push(mkKart(x.usuario,Math.max(0,Math.min(1,x.pontos/max))*N,false,x.posicao,x.pontos)));
   const trail=E('g',{});svg.append(trail);for(const k of karts)svg.append(k.g);
   const gaps=karts.filter(k=>!k.eh).map(k=>k.voltas-(dec===null?0:dec));const M=Math.max(1,...gaps.map(Math.abs));
   for(const k of karts)k.f=k.eh?0:(dec===null?Math.max(0,Math.min(1,k.voltas/N))*.9:((k.voltas-dec)/(2*M))*.9);
-  const pose=(t,ph=0)=>{trail.textContent='';for(const k of karts){const v=k.f*t+ph;const p=pt(v);const x=p.x+p.nx*k.off,y=p.y+p.ny*k.off;k.g.setAttribute('transform','translate('+x+','+y+')');
-      if(mov&&(t<1||ph>0)&&!k.eh)for(let i=1;i<=(k.turbo?6:3);i++){const q=pt(v-i*.012*Math.sign(k.f||1));trail.append(E('circle',{cx:q.x+q.nx*k.off,cy:q.y+q.ny*k.off,r:(k.turbo?9:6)-i,fill:k.turbo?(i%2?'#ff7a45':'#ffd54a'):'#fff',opacity:(k.turbo?.6:.28)-i*.05}))}}};
+  const pose=(t,ph=0)=>{trail.textContent='';for(const k of karts){const v=k.f*t+ph;const p=pt(v);const x=p.x+p.nx*k.off,y=p.y+p.ny*k.off;k.g.setAttribute('transform','translate('+x+','+y+')');{const dx=Math.cos(p.an)*(k.f<0?-1:1);k.cav.setAttribute('transform','scale('+(dx<0?-1:1)+',1)')}
+      if(mov&&(t<1||ph>0)&&!k.eh)for(let i=1;i<=(k.turbo?6:3);i++){const q=pt(v-i*.012*Math.sign(k.f||1));trail.append(E('circle',{cx:q.x+q.nx*k.off,cy:q.y+q.ny*k.off,r:(k.turbo?9:6)-i,fill:k.turbo?(i%2?'#ff7a45':'#ffd54a'):'#e8d3a8',opacity:(k.turbo?.6:.4)-i*.07}))}}};
   pose(mov?0:1);
   if(mov){const t0=performance.now(),dur=9500;const VOLTA=30000;const passo=n=>{if(!document.body.contains(svg))return;const t=Math.min(1,(n-t0)/dur);if(t<1)pose(1-Math.pow(1-t,3));else pose(1,(((n-t0-dur)/VOLTA)%1));requestAnimationFrame(passo)};requestAnimationFrame(passo)}
   const wrap=h('div',{class:'corr-wrap'},svg);wrap.dataset.voltas=N;wrap.dataset.dec=dec===null?'':dec;return wrap}
