@@ -32,6 +32,9 @@ Use os termos e programas **em inglês**.
 - **Pontuação** (`lib/pontos.js`): presença + participação + exercícios − penalidades; pesos em `pontuacao` (padrão) e `turmas.<id>.pesos`; entregas em `s.entregas` de cada sessão; Top 5 congelado em `turmas.<id>.rankingFinal` ao arquivar.
 - **Eventos** (`api/eventos.js`, `public/eventos.html`): `dados/eventos/<ID>/evento.json` e `inscricoes/<usuario>.json`. **Certificado** em `/certificado/<código>` (código = ID.usuario.HMAC); modelo opcional em `modelos/certificado.html` no repositório de conteúdo.
 
+## Interesses dos alunos (só owners)
+Painel → **Interesses dos alunos**. Dados em `dados/perfis/interesses.json` no `liga-curriculo` (`lib/perfis.js`): por aluno, um histórico com um registro por nível (frente principal, outras frentes, metas mantidas/mudadas, vontade de aprender de 1 a 5, resumo, perfil e dica). A tabela **Fome de conhecimento por nível** compara cada registro com o seguinte e credita a mudança ao nível anterior, destacando o que mais despertou interesse. O botão da aba cria na turma a atividade de revisão de metas: ao liberar, o marcador `{{interesse_anterior}}` da descrição vira a resposta anterior de cada aluno (só frente e resumo).
+
 ## Vitrine
 `site.vitrine` (até 24 destaques) aparece na tela inicial. Cada item tem modo `cartao`, `clique` ou `direto`. Embeds só de sites da lista em `public/vitrine.js` (YouTube, Vimeo, itch.io, Instagram, Spotify, Discord, Google Slides/Drive, TikTok), sempre em iframe com sandbox. Edição em Personalizar → 9. Vitrine.
 
